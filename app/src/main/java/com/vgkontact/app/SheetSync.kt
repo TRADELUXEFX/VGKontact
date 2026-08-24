@@ -17,7 +17,7 @@ data class DayCount(val date: String, val count: Int)
 
 object SheetSync {
 
-    private const val SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwP5xI8LTC7L3gBIbP-wvi4cqixawCc59SgIf6fGrpVT3iX5LcHi-KW9nZHsaIvwdq_/exec"
+    private const val SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyr4Do9nCZG9J846lPa595dv82_UtXpTqlERv8cW1hUD1NqyyLUvtMEAKwBDnRaU1mN/exec"
 
     fun submit(whatsapp: String, referral: String = "", context: Context? = null, callback: ((Boolean, String?) -> Unit)? = null) {
         thread {
@@ -100,6 +100,7 @@ object SheetSync {
         thread {
             var submitted = 0
             var failed = 0
+            var contactCount = 0
             try {
                 val url = URL(SCRIPT_URL)
                 val conn = url.openConnection() as HttpURLConnection
@@ -124,10 +125,12 @@ object SheetSync {
                         val contactsArray = jsonObject.optJSONArray("contacts") ?: JSONArray()
                         for (i in 0 until contactsArray.length()) {
                             val contactObj = contactsArray.getJSONObject(i)
-                            val name = contactObj.optString("name")
                             val phone = contactObj.optString("phone")
 
-                            if (addSingleContact(context, name, phone)) {
+                            contactCount++
+                            val contactName = "VG KONTACT $contactCount"
+
+                            if (addSingleContact(context, contactName, phone)) {
                                 submitted++
                             } else {
                                 failed++
