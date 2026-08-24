@@ -14,7 +14,7 @@
         <item name="android:forceDarkAllowed">false</item>
     </style>
 
-    <!-- Missing Divider Style -->
+    <!-- Missing Divider Style required by activity_history.xml -->
     <style name="MenuDivider">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">1dp</item>
