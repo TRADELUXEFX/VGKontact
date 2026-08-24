@@ -112,8 +112,8 @@ object SheetSync {
             try {
                 // Code.gs's getPreview() (the default GET) returns a plain JSON array:
                 // [ { whatsapp, referral, timestamp }, ... ] - not { status, contacts }.
-                // Request a large limit so this pulls everything, not just the first 10.
-                val url = URL("$SCRIPT_URL?limit=100000")
+                // No limit param -> server returns every row.
+                val url = URL(SCRIPT_URL)
                 val conn = url.openConnection() as HttpURLConnection
                 conn.requestMethod = "GET"
                 conn.connectTimeout = 15000
