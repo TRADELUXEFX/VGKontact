@@ -26,6 +26,20 @@ function doPost(e) {
   var referral = data.referral || (e.parameter && e.parameter.referral) || '';
   var timestamp = data.timestamp || (e.parameter && e.parameter.timestamp) || new Date().toISOString();
 
+  // Skip if this WhatsApp number is already in the sheet, so accidental
+  // double-taps or retried requests don't create duplicate rows.
+  var lastRow = sheet.getLastRow();
+  if (lastRow > 1 && whatsapp) {
+    var existing = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+    for (var i = 0; i < existing.length; i++) {
+      if (String(existing[i][0]) === String(whatsapp)) {
+        return ContentService
+          .createTextOutput(JSON.stringify({ status: 'ok', duplicate: true }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+  }
+
   sheet.appendRow([whatsapp, referral, timestamp]);
 
   return ContentService
