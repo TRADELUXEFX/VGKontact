@@ -1,0 +1,23 @@
+<resources>
+    <string name="app_name">VG ADDUP</string>
+    <string name="title_onboarding">JOIN VIEWGROW</string>
+    <string name="hint_whatsapp">Your WhatsApp Number</string>
+    <string name="hint_referral">Referral WhatsApp Number</string>
+    <string name="btn_pick_contact">Pick from Contacts</string>
+    <string name="btn_continue">Continue</string>
+    <string name="btn_sync_kontact">Sync Kontact</string>
+    <string name="stats_total_label">Total Kontacts Synced</string>
+    <string name="error_whatsapp_required">Please enter your WhatsApp number</string>
+    <string name="error_referral_required">Please enter a referral WhatsApp number</string>
+    <string name="error_number_too_short">Enter all 11 digits</string>
+    <string name="error_number_too_long">Number must be 11 digits</string>
+    <string name="sync_failed">Could not save right now. Check your connection and try again.</string>
+    <string name="main_menu_title">Settings</string>
+    <string name="menu_profile">My Profile</string>
+    <string name="menu_history">Kontact History</string>
+    <string name="menu_contact_us">Contact Us</string>
+    <string name="title_history">Kontact History</string>
+    <string name="history_total_prefix">Total Kontacts: </string>
+    <string name="history_empty">No kontacts synced yet.</string>
+    <string name="history_load_failed">Could not load history. Check your connection and try again.</string>
+</resources>
