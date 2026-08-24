@@ -6,8 +6,6 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
 import android.view.View
-import android.widget.Button
-import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -18,30 +16,30 @@ class MainMenuActivity : AppCompatActivity() {
 
     private val PERMISSION_REQUEST_CODE = 100
 
-    private lateinit var cardSync: LinearLayout
-    private lateinit var cardHistory: LinearLayout
-    private lateinit var cardCommunity: LinearLayout
-    private lateinit var cardProfile: LinearLayout
+    private var cardSync: View? = null
+    private var cardHistory: View? = null
+    private var cardCommunity: View? = null
+    private var cardProfile: View? = null
 
-    private lateinit var tvWhatsappNumber: TextView
-    private lateinit var tvReferralCode: TextView
+    private var tvWhatsappNumber: TextView? = null
+    private var tvReferralCode: TextView? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main_menu)
 
-        cardSync = findViewById(R.id.cardSync)
-        cardHistory = findViewById(R.id.cardHistory)
-        cardCommunity = findViewById(R.id.cardCommunity)
-        cardProfile = findViewById(R.id.cardProfile)
+        cardSync = findViewById(R.id.cardSync) ?: findViewById(R.id.card_sync)
+        cardHistory = findViewById(R.id.cardHistory) ?: findViewById(R.id.card_history)
+        cardCommunity = findViewById(R.id.cardCommunity) ?: findViewById(R.id.card_community)
+        cardProfile = findViewById(R.id.cardProfile) ?: findViewById(R.id.card_profile)
 
-        tvWhatsappNumber = findViewById(R.id.tvWhatsappNumber)
-        tvReferralCode = findViewById(R.id.tvReferralCode)
+        tvWhatsappNumber = findViewById(R.id.tvWhatsappNumber) ?: findViewById(R.id.tv_whatsapp)
+        tvReferralCode = findViewById(R.id.tvReferralCode) ?: findViewById(R.id.tv_referral)
 
-        tvWhatsappNumber.text = UserPrefs.getWhatsapp(this) ?: "N/A"
-        tvReferralCode.text = UserPrefs.getReferral(this) ?: "N/A"
+        tvWhatsappNumber?.text = UserPrefs.getWhatsapp(this) ?: "N/A"
+        tvReferralCode?.text = UserPrefs.getReferral(this) ?: "N/A"
 
-        cardSync.setOnClickListener {
+        cardSync?.setOnClickListener {
             if (checkContactsPermission()) {
                 startSync()
             } else {
@@ -49,16 +47,16 @@ class MainMenuActivity : AppCompatActivity() {
             }
         }
 
-        cardHistory.setOnClickListener {
+        cardHistory?.setOnClickListener {
             startActivity(Intent(this, HistoryActivity::class.java))
         }
 
-        cardCommunity.setOnClickListener {
+        cardCommunity?.setOnClickListener {
             val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://chat.whatsapp.com/"))
             startActivity(intent)
         }
 
-        cardProfile.setOnClickListener {
+        cardProfile?.setOnClickListener {
             Toast.makeText(this, "Profile Settings", Toast.LENGTH_SHORT).show()
         }
     }
