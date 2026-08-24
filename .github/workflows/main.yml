@@ -26,11 +26,8 @@ jobs:
         with:
           gradle-version: '8.4'
 
-      - name: Make gradlew executable
-        run: chmod +x ./gradlew
-
       - name: Build release APK
-        run: ./gradlew assembleRelease
+        run: gradle assembleRelease
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
