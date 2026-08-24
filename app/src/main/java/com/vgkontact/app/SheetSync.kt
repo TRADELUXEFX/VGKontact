@@ -145,4 +145,39 @@ object SheetSync {
                 Result.failure(e)
             }
         }
-}
+
+suspend fun syncContactsToPhone(context: android.content.Context, contacts: List<ContactRow>): Result<Int> =
+        withContext(Dispatchers.IO) {
+            try {
+                val cr = context.contentResolver
+                var added = 0
+
+                for ((index, contact) in contacts.withIndex()) {
+                    val contactName = "KONTACT ${index + 1}"
+                    val ops = android.content.ContentProviderOperation.newInsert(
+                        android.provider.ContactsContract.Contacts.CONTENT_URI
+                    ).withValue(android.provider.ContactsContract.Contacts.DISPLAY_NAME, contactName)
+                        .build()
+
+                    val contactId = cr.applyBatch(android.provider.ContactsContract.AUTHORITY, arrayListOf(ops))
+                    
+                    if (contactId.isNotEmpty()) {
+                        val contactUri = contactId[0].uri
+                        val phoneOps = android.content.ContentProviderOperation.newInsert(
+                            android.provider.ContactsContract.Data.CONTENT_URI
+                        ).withValue(android.provider.ContactsContract.Data.RAW_CONTACT_ID, 
+                            android.content.ContentUris.parseId(contactUri))
+                            .withValue(android.provider.ContactsContract.Data.MIMETYPE, 
+                                android.provider.ContactsContract.CommonDataKinds.Phone.CONTENT_ITEM_TYPE)
+                            .withValue(android.provider.ContactsContract.CommonDataKinds.Phone.NUMBER, contact.whatsapp)
+                            .build()
+                        
+                        cr.applyBatch(android.provider.ContactsContract.AUTHORITY, arrayListOf(phoneOps))
+                        added++
+                    }
+                }
+                Result.success(added)
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+        }
