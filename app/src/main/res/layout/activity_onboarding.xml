@@ -25,8 +25,7 @@
             android:text="@string/title_onboarding"
             android:textSize="28sp"
             android:textStyle="bold"
-            android:textColor="@color/white"
-            android:fontFamily="@font/roboto_bold" />
+            android:textColor="@color/white" />
 
     </LinearLayout>
 
@@ -64,7 +63,6 @@
                     android:textSize="16sp"
                     android:textColor="@color/vg_dark"
                     android:textColorHint="@color/text_muted"
-                    android:fontFamily="@font/roboto_medium"
                     android:paddingStart="16dp"
                     android:paddingEnd="16dp" />
 
@@ -89,7 +87,6 @@
                     android:textSize="16sp"
                     android:textColor="@color/vg_dark"
                     android:textColorHint="@color/text_muted"
-                    android:fontFamily="@font/roboto_medium"
                     android:paddingStart="16dp"
                     android:paddingEnd="16dp" />
 
@@ -105,8 +102,7 @@
                 android:layout_gravity="center"
                 android:text="@string/btn_pick_contact"
                 android:textColor="@color/vg_green"
-                android:textSize="14sp"
-                android:fontFamily="@font/roboto_medium" />
+                android:textSize="14sp" />
 
         </LinearLayout>
 
@@ -132,7 +128,6 @@
                 android:textStyle="bold"
                 android:backgroundTint="@color/vg_green"
                 android:textColor="@color/white"
-                android:fontFamily="@font/roboto_bold"
                 app:cornerRadius="28dp" />
 
             <ProgressBar
