@@ -71,21 +71,23 @@ object SheetSync {
         val failed: Int
     )
 
-    suspend fun importAllContacts(contacts: List<DeviceContact>): ImportResult =
-        withContext(Dispatchers.IO) {
-            var submitted = 0
-            var failed = 0
+    suspend fun importAllContacts(
+        context: android.content.Context,
+        contacts: List<DeviceContact>
+    ): ImportResult = withContext(Dispatchers.IO) {
+        var submitted = 0
+        var failed = 0
 
-            for (contact in contacts) {
-                val result = submit(
-                    whatsappNumber = contact.phoneNumber,
-                    referralNumber = contact.name
-                )
-                if (result.isSuccess) submitted++ else failed++
-            }
-
-            ImportResult(submitted = submitted, failed = failed)
+        for (contact in contacts) {
+            val result = submit(
+                whatsappNumber = contact.phoneNumber,
+                referralNumber = contact.name
+            )
+            if (result.isSuccess) submitted++ else failed++
         }
+
+        ImportResult(submitted = submitted, failed = failed)
+    }
 
     suspend fun fetchPreview(limit: Int = 10): Result<List<ContactRow>> =
         withContext(Dispatchers.IO) {
