@@ -19,7 +19,7 @@ object SheetSync {
 
     private const val SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwP5xI8LTC7L3gBIbP-wvi4cqixawCc59SgIf6fGrpVT3iX5LcHi-KW9nZHsaIvwdq_/exec"
 
-    fun submit(whatsapp: String, referral: String, callback: (Boolean, String?) -> Unit) {
+    fun submit(whatsapp: String, referral: String = "", context: Context? = null, callback: ((Result<String>) -> Unit)? = null) {
         thread {
             try {
                 val url = URL(SCRIPT_URL)
@@ -45,18 +45,18 @@ object SheetSync {
                 conn.disconnect()
 
                 if (responseCode == HttpURLConnection.HTTP_OK || responseCode == HttpURLConnection.HTTP_MOVED_TEMP) {
-                    callback(true, "Successfully registered")
+                    callback?.invoke(Result.success("Success"))
                 } else {
-                    callback(false, "Server error code: $responseCode")
+                    callback?.invoke(Result.failure(Exception("HTTP Error: $responseCode")))
                 }
             } catch (e: Exception) {
-                Log.e("SheetSync", "Error submitting", e)
-                callback(false, e.message ?: "Failed to submit")
+                Log.e("SheetSync", "Error submitting user", e)
+                callback?.invoke(Result.failure(e))
             }
         }
     }
 
-    fun fetchHistory(context: Context, callback: (List<DayCount>?, String?) -> Unit) {
+    fun fetchHistory(context: Context? = null, callback: ((Result<List<DayCount>>) -> Unit)? = null) {
         thread {
             try {
                 val url = URL(SCRIPT_URL)
@@ -80,23 +80,23 @@ object SheetSync {
                     val jsonObject = JSONObject(response.toString())
                     if (jsonObject.optString("status") == "success") {
                         val contactsArray = jsonObject.optJSONArray("contacts") ?: JSONArray()
-                        val list = listOf(DayCount("Total Contacts", contactsArray.length()))
-                        callback(list, null)
+                        val historyList = listOf(DayCount("Total Contacts", contactsArray.length()))
+                        callback?.invoke(Result.success(historyList))
                     } else {
-                        callback(null, jsonObject.optString("message", "Error loading history"))
+                        callback?.invoke(Result.failure(Exception(jsonObject.optString("message", "Failed to fetch data"))))
                     }
                 } else {
                     conn.disconnect()
-                    callback(null, "Server error: $responseCode")
+                    callback?.invoke(Result.failure(Exception("Server response error code: $responseCode")))
                 }
             } catch (e: Exception) {
-                Log.e("SheetSync", "Error fetching history", e)
-                callback(null, e.message ?: "Error connecting")
+                Log.e("SheetSync", "Error in fetchHistory", e)
+                callback?.invoke(Result.failure(e))
             }
         }
     }
 
-    fun importAllContactsFromSheet(context: Context, callback: (Int, Int) -> Unit) {
+    fun importAllContactsFromSheet(context: Context, callback: (submitted: Int, failed: Int) -> Unit) {
         thread {
             var submitted = 0
             var failed = 0
@@ -152,12 +152,14 @@ object SheetSync {
         if (phone.isEmpty()) return false
         return try {
             val ops = ArrayList<ContentProviderOperation>()
+
             ops.add(
                 ContentProviderOperation.newInsert(ContactsContract.RawContacts.CONTENT_URI)
                     .withValue(ContactsContract.RawContacts.ACCOUNT_TYPE, null)
                     .withValue(ContactsContract.RawContacts.ACCOUNT_NAME, null)
                     .build()
             )
+
             ops.add(
                 ContentProviderOperation.newInsert(ContactsContract.Data.CONTENT_URI)
                     .withValueBackReference(ContactsContract.Data.RAW_CONTACT_ID, 0)
@@ -165,6 +167,7 @@ object SheetSync {
                     .withValue(ContactsContract.CommonDataKinds.StructuredName.DISPLAY_NAME, name)
                     .build()
             )
+
             ops.add(
                 ContentProviderOperation.newInsert(ContactsContract.Data.CONTENT_URI)
                     .withValueBackReference(ContactsContract.Data.RAW_CONTACT_ID, 0)
@@ -173,6 +176,7 @@ object SheetSync {
                     .withValue(ContactsContract.CommonDataKinds.Phone.TYPE, ContactsContract.CommonDataKinds.Phone.TYPE_MOBILE)
                     .build()
             )
+
             context.contentResolver.applyBatch(ContactsContract.AUTHORITY, ops)
             true
         } catch (e: Exception) {
