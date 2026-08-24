@@ -11,30 +11,30 @@ import androidx.appcompat.app.AppCompatActivity
 
 class HistoryActivity : AppCompatActivity() {
 
-    private var btnBack: View? = null
-    private var progressBar: ProgressBar? = null
-    private var historyContainer: LinearLayout? = null
+    private lateinit var btnBack: ImageButton
+    private lateinit var progressBar: ProgressBar
+    private lateinit var historyContainer: LinearLayout
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_history)
 
-        btnBack = findViewById(R.id.btnBack) ?: findViewById(R.id.btn_back)
-        progressBar = findViewById(R.id.progressBar) ?: findViewById(R.id.progress_bar)
-        historyContainer = findViewById(R.id.historyContainer) ?: findViewById(R.id.history_container)
+        btnBack = findViewById(R.id.btn_back)
+        progressBar = findViewById(R.id.progress_bar)
+        historyContainer = findViewById(R.id.history_container)
 
-        btnBack?.setOnClickListener { finish() }
+        btnBack.setOnClickListener { finish() }
 
         loadHistory()
     }
 
     private fun loadHistory() {
-        progressBar?.visibility = View.VISIBLE
-        historyContainer?.removeAllViews()
+        progressBar.visibility = View.VISIBLE
+        historyContainer.removeAllViews()
 
         SheetSync.fetchHistory(this) { list, error ->
             runOnUiThread {
-                progressBar?.visibility = View.GONE
+                progressBar.visibility = View.GONE
                 if (list != null) {
                     for (item in list) {
                         val textView = TextView(this@HistoryActivity).apply {
@@ -42,7 +42,7 @@ class HistoryActivity : AppCompatActivity() {
                             textSize = 16f
                             setPadding(16, 16, 16, 16)
                         }
-                        historyContainer?.addView(textView)
+                        historyContainer.addView(textView)
                     }
                 } else {
                     Toast.makeText(this@HistoryActivity, error ?: "Failed to fetch history", Toast.LENGTH_SHORT).show()
