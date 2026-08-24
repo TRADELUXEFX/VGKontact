@@ -1,18 +1,42 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.vgkontact.app">
-<!--  Required to read contacts from your phone (original feature)  -->
-<uses-permission android:name="android.permission.READ_CONTACTS"/>
-<!--  Required to write/add contacts to your phone (FIXED: now the main feature)  -->
-<uses-permission android:name="android.permission.WRITE_CONTACTS"/>
-<!--  Required for internet connection to Google Sheet  -->
-<uses-permission android:name="android.permission.INTERNET"/>
-<application android:allowBackup="true" android:icon="@mipmap/ic_launcher" android:label="@string/app_name" android:roundIcon="@mipmap/ic_launcher" android:supportsRtl="true" android:theme="@style/Theme.VGKontact">
-<activity android:name=".OnboardingActivity" android:exported="true">
-<intent-filter>
-<action android:name="android.intent.action.MAIN"/>
-<category android:name="android.intent.category.LAUNCHER"/>
-</intent-filter>
-</activity>
-<activity android:name=".MainMenuActivity" android:exported="true"/>
-<activity android:name=".HistoryActivity" android:exported="true"/>
-</application>
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Network permissions for Google Sheets / Apps Script synchronization -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <application
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.VGKontact"
+        tools:targetApi="31">
+
+        <!-- Main Launcher Activity -->
+        <activity
+            android:name=".OnboardingActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- Main Menu -->
+        <activity
+            android:name=".MainMenuActivity"
+            android:exported="false" />
+
+        <!-- History View -->
+        <activity
+            android:name=".HistoryActivity"
+            android:exported="false" />
+
+    </application>
+
 </manifest>
