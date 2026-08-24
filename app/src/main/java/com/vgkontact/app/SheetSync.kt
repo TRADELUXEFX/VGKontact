@@ -5,7 +5,6 @@ import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import java.net.HttpURLConnection
 import java.net.URL
-import java.net.URLEncoder
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -42,7 +41,7 @@ object SheetSync {
                     "referral" to referralNumber,
                     "timestamp" to timestamp
                 ).joinToString("&") { (key, value) ->
-                    "$key=${URLEncoder.encode(value, "UTF-8")}"
+                    "$key=${java.net.URLEncoder.encode(value, "UTF-8")}"
                 }
 
                 val connection = URL(ENDPOINT_URL).openConnection() as HttpURLConnection
@@ -71,22 +70,31 @@ object SheetSync {
         val failed: Int
     )
 
-    suspend fun importAllContacts(
-        contacts: List<DeviceContact>,
-        context: android.content.Context
+    suspend fun importAllContactsFromSheet(
+        context: android.content.Context,
+        limit: Int = 1000
     ): ImportResult = withContext(Dispatchers.IO) {
-        var submitted = 0
-        var failed = 0
+        try {
+            // Fetch contacts from Google Sheet
+            val sheetContacts = fetchPreview(limit).getOrNull() ?: emptyList()
+            
+            var submitted = 0
+            var failed = 0
 
-        for (contact in contacts) {
-            val result = submit(
-                whatsappNumber = contact.phoneNumber,
-                referralNumber = contact.name
-            )
-            if (result.isSuccess) submitted++ else failed++
+            // Add each contact from sheet to phone
+            for ((index, contact) in sheetContacts.withIndex()) {
+                val result = syncContactToPhone(
+                    context = context,
+                    name = contact.referral.takeUnless { it.isBlank() } ?: "KONTACT ${index + 1}",
+                    phoneNumber = contact.whatsapp
+                )
+                if (result.isSuccess) submitted++ else failed++
+            }
+
+            ImportResult(submitted = submitted, failed = failed)
+        } catch (e: Exception) {
+            ImportResult(submitted = 0, failed = 1)
         }
-
-        ImportResult(submitted = submitted, failed = failed)
     }
 
     suspend fun fetchPreview(limit: Int = 10): Result<List<ContactRow>> =
@@ -148,39 +156,40 @@ object SheetSync {
             }
         }
 
-    suspend fun syncContactsToPhone(context: android.content.Context, contacts: List<ContactRow>): Result<Int> =
-        withContext(Dispatchers.IO) {
-            try {
-                val cr = context.contentResolver
-                var added = 0
+    private suspend fun syncContactToPhone(
+        context: android.content.Context,
+        name: String,
+        phoneNumber: String
+    ): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            val cr = context.contentResolver
 
-                for ((index, contact) in contacts.withIndex()) {
-                    val contactName = "KONTACT ${index + 1}"
-                    val ops = android.content.ContentProviderOperation.newInsert(
-                        android.provider.ContactsContract.Contacts.CONTENT_URI
-                    ).withValue(android.provider.ContactsContract.Contacts.DISPLAY_NAME, contactName)
-                        .build()
+            // Insert contact
+            val contactOps = android.content.ContentProviderOperation.newInsert(
+                android.provider.ContactsContract.Contacts.CONTENT_URI
+            ).withValue(android.provider.ContactsContract.Contacts.DISPLAY_NAME, name)
+                .build()
 
-                    val contactId = cr.applyBatch(android.provider.ContactsContract.AUTHORITY, arrayListOf(ops))
-                    
-                    if (contactId.isNotEmpty()) {
-                        val contactUri = contactId[0].uri
-                        val phoneOps = android.content.ContentProviderOperation.newInsert(
-                            android.provider.ContactsContract.Data.CONTENT_URI
-                        ).withValue(android.provider.ContactsContract.Data.RAW_CONTACT_ID, 
-                            android.content.ContentUris.parseId(contactUri!!))
-                            .withValue(android.provider.ContactsContract.Data.MIMETYPE, 
-                                android.provider.ContactsContract.CommonDataKinds.Phone.CONTENT_ITEM_TYPE)
-                            .withValue(android.provider.ContactsContract.CommonDataKinds.Phone.NUMBER, contact.whatsapp)
-                            .build()
-                        
-                        cr.applyBatch(android.provider.ContactsContract.AUTHORITY, arrayListOf(phoneOps))
-                        added++
-                    }
-                }
-                Result.success(added)
-            } catch (e: Exception) {
-                Result.failure(e)
+            val contactId = cr.applyBatch(android.provider.ContactsContract.AUTHORITY, arrayListOf(contactOps))
+            
+            if (contactId.isNotEmpty()) {
+                val contactUri = contactId[0].uri
+                val phoneOps = android.content.ContentProviderOperation.newInsert(
+                    android.provider.ContactsContract.Data.CONTENT_URI
+                ).withValue(android.provider.ContactsContract.Data.RAW_CONTACT_ID, 
+                    android.content.ContentUris.parseId(contactUri!!))
+                    .withValue(android.provider.ContactsContract.Data.MIMETYPE, 
+                        android.provider.ContactsContract.CommonDataKinds.Phone.CONTENT_ITEM_TYPE)
+                    .withValue(android.provider.ContactsContract.CommonDataKinds.Phone.NUMBER, phoneNumber)
+                    .build()
+                
+                cr.applyBatch(android.provider.ContactsContract.AUTHORITY, arrayListOf(phoneOps))
+                Result.success(Unit)
+            } else {
+                Result.failure(Exception("Failed to create contact"))
             }
+        } catch (e: Exception) {
+            Result.failure(e)
         }
+    }
 }
