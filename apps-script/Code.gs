@@ -33,7 +33,7 @@ function doPost(e) {
     .setMimeType(ContentService.MimeType.JSON);
 }
 
-// GET /exec?limit=10            -> preview: first N data rows
+// GET /exec?limit=10            -> preview: first N data rows (omit limit for all rows)
 // GET /exec?action=history      -> history: total count + count of contacts added per day
 function doGet(e) {
   var action = (e && e.parameter && e.parameter.action) || 'preview';
@@ -43,9 +43,11 @@ function doGet(e) {
 
 function getPreview(e) {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-  var limit = parseInt((e.parameter && e.parameter.limit) || '10', 10);
-
   var lastRow = sheet.getLastRow();
+  var hasLimitParam = e.parameter && e.parameter.limit;
+  // No limit param -> return everything. Otherwise use the given limit.
+  var limit = hasLimitParam ? parseInt(e.parameter.limit, 10) : (lastRow - 1);
+
   var rowCount = Math.max(0, Math.min(limit, lastRow - 1)); // -1 to skip header
 
   var rows = [];
