@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/white">
+
+    <!-- Profile row: icon + phone number + WhatsApp chat icon -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:padding="20dp">
+
+        <ImageView
+            android:id="@+id/profileIcon"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:src="@drawable/ic_profile"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            app:tint="@color/vg_green" />
+
+        <TextView
+            android:id="@+id/phoneNumberText"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="12dp"
+            android:textSize="17sp"
+            android:textStyle="bold"
+            android:textColor="@color/vg_dark"
+            tools:text="0801 122 3344" />
+
+        <ImageView
+            android:id="@+id/chatIcon"
+            android:layout_width="26dp"
+            android:layout_height="26dp"
+            android:src="@drawable/ic_chat"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:padding="2dp"
+            app:tint="@color/vg_dark" />
+
+    </LinearLayout>
+
+    <!-- Synced-total stat card: fills the middle space with live data -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:paddingStart="20dp"
+        android:paddingEnd="20dp">
+
+        <LinearLayout
+            android:id="@+id/statsCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:background="@drawable/stats_card_background"
+            android:padding="20dp"
+            android:visibility="gone">
+
+            <ProgressBar
+                android:id="@+id/statsProgressBar"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+
+            <LinearLayout
+                android:id="@+id/statsContent"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/statsTotalText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textSize="30sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/vg_green"
+                    tools:text="41" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="@string/stats_total_label"
+                    android:textSize="10sp"
+                    android:textStyle="bold"
+                    android:textAllCaps="true"
+                    android:letterSpacing="0.05"
+                    android:textColor="@color/text_muted" />
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginTop="12dp"
+                    android:layout_marginBottom="10dp"
+                    android:background="@color/stats_card_border" />
+
+                <TextView
+                    android:id="@+id/statsTodayText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textSize="11sp"
+                    android:textColor="@color/text_muted"
+                    tools:text="6 added today" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <!-- Sync Kontact + Kontact History buttons -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="20dp">
+
+        <Button
+            android:id="@+id/syncKontactButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/btn_sync_kontact"
+            android:backgroundTint="@color/vg_green"
+            android:textColor="@color/white"
+            app:icon="@drawable/ic_sync"
+            app:iconTint="@color/white"
+            app:iconGravity="textStart"
+            app:cornerRadius="28dp" />
+
+        <Button
+            android:id="@+id/kontactHistoryButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="@string/menu_history"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            app:strokeColor="@color/vg_green"
+            android:textColor="@color/vg_green"
+            app:cornerRadius="28dp" />
+
+    </LinearLayout>
+
+</LinearLayout>
