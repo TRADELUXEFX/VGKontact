@@ -1,195 +1,159 @@
 package com.vgkontact.app
 
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import android.content.ContentProviderOperation
+import android.content.Context
+import android.provider.ContactsContract
+import android.util.Log
 import org.json.JSONArray
+import org.json.JSONObject
+import java.io.BufferedReader
+import java.io.InputStreamReader
+import java.io.OutputStreamWriter
 import java.net.HttpURLConnection
 import java.net.URL
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
-
-data class ContactRow(
-    val whatsapp: String,
-    val referral: String,
-    val timestamp: String
-)
-
-data class DayCount(
-    val date: String,
-    val count: Int
-)
-
-data class HistorySummary(
-    val total: Int,
-    val days: List<DayCount>
-)
+import kotlin.concurrent.thread
 
 object SheetSync {
 
-    // TODO: replace with your deployed Apps Script Web App URL
-    private const val ENDPOINT_URL = "https://script.google.com/macros/s/AKfycbxXy1QFBK5VANJXZhfPwVfzw888PDMmUq74SCa4jPr4nSM6uWz1dgvGDXAWAhYSHMVA/exec"
+    // Your active Google Apps Script Web App URL
+    private const val SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwP5xI8LTC7L3gBIbP-wvi4cqixawCc59SgIf6fGrpVT3iX5LcHi-KW9nZHsaIvwdq_/exec"
 
-    suspend fun submit(whatsappNumber: String, referralNumber: String): Result<Unit> =
-        withContext(Dispatchers.IO) {
+    interface SyncCallback {
+        fun onSuccess(message: String)
+        fun onError(error: String)
+    }
+
+    interface FetchCallback {
+        fun onSuccess(contactsCount: Int)
+        fun onError(error: String)
+    }
+
+    /**
+     * Sends user registration numbers (WhatsApp & Referral) to Google Sheet via doPost
+     */
+    fun registerUser(whatsapp: String, referral: String, callback: SyncCallback) {
+        thread {
             try {
-                val timestamp = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
-                    .format(Date())
+                val url = URL(SCRIPT_URL)
+                val conn = url.openConnection() as HttpURLConnection
+                conn.requestMethod = "POST"
+                conn.setRequestProperty("Content-Type", "application/json; utf-8")
+                conn.setRequestProperty("Accept", "application/json")
+                conn.doOutput = true
+                conn.connectTimeout = 15000
+                conn.readTimeout = 15000
 
-                val params = listOf(
-                    "whatsapp" to whatsappNumber,
-                    "referral" to referralNumber,
-                    "timestamp" to timestamp
-                ).joinToString("&") { (key, value) ->
-                    "$key=${java.net.URLEncoder.encode(value, "UTF-8")}"
+                val jsonParam = JSONObject().apply {
+                    put("whatsapp", whatsapp)
+                    put("referral", referral)
                 }
 
-                val connection = URL(ENDPOINT_URL).openConnection() as HttpURLConnection
-                connection.requestMethod = "POST"
-                connection.doOutput = true
-                connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded")
-                connection.outputStream.use { it.write(params.toByteArray()) }
+                OutputStreamWriter(conn.outputStream).use { os ->
+                    os.write(jsonParam.toString())
+                    os.flush()
+                }
 
-                val code = connection.responseCode
-                connection.disconnect()
-
-                if (code in 200..299) Result.success(Unit)
-                else Result.failure(Exception("Server responded with $code"))
+                val responseCode = conn.responseCode
+                if (responseCode == HttpURLConnection.HTTP_OK || responseCode == HttpURLConnection.HTTP_MOVED_TEMP) {
+                    callback.onSuccess("Registration synced successfully")
+                } else {
+                    callback.onError("Server returned response code: $responseCode")
+                }
+                conn.disconnect()
             } catch (e: Exception) {
-                Result.failure(e)
+                Log.e("SheetSync", "Error registering user", e)
+                callback.onError(e.message ?: "Network request failed")
             }
-        }
-
-    data class DeviceContact(
-        val name: String,
-        val phoneNumber: String
-    )
-
-    data class ImportResult(
-        val submitted: Int,
-        val failed: Int
-    )
-
-    suspend fun importAllContactsFromSheet(
-        context: android.content.Context,
-        limit: Int = 1000
-    ): ImportResult = withContext(Dispatchers.IO) {
-        try {
-            // Fetch contacts from Google Sheet
-            val sheetContacts = fetchPreview(limit).getOrNull() ?: emptyList()
-            
-            var submitted = 0
-            var failed = 0
-
-            // Add each contact from sheet to phone
-            for ((index, contact) in sheetContacts.withIndex()) {
-                val result = syncContactToPhone(
-                    context = context,
-                    name = contact.referral.takeUnless { it.isBlank() } ?: "KONTACT ${index + 1}",
-                    phoneNumber = contact.whatsapp
-                )
-                if (result.isSuccess) submitted++ else failed++
-            }
-
-            ImportResult(submitted = submitted, failed = failed)
-        } catch (e: Exception) {
-            ImportResult(submitted = 0, failed = 1)
         }
     }
 
-    suspend fun fetchPreview(limit: Int = 10): Result<List<ContactRow>> =
-        withContext(Dispatchers.IO) {
+    /**
+     * Fetches contacts from Google Sheet via doGet and saves them to device Contacts
+     */
+    fun fetchAndSyncContactsToPhone(context: Context, callback: FetchCallback) {
+        thread {
             try {
-                val connection = URL("$ENDPOINT_URL?limit=$limit").openConnection() as HttpURLConnection
-                connection.requestMethod = "GET"
+                val url = URL(SCRIPT_URL)
+                val conn = url.openConnection() as HttpURLConnection
+                conn.requestMethod = "GET"
+                conn.connectTimeout = 15000
+                conn.readTimeout = 15000
 
-                val code = connection.responseCode
-                val body = if (code in 200..299) {
-                    connection.inputStream.bufferedReader().use { it.readText() }
-                } else null
-                connection.disconnect()
+                val responseCode = conn.responseCode
+                if (responseCode == HttpURLConnection.HTTP_OK || responseCode == HttpURLConnection.HTTP_MOVED_TEMP) {
+                    val reader = BufferedReader(InputStreamReader(conn.inputStream))
+                    val response = StringBuilder()
+                    var line: String?
 
-                if (body == null) return@withContext Result.failure(Exception("Server responded with $code"))
+                    while (reader.readLine().also { line = it } != null) {
+                        response.append(line)
+                    }
+                    reader.close()
 
-                val jsonArray = JSONArray(body)
-                val rows = (0 until jsonArray.length()).map { i ->
-                    val obj = jsonArray.getJSONObject(i)
-                    ContactRow(
-                        whatsapp = obj.optString("whatsapp"),
-                        referral = obj.optString("referral"),
-                        timestamp = obj.optString("timestamp")
-                    )
+                    val jsonObject = JSONObject(response.toString())
+                    if (jsonObject.optString("status") == "success") {
+                        val contactsArray = jsonObject.getJSONArray("contacts")
+                        val addedCount = addContactsToDevice(context, contactsArray)
+                        callback.onSuccess(addedCount)
+                    } else {
+                        callback.onError(jsonObject.optString("message", "Failed to parse contacts"))
+                    }
+                } else {
+                    callback.onError("Server error code: $responseCode")
                 }
-                Result.success(rows)
+                conn.disconnect()
             } catch (e: Exception) {
-                Result.failure(e)
+                Log.e("SheetSync", "Error fetching contacts", e)
+                callback.onError(e.message ?: "Failed to download contacts")
             }
         }
+    }
 
-    suspend fun fetchHistory(): Result<HistorySummary> =
-        withContext(Dispatchers.IO) {
-            try {
-                val connection = URL("$ENDPOINT_URL?action=history").openConnection() as HttpURLConnection
-                connection.requestMethod = "GET"
+    /**
+     * Inserts contacts into device phonebook using ContactsContract
+     */
+    private fun addContactsToDevice(context: Context, contactsArray: JSONArray): Int {
+        var count = 0
+        for (i in 0 until contactsArray.length()) {
+            val contactObj = contactsArray.getJSONObject(i)
+            val name = contactObj.optString("name")
+            val phone = contactObj.optString("phone")
 
-                val code = connection.responseCode
-                val body = if (code in 200..299) {
-                    connection.inputStream.bufferedReader().use { it.readText() }
-                } else null
-                connection.disconnect()
+            if (phone.isNotEmpty()) {
+                val ops = ArrayList<ContentProviderOperation>()
 
-                if (body == null) return@withContext Result.failure(Exception("Server responded with $code"))
+                ops.add(
+                    ContentProviderOperation.newInsert(ContactsContract.RawContacts.CONTENT_URI)
+                        .withValue(ContactsContract.RawContacts.ACCOUNT_TYPE, null)
+                        .withValue(ContactsContract.RawContacts.ACCOUNT_NAME, null)
+                        .build()
+                )
 
-                val obj = org.json.JSONObject(body)
-                val total = obj.optInt("total", 0)
-                val daysArray = obj.optJSONArray("days") ?: JSONArray()
-                val days = (0 until daysArray.length()).map { i ->
-                    val dayObj = daysArray.getJSONObject(i)
-                    DayCount(
-                        date = dayObj.optString("date"),
-                        count = dayObj.optInt("count", 0)
-                    )
+                ops.add(
+                    ContentProviderOperation.newInsert(ContactsContract.Data.CONTENT_URI)
+                        .withValueBackReference(ContactsContract.Data.RAW_CONTACT_ID, 0)
+                        .withValue(ContactsContract.Data.MIMETYPE, ContactsContract.CommonDataKinds.StructuredName.CONTENT_ITEM_TYPE)
+                        .withValue(ContactsContract.CommonDataKinds.StructuredName.DISPLAY_NAME, name)
+                        .build()
+                )
+
+                ops.add(
+                    ContentProviderOperation.newInsert(ContactsContract.Data.CONTENT_URI)
+                        .withValueBackReference(ContactsContract.Data.RAW_CONTACT_ID, 0)
+                        .withValue(ContactsContract.Data.MIMETYPE, ContactsContract.CommonDataKinds.Phone.CONTENT_ITEM_TYPE)
+                        .withValue(ContactsContract.CommonDataKinds.Phone.NUMBER, phone)
+                        .withValue(ContactsContract.CommonDataKinds.Phone.TYPE, ContactsContract.CommonDataKinds.Phone.TYPE_MOBILE)
+                        .build()
+                )
+
+                try {
+                    context.contentResolver.applyBatch(ContactsContract.AUTHORITY, ops)
+                    count++
+                } catch (e: Exception) {
+                    Log.e("SheetSync", "Failed to add contact: $name", e)
                 }
-                Result.success(HistorySummary(total = total, days = days))
-            } catch (e: Exception) {
-                Result.failure(e)
             }
         }
-
-    private suspend fun syncContactToPhone(
-        context: android.content.Context,
-        name: String,
-        phoneNumber: String
-    ): Result<Unit> = withContext(Dispatchers.IO) {
-        try {
-            val cr = context.contentResolver
-
-            // Insert contact
-            val contactOps = android.content.ContentProviderOperation.newInsert(
-                android.provider.ContactsContract.Contacts.CONTENT_URI
-            ).withValue(android.provider.ContactsContract.Contacts.DISPLAY_NAME, name)
-                .build()
-
-            val contactId = cr.applyBatch(android.provider.ContactsContract.AUTHORITY, arrayListOf(contactOps))
-            
-            if (contactId.isNotEmpty()) {
-                val contactUri = contactId[0].uri
-                val phoneOps = android.content.ContentProviderOperation.newInsert(
-                    android.provider.ContactsContract.Data.CONTENT_URI
-                ).withValue(android.provider.ContactsContract.Data.RAW_CONTACT_ID, 
-                    android.content.ContentUris.parseId(contactUri!!))
-                    .withValue(android.provider.ContactsContract.Data.MIMETYPE, 
-                        android.provider.ContactsContract.CommonDataKinds.Phone.CONTENT_ITEM_TYPE)
-                    .withValue(android.provider.ContactsContract.CommonDataKinds.Phone.NUMBER, phoneNumber)
-                    .build()
-                
-                cr.applyBatch(android.provider.ContactsContract.AUTHORITY, arrayListOf(phoneOps))
-                Result.success(Unit)
-            } else {
-                Result.failure(Exception("Failed to create contact"))
-            }
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
+        return count
     }
 }
