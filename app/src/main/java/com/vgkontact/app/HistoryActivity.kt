@@ -36,7 +36,7 @@ class HistoryActivity : AppCompatActivity() {
                 progressBar.visibility = View.GONE
                 if (list != null) {
                     totalText.text = "Total Kontacts: ${if (list.isNotEmpty()) list[0].count else 0}"
-                    for (item in list) {
+                    for (item in list.drop(1)) {
                         val textView = TextView(this@HistoryActivity).apply {
                             text = "${item.date}: ${item.count}"
                             textSize = 16f
