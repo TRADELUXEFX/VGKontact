@@ -59,7 +59,10 @@ object SheetSync {
     fun fetchHistory(context: Context? = null, callback: ((List<DayCount>?, String?) -> Unit)? = null) {
         thread {
             try {
-                val url = URL(SCRIPT_URL)
+                // Code.gs's getHistory() (triggered by ?action=history) returns
+                // { total: <number>, days: [ { date, count }, ... ] } - NOT the
+                // { status, contacts } shape this used to assume.
+                val url = URL("$SCRIPT_URL?action=history")
                 val conn = url.openConnection() as HttpURLConnection
                 conn.requestMethod = "GET"
                 conn.connectTimeout = 15000
@@ -78,13 +81,18 @@ object SheetSync {
                     conn.disconnect()
 
                     val jsonObject = JSONObject(response.toString())
-                    if (jsonObject.optString("status") == "success") {
-                        val contactsArray = jsonObject.optJSONArray("contacts") ?: JSONArray()
-                        val historyList = listOf(DayCount("Total Contacts", contactsArray.length()))
-                        callback?.invoke(historyList, null)
-                    } else {
-                        callback?.invoke(null, jsonObject.optString("message", "Failed to fetch data"))
+                    val total = jsonObject.optInt("total", 0)
+                    val daysArray = jsonObject.optJSONArray("days") ?: JSONArray()
+
+                    // HistoryActivity expects list[0] to be the running total,
+                    // followed by one entry per day.
+                    val historyList = ArrayList<DayCount>()
+                    historyList.add(DayCount("Total Kontacts", total))
+                    for (i in 0 until daysArray.length()) {
+                        val dayObj = daysArray.getJSONObject(i)
+                        historyList.add(DayCount(dayObj.optString("date"), dayObj.optInt("count", 0)))
                     }
+                    callback?.invoke(historyList, null)
                 } else {
                     conn.disconnect()
                     callback?.invoke(null, "Server response error code: $responseCode")
@@ -102,7 +110,10 @@ object SheetSync {
             var failed = 0
             var contactCount = 0
             try {
-                val url = URL(SCRIPT_URL)
+                // Code.gs's getPreview() (the default GET) returns a plain JSON array:
+                // [ { whatsapp, referral, timestamp }, ... ] - not { status, contacts }.
+                // Request a large limit so this pulls everything, not just the first 10.
+                val url = URL("$SCRIPT_URL?limit=100000")
                 val conn = url.openConnection() as HttpURLConnection
                 conn.requestMethod = "GET"
                 conn.connectTimeout = 15000
@@ -120,24 +131,19 @@ object SheetSync {
                     reader.close()
                     conn.disconnect()
 
-                    val jsonObject = JSONObject(response.toString())
-                    if (jsonObject.optString("status") == "success") {
-                        val contactsArray = jsonObject.optJSONArray("contacts") ?: JSONArray()
-                        for (i in 0 until contactsArray.length()) {
-                            val contactObj = contactsArray.getJSONObject(i)
-                            val phone = contactObj.optString("phone")
+                    val contactsArray = JSONArray(response.toString())
+                    for (i in 0 until contactsArray.length()) {
+                        val contactObj = contactsArray.getJSONObject(i)
+                        val phone = contactObj.optString("whatsapp")
 
-                            contactCount++
-                            val contactName = "VG KONTACT $contactCount"
+                        contactCount++
+                        val contactName = "VG KONTACT $contactCount"
 
-                            if (addSingleContact(context, contactName, phone)) {
-                                submitted++
-                            } else {
-                                failed++
-                            }
+                        if (addSingleContact(context, contactName, phone)) {
+                            submitted++
+                        } else {
+                            failed++
                         }
-                    } else {
-                        failed++
                     }
                 } else {
                     conn.disconnect()
