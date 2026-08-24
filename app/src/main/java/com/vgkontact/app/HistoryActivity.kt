@@ -1,6 +1,5 @@
 package com.vgkontact.app
 
-import android.content.Intent
 import android.os.Bundle
 import android.view.View
 import android.widget.ImageButton
@@ -12,38 +11,38 @@ import androidx.appcompat.app.AppCompatActivity
 
 class HistoryActivity : AppCompatActivity() {
 
-    private lateinit var btnBack: ImageButton
-    private lateinit var progressBar: ProgressBar
-    private lateinit var historyContainer: LinearLayout
+    private var btnBack: View? = null
+    private var progressBar: ProgressBar? = null
+    private var historyContainer: LinearLayout? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_history)
 
-        btnBack = findViewById(R.id.btnBack)
-        progressBar = findViewById(R.id.progressBar)
-        historyContainer = findViewById(R.id.historyContainer)
+        btnBack = findViewById(R.id.btnBack) ?: findViewById(R.id.btn_back)
+        progressBar = findViewById(R.id.progressBar) ?: findViewById(R.id.progress_bar)
+        historyContainer = findViewById(R.id.historyContainer) ?: findViewById(R.id.history_container)
 
-        btnBack.setOnClickListener { finish() }
+        btnBack?.setOnClickListener { finish() }
 
         loadHistory()
     }
 
     private fun loadHistory() {
-        progressBar.visibility = View.VISIBLE
-        historyContainer.removeAllViews()
+        progressBar?.visibility = View.VISIBLE
+        historyContainer?.removeAllViews()
 
         SheetSync.fetchHistory(this) { list, error ->
             runOnUiThread {
-                progressBar.visibility = View.GONE
+                progressBar?.visibility = View.GONE
                 if (list != null) {
                     for (item in list) {
-                        val rowView = layoutInflater.inflate(R.layout.activity_history, historyContainer, false)
-                        val tvDate = rowView.findViewById<TextView>(R.id.tvDate)
-                        val tvCount = rowView.findViewById<TextView>(R.id.tvCount)
-                        tvDate?.text = item.date
-                        tvCount?.text = item.count.toString()
-                        historyContainer.addView(rowView)
+                        val textView = TextView(this@HistoryActivity).apply {
+                            text = "${item.date}: ${item.count}"
+                            textSize = 16f
+                            setPadding(16, 16, 16, 16)
+                        }
+                        historyContainer?.addView(textView)
                     }
                 } else {
                     Toast.makeText(this@HistoryActivity, error ?: "Failed to fetch history", Toast.LENGTH_SHORT).show()
