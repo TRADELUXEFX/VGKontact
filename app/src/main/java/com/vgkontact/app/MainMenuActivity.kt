@@ -6,7 +6,6 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
-import android.provider.ContactsContract
 import android.view.Gravity
 import android.view.View
 import android.widget.LinearLayout
@@ -29,11 +28,11 @@ class MainMenuActivity : AppCompatActivity() {
         ActivityResultContracts.RequestPermission()
     ) { granted ->
         if (granted) {
-            runImportAllContacts()
+            runImportContactsFromSheet()
         } else {
             AlertDialog.Builder(this)
                 .setTitle("Permission needed")
-                .setMessage("VGKontact needs access to your contacts to import them. You can allow this from your phone's app settings.")
+                .setMessage("VGKontact needs access to your contacts to import them from Google Sheet. You can allow this from your phone's app settings.")
                 .setPositiveButton("OK", null)
                 .show()
         }
@@ -55,6 +54,7 @@ class MainMenuActivity : AppCompatActivity() {
             startActivity(intent)
         }
 
+        // Fixed: Changed button action to import from sheet to phone
         binding.syncKontactButton.setOnClickListener {
             requestContactsPermissionAndImport()
         }
@@ -108,38 +108,38 @@ class MainMenuActivity : AppCompatActivity() {
 
     private fun requestContactsPermissionAndImport() {
         val alreadyGranted = ContextCompat.checkSelfPermission(
-            this, Manifest.permission.READ_CONTACTS
+            this, Manifest.permission.WRITE_CONTACTS
         ) == PackageManager.PERMISSION_GRANTED
 
         if (alreadyGranted) {
-            runImportAllContacts()
+            runImportContactsFromSheet()
         } else {
-            contactsPermissionLauncher.launch(Manifest.permission.READ_CONTACTS)
+            contactsPermissionLauncher.launch(Manifest.permission.WRITE_CONTACTS)
         }
     }
 
-    private fun runImportAllContacts() {
+    private fun runImportContactsFromSheet() {
         val progressDialog = AlertDialog.Builder(this)
             .setView(buildImportProgressView())
             .setCancelable(false)
             .show()
 
         lifecycleScope.launch {
-            val contacts = readDeviceContacts()
-            val result = SheetSync.importAllContacts(contacts, this@MainMenuActivity)
+            // Fixed: Changed to import from Sheet to Phone instead of Phone to Sheet
+            val result = SheetSync.importAllContactsFromSheet(this@MainMenuActivity)
             progressDialog.dismiss()
 
             val message = when {
-                contacts.isEmpty() ->
-                    "No contacts with phone numbers were found on this device."
+                result.submitted == 0 && result.failed == 0 ->
+                    "No contacts found in your Google Sheet."
                 result.failed == 0 ->
-                    "Imported ${result.submitted} contact${if (result.submitted == 1) "" else "s"} successfully."
+                    "Imported ${result.submitted} contact${if (result.submitted == 1) "" else "s"} from Google Sheet to your phone successfully."
                 else ->
                     "Imported ${result.submitted} contact${if (result.submitted == 1) "" else "s"}. ${result.failed} could not be saved — check your connection and try again."
             }
 
             AlertDialog.Builder(this@MainMenuActivity)
-                .setTitle("Import all Contacts")
+                .setTitle("Import Contacts from Google Sheet")
                 .setMessage(message)
                 .setPositiveButton("OK", null)
                 .show()
@@ -155,48 +155,10 @@ class MainMenuActivity : AppCompatActivity() {
         }
         container.addView(ProgressBar(this))
         container.addView(TextView(this).apply {
-            text = "Importing your contacts…"
+            text = "Importing contacts from Google Sheet…"
             setPadding(0, (16 * density).toInt(), 0, 0)
         })
         return container
-    }
-
-    private fun readDeviceContacts(): List<SheetSync.DeviceContact> {
-        val contacts = mutableListOf<SheetSync.DeviceContact>()
-        val seenNumbers = mutableSetOf<String>()
-
-        val cursor = contentResolver.query(
-            ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
-            arrayOf(
-                ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME,
-                ContactsContract.CommonDataKinds.Phone.NUMBER
-            ),
-            null,
-            null,
-            null
-        )
-
-        cursor?.use {
-            val nameIndex = it.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME)
-            val numberIndex = it.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)
-
-            while (it.moveToNext()) {
-                val name = if (nameIndex >= 0) it.getString(nameIndex) else null
-                val rawNumber = if (numberIndex >= 0) it.getString(numberIndex) else null
-                val number = rawNumber?.filter { c -> c.isDigit() || c == '+' }
-
-                if (!number.isNullOrBlank() && seenNumbers.add(number)) {
-                    contacts.add(
-                        SheetSync.DeviceContact(
-                            name = name?.takeUnless { n -> n.isBlank() } ?: "Unknown",
-                            phoneNumber = number
-                        )
-                    )
-                }
-            }
-        }
-
-        return contacts
     }
 
     override fun onResume() {
@@ -205,4 +167,3 @@ class MainMenuActivity : AppCompatActivity() {
         loadStats()
     }
 }
-
