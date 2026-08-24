@@ -13,9 +13,10 @@ import java.net.HttpURLConnection
 import java.net.URL
 import kotlin.concurrent.thread
 
+data class DayCount(val date: String, val count: Int)
+
 object SheetSync {
 
-    // Your active Google Apps Script Web App URL
     private const val SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwP5xI8LTC7L3gBIbP-wvi4cqixawCc59SgIf6fGrpVT3iX5LcHi-KW9nZHsaIvwdq_/exec"
 
     interface SyncCallback {
@@ -28,9 +29,24 @@ object SheetSync {
         fun onError(error: String)
     }
 
-    /**
-     * Sends user registration numbers (WhatsApp & Referral) to Google Sheet via doPost
-     */
+    interface HistoryCallback {
+        fun onSuccess(history: List<DayCount>)
+        fun onError(error: String)
+    }
+
+    // Submission method called by OnboardingActivity
+    fun submit(context: Context, whatsapp: String, referral: String, callback: (Boolean, String?) -> Unit) {
+        registerUser(whatsapp, referral, object : SyncCallback {
+            override fun onSuccess(message: String) {
+                callback(true, message)
+            }
+            override fun onError(error: String) {
+                callback(false, error)
+            }
+        })
+    }
+
+    // Method called by OnboardingActivity & SheetSync
     fun registerUser(whatsapp: String, referral: String, callback: SyncCallback) {
         thread {
             try {
@@ -67,9 +83,66 @@ object SheetSync {
         }
     }
 
-    /**
-     * Fetches contacts from Google Sheet via doGet and saves them to device Contacts
-     */
+    // Method called by MainMenuActivity
+    fun importAllContactsFromSheet(context: Context, callback: (Boolean, String?) -> Unit) {
+        fetchAndSyncContactsToPhone(context, object : FetchCallback {
+            override fun onSuccess(contactsCount: Int) {
+                callback(true, "Synced $contactsCount contacts successfully")
+            }
+            override fun onError(error: String) {
+                callback(false, error)
+            }
+        })
+    }
+
+    // Fetch method called by MainMenuActivity & HistoryActivity
+    fun fetchHistory(context: Context, callback: (List<DayCount>?, String?) -> Unit) {
+        thread {
+            try {
+                val url = URL(SCRIPT_URL)
+                val conn = url.openConnection() as HttpURLConnection
+                conn.requestMethod = "GET"
+                conn.connectTimeout = 15000
+                conn.readTimeout = 15000
+
+                val responseCode = conn.responseCode
+                if (responseCode == HttpURLConnection.HTTP_OK || responseCode == HttpURLConnection.HTTP_MOVED_TEMP) {
+                    val reader = BufferedReader(InputStreamReader(conn.inputStream))
+                    val response = StringBuilder()
+                    var line: String?
+
+                    while (reader.readLine().also { line = it } != null) {
+                        response.append(line)
+                    }
+                    reader.close()
+
+                    val jsonObject = JSONObject(response.toString())
+                    if (jsonObject.optString("status") == "success") {
+                        val contactsArray = jsonObject.optJSONArray("contacts") ?: JSONArray()
+                        val dayCountMap = mutableMapOf<String, Int>()
+
+                        for (i in 0 until contactsArray.length()) {
+                            val key = "Today"
+                            dayCountMap[key] = (dayCountMap[key] ?: 0) + 1
+                        }
+
+                        val historyList = dayCountMap.map { DayCount(it.key, it.value) }
+                        callback(historyList, null)
+                    } else {
+                        callback(null, jsonObject.optString("message", "Failed to parse history"))
+                    }
+                } else {
+                    callback(null, "Server error code: $responseCode")
+                }
+                conn.disconnect()
+            } catch (e: Exception) {
+                Log.e("SheetSync", "Error fetching history", e)
+                callback(null, e.message ?: "Failed to fetch history")
+            }
+        }
+    }
+
+    // Base method to import contacts directly to device contact book
     fun fetchAndSyncContactsToPhone(context: Context, callback: FetchCallback) {
         thread {
             try {
@@ -92,7 +165,7 @@ object SheetSync {
 
                     val jsonObject = JSONObject(response.toString())
                     if (jsonObject.optString("status") == "success") {
-                        val contactsArray = jsonObject.getJSONArray("contacts")
+                        val contactsArray = jsonObject.optJSONArray("contacts") ?: JSONArray()
                         val addedCount = addContactsToDevice(context, contactsArray)
                         callback.onSuccess(addedCount)
                     } else {
@@ -109,9 +182,6 @@ object SheetSync {
         }
     }
 
-    /**
-     * Inserts contacts into device phonebook using ContactsContract
-     */
     private fun addContactsToDevice(context: Context, contactsArray: JSONArray): Int {
         var count = 0
         for (i in 0 until contactsArray.length()) {
