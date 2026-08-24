@@ -23,98 +23,128 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/title_onboarding"
-            android:textSize="24sp"
+            android:textSize="28sp"
             android:textStyle="bold"
-            android:textColor="@color/white" />
+            android:textColor="@color/white"
+            android:fontFamily="@font/roboto_bold" />
 
     </LinearLayout>
 
-    <!-- Flat white body, no card/container -->
+    <!-- ScrollView for form content -->
     <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
         android:background="@color/white">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="24dp">
+            android:paddingStart="24dp"
+            android:paddingEnd="24dp"
+            android:paddingTop="32dp"
+            android:paddingBottom="24dp">
 
+            <!-- WhatsApp Number Input -->
             <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/whatsappLayout"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:hint="@string/hint_whatsapp"
+                android:textColorHint="@color/text_muted"
+                app:hintTextColor="@color/vg_green"
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/whatsappInput"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
+                    android:layout_height="56dp"
                     android:inputType="phone"
-                    android:maxLength="11" />
+                    android:maxLength="11"
+                    android:textSize="16sp"
+                    android:textColor="@color/vg_dark"
+                    android:textColorHint="@color/text_muted"
+                    android:fontFamily="@font/roboto_medium"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp" />
 
             </com.google.android.material.textfield.TextInputLayout>
 
+            <!-- Referral Number Input -->
             <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/referralLayout"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
+                android:layout_marginTop="24dp"
                 android:hint="@string/hint_referral"
+                android:textColorHint="@color/text_muted"
+                app:hintTextColor="@color/vg_green"
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/referralInput"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
+                    android:layout_height="56dp"
                     android:inputType="phone"
-                    android:maxLength="11" />
+                    android:maxLength="11"
+                    android:textSize="16sp"
+                    android:textColor="@color/vg_dark"
+                    android:textColorHint="@color/text_muted"
+                    android:fontFamily="@font/roboto_medium"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp" />
 
             </com.google.android.material.textfield.TextInputLayout>
 
-            <FrameLayout
-                android:layout_width="match_parent"
+            <!-- Pick from Contacts Button -->
+            <Button
+                android:id="@+id/pickContactButton"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp">
-
-                <Button
-                    android:id="@+id/pickContactButton"
-                    style="@style/Widget.MaterialComponents.Button.TextButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/btn_pick_contact"
-                    android:layout_gravity="center" />
-
-            </FrameLayout>
-
-            <FrameLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="24dp">
-
-                <Button
-                    android:id="@+id/continueButton"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/btn_continue"
-                    android:backgroundTint="@color/vg_green"
-                    android:textColor="@color/white"
-                    app:cornerRadius="28dp" />
-
-                <ProgressBar
-                    android:id="@+id/progressBar"
-                    android:layout_width="22dp"
-                    android:layout_height="22dp"
-                    android:layout_gravity="center"
-                    android:indeterminateTint="@color/white"
-                    android:visibility="gone" />
-
-            </FrameLayout>
+                android:layout_marginTop="20dp"
+                android:layout_gravity="center"
+                android:text="@string/btn_pick_contact"
+                android:textColor="@color/vg_green"
+                android:textSize="14sp"
+                android:fontFamily="@font/roboto_medium" />
 
         </LinearLayout>
 
     </ScrollView>
+
+    <!-- Continue Button at bottom -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="24dp"
+        android:background="@color/white">
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="56dp">
+
+            <Button
+                android:id="@+id/continueButton"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:text="@string/btn_continue"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:backgroundTint="@color/vg_green"
+                android:textColor="@color/white"
+                android:fontFamily="@font/roboto_bold"
+                app:cornerRadius="28dp" />
+
+            <ProgressBar
+                android:id="@+id/progressBar"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:layout_gravity="center"
+                android:indeterminateTint="@color/white"
+                android:visibility="gone" />
+
+        </FrameLayout>
+
+    </LinearLayout>
 
 </LinearLayout>
