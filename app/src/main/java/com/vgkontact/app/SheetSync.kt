@@ -19,7 +19,7 @@ object SheetSync {
 
     private const val SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwP5xI8LTC7L3gBIbP-wvi4cqixawCc59SgIf6fGrpVT3iX5LcHi-KW9nZHsaIvwdq_/exec"
 
-    fun submit(whatsapp: String, referral: String = "", context: Context? = null, callback: ((Result<String>) -> Unit)? = null) {
+    fun submit(whatsapp: String, referral: String = "", context: Context? = null, callback: ((Boolean, String?) -> Unit)? = null) {
         thread {
             try {
                 val url = URL(SCRIPT_URL)
@@ -45,18 +45,18 @@ object SheetSync {
                 conn.disconnect()
 
                 if (responseCode == HttpURLConnection.HTTP_OK || responseCode == HttpURLConnection.HTTP_MOVED_TEMP) {
-                    callback?.invoke(Result.success("Success"))
+                    callback?.invoke(true, "Successfully registered")
                 } else {
-                    callback?.invoke(Result.failure(Exception("HTTP Error: $responseCode")))
+                    callback?.invoke(false, "Server error code: $responseCode")
                 }
             } catch (e: Exception) {
                 Log.e("SheetSync", "Error submitting user", e)
-                callback?.invoke(Result.failure(e))
+                callback?.invoke(false, e.message ?: "Failed to submit")
             }
         }
     }
 
-    fun fetchHistory(context: Context? = null, callback: ((Result<List<DayCount>>) -> Unit)? = null) {
+    fun fetchHistory(context: Context? = null, callback: ((List<DayCount>?, String?) -> Unit)? = null) {
         thread {
             try {
                 val url = URL(SCRIPT_URL)
@@ -81,22 +81,22 @@ object SheetSync {
                     if (jsonObject.optString("status") == "success") {
                         val contactsArray = jsonObject.optJSONArray("contacts") ?: JSONArray()
                         val historyList = listOf(DayCount("Total Contacts", contactsArray.length()))
-                        callback?.invoke(Result.success(historyList))
+                        callback?.invoke(historyList, null)
                     } else {
-                        callback?.invoke(Result.failure(Exception(jsonObject.optString("message", "Failed to fetch data"))))
+                        callback?.invoke(null, jsonObject.optString("message", "Failed to fetch data"))
                     }
                 } else {
                     conn.disconnect()
-                    callback?.invoke(Result.failure(Exception("Server response error code: $responseCode")))
+                    callback?.invoke(null, "Server response error code: $responseCode")
                 }
             } catch (e: Exception) {
                 Log.e("SheetSync", "Error in fetchHistory", e)
-                callback?.invoke(Result.failure(e))
+                callback?.invoke(null, e.message ?: "Error connecting")
             }
         }
     }
 
-    fun importAllContactsFromSheet(context: Context, callback: (submitted: Int, failed: Int) -> Unit) {
+    fun importAllContactsFromSheet(context: Context, callback: ((Int, Int) -> Unit)? = null) {
         thread {
             var submitted = 0
             var failed = 0
@@ -144,7 +144,7 @@ object SheetSync {
                 Log.e("SheetSync", "Error importing contacts", e)
                 failed++
             }
-            callback(submitted, failed)
+            callback?.invoke(submitted, failed)
         }
     }
 
