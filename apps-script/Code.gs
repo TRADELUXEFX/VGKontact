@@ -10,9 +10,21 @@
 function doPost(e) {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
 
-  var whatsapp = e.parameter.whatsapp || '';
-  var referral = e.parameter.referral || '';
-  var timestamp = e.parameter.timestamp || new Date().toISOString();
+  // The Android app sends a raw JSON body (Content-Type: application/json),
+  // so the data arrives in e.postData.contents, NOT e.parameter (that's only
+  // populated for form-encoded or multipart bodies).
+  var data = {};
+  if (e && e.postData && e.postData.contents) {
+    try {
+      data = JSON.parse(e.postData.contents);
+    } catch (err) {
+      data = {};
+    }
+  }
+  // Fall back to e.parameter too, in case something posts form-encoded instead.
+  var whatsapp = data.whatsapp || (e.parameter && e.parameter.whatsapp) || '';
+  var referral = data.referral || (e.parameter && e.parameter.referral) || '';
+  var timestamp = data.timestamp || (e.parameter && e.parameter.timestamp) || new Date().toISOString();
 
   sheet.appendRow([whatsapp, referral, timestamp]);
 
