@@ -146,7 +146,7 @@ object SheetSync {
             }
         }
 
-suspend fun syncContactsToPhone(context: android.content.Context, contacts: List<ContactRow>): Result<Int> =
+    suspend fun syncContactsToPhone(context: android.content.Context, contacts: List<ContactRow>): Result<Int> =
         withContext(Dispatchers.IO) {
             try {
                 val cr = context.contentResolver
@@ -166,7 +166,7 @@ suspend fun syncContactsToPhone(context: android.content.Context, contacts: List
                         val phoneOps = android.content.ContentProviderOperation.newInsert(
                             android.provider.ContactsContract.Data.CONTENT_URI
                         ).withValue(android.provider.ContactsContract.Data.RAW_CONTACT_ID, 
-                            android.content.ContentUris.parseId(contactUri))
+                            android.content.ContentUris.parseId(contactUri!!))
                             .withValue(android.provider.ContactsContract.Data.MIMETYPE, 
                                 android.provider.ContactsContract.CommonDataKinds.Phone.CONTENT_ITEM_TYPE)
                             .withValue(android.provider.ContactsContract.CommonDataKinds.Phone.NUMBER, contact.whatsapp)
@@ -181,3 +181,4 @@ suspend fun syncContactsToPhone(context: android.content.Context, contacts: List
                 Result.failure(e)
             }
         }
+}
