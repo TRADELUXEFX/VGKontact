@@ -53,8 +53,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:inputType="phone"
-                    android:maxLength="13"
-                    android:hint="0810 870 9629" />
+                    android:maxLength="13" />
 
             </com.google.android.material.textfield.TextInputLayout>
 
@@ -71,18 +70,24 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:inputType="phone"
-                    android:maxLength="13"
-                    android:hint="0805 555 1234" />
+                    android:maxLength="13" />
 
             </com.google.android.material.textfield.TextInputLayout>
 
-            <Button
-                android:id="@+id/pickContactButton"
-                style="@style/Widget.MaterialComponents.Button.TextButton"
-                android:layout_width="wrap_content"
+            <FrameLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:text="@string/btn_pick_contact" />
+                android:layout_marginTop="4dp">
+
+                <Button
+                    android:id="@+id/pickContactButton"
+                    style="@style/Widget.MaterialComponents.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/btn_pick_contact"
+                    android:layout_gravity="center" />
+
+            </FrameLayout>
 
             <FrameLayout
                 android:layout_width="match_parent"
