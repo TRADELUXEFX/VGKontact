@@ -126,7 +126,7 @@ class MainMenuActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             val contacts = readDeviceContacts()
-            val result = SheetSync.importAllContacts(this@MainMenuActivity, contacts)
+            val result = SheetSync.importAllContacts(contacts, this@MainMenuActivity)
             progressDialog.dismiss()
 
             val message = when {
@@ -205,3 +205,4 @@ class MainMenuActivity : AppCompatActivity() {
         loadStats()
     }
 }
+
