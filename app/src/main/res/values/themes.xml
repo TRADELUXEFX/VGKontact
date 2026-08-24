@@ -1,12 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <style name="Theme.VGKontact" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <!-- Primary Brand Colors -->
         <item name="colorPrimary">#25D366</item>
         <item name="colorPrimaryVariant">#128C7E</item>
         <item name="colorOnPrimary">#FFFFFF</item>
+
+        <!-- Force Light Backgrounds and Text -->
         <item name="android:windowBackground">#FFFFFF</item>
         <item name="android:textColorPrimary">#000000</item>
         <item name="android:textColorSecondary">#555555</item>
+
+        <!-- Disable Force Dark Mode Engine -->
         <item name="android:forceDarkAllowed">false</item>
+    </style>
+
+    <!-- Missing Divider Style -->
+    <style name="MenuDivider">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">1dp</item>
+        <item name="android:background">#E0E0E0</item>
     </style>
 </resources>
