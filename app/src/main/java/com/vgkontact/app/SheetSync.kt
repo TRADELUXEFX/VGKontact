@@ -72,8 +72,8 @@ object SheetSync {
     )
 
     suspend fun importAllContacts(
-        context: android.content.Context,
-        contacts: List<DeviceContact>
+        contacts: List<DeviceContact>,
+        context: android.content.Context
     ): ImportResult = withContext(Dispatchers.IO) {
         var submitted = 0
         var failed = 0
