@@ -92,18 +92,6 @@
 
             </com.google.android.material.textfield.TextInputLayout>
 
-            <!-- Pick from Contacts Button -->
-            <Button
-                android:id="@+id/pickContactButton"
-                style="@style/Widget.MaterialComponents.Button.TextButton"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="20dp"
-                android:layout_gravity="center"
-                android:text="@string/btn_pick_contact"
-                android:textColor="@color/vg_green"
-                android:textSize="14sp" />
-
         </LinearLayout>
 
     </ScrollView>
