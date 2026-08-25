@@ -29,10 +29,11 @@ object NotificationHelper {
 
         val message = if (submitted == 0 && failed == 0) {
             "No new numbers"
-        } else if (failed == 0) {
-            "Successfully synced $submitted kontacts"
+        } else if (submitted > 0 && failed == 0) {
+            val label = if (submitted == 1) "number" else "numbers"
+            "$submitted new $label added"
         } else {
-            "Synced $submitted kontacts, $failed failed"
+            "$submitted new added, $failed failed"
         }
 
         val builder = NotificationCompat.Builder(context, CHANNEL_ID)
