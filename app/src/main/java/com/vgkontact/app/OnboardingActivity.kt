@@ -48,12 +48,14 @@ class OnboardingActivity : AppCompatActivity() {
             }
 
             continueButton.isEnabled = false
+            continueButton.text = ""
             progressBar.visibility = android.view.View.VISIBLE
 
             SheetSync.submit(whatsapp, referral, this) { success, message ->
                 runOnUiThread {
                     progressBar.visibility = android.view.View.GONE
                     continueButton.isEnabled = true
+                    continueButton.text = getString(R.string.btn_continue)
                     if (success) {
                         UserPrefs.saveUser(this, whatsapp, referral)
                         startActivity(Intent(this, MainMenuActivity::class.java))
