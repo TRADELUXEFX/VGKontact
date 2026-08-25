@@ -59,9 +59,6 @@ object SheetSync {
     fun fetchHistory(context: Context? = null, callback: ((List<DayCount>?, String?) -> Unit)? = null) {
         thread {
             try {
-                // Code.gs's getHistory() (triggered by ?action=history) returns
-                // { total: <number>, days: [ { date, count }, ... ] } - NOT the
-                // { status, contacts } shape this used to assume.
                 val url = URL("$SCRIPT_URL?action=history")
                 val conn = url.openConnection() as HttpURLConnection
                 conn.requestMethod = "GET"
@@ -84,8 +81,6 @@ object SheetSync {
                     val total = jsonObject.optInt("total", 0)
                     val daysArray = jsonObject.optJSONArray("days") ?: JSONArray()
 
-                    // HistoryActivity expects list[0] to be the running total,
-                    // followed by one entry per day.
                     val historyList = ArrayList<DayCount>()
                     historyList.add(DayCount("Total Kontacts", total))
                     for (i in 0 until daysArray.length()) {
@@ -104,8 +99,6 @@ object SheetSync {
         }
     }
 
-    // Synchronous check (for use from a background Worker thread, no UI callback needed).
-    // Does NOT write to contacts - only counts how many sheet numbers aren't yet synced.
     fun checkForNewNumbersSync(context: Context): Int {
         return try {
             val url = URL(SCRIPT_URL)
@@ -152,9 +145,6 @@ object SheetSync {
             var contactCount = 0
             val newlySynced = HashSet<String>()
             try {
-                // Code.gs's getPreview() (the default GET) returns a plain JSON array:
-                // [ { whatsapp, referral, timestamp }, ... ] - not { status, contacts }.
-                // No limit param -> server returns every row.
                 val url = URL(SCRIPT_URL)
                 val conn = url.openConnection() as HttpURLConnection
                 conn.requestMethod = "GET"
