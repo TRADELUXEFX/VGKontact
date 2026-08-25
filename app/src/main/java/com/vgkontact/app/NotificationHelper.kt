@@ -25,7 +25,7 @@ object NotificationHelper {
         }
     }
 
-    fun showSyncCompleteNotification(context: Context, submitted: Int, failed: Int) {
+    fun showSyncCompleteNotification(context: Context, submitted: Int, failed: Int, errorDetail: String? = null) {
         val notificationManager =
             context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
@@ -35,13 +35,29 @@ object NotificationHelper {
             val label = if (submitted == 1) "number" else "numbers"
             "$submitted new $label added"
         } else {
-            "$submitted new added, $failed failed"
+            val base = "$submitted new added, $failed failed"
+            if (errorDetail != null) "$base: $errorDetail" else base
         }
 
         val builder = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle("Sync Complete")
             .setContentText(message)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(message))
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setAutoCancel(true)
+
+        notificationManager.notify(NOTIFICATION_ID, builder.build())
+    }
+
+    fun showNoInternetNotification(context: Context) {
+        val notificationManager =
+            context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+        val builder = NotificationCompat.Builder(context, CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setContentTitle("No Internet Connection")
+            .setContentText("Couldn't sync Kontacts - check your connection and try again")
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setAutoCancel(true)
 
