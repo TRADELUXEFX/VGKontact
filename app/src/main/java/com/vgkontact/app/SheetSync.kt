@@ -104,6 +104,47 @@ object SheetSync {
         }
     }
 
+    // Synchronous check (for use from a background Worker thread, no UI callback needed).
+    // Does NOT write to contacts - only counts how many sheet numbers aren't yet synced.
+    fun checkForNewNumbersSync(context: Context): Int {
+        return try {
+            val url = URL(SCRIPT_URL)
+            val conn = url.openConnection() as HttpURLConnection
+            conn.requestMethod = "GET"
+            conn.connectTimeout = 15000
+            conn.readTimeout = 15000
+
+            val responseCode = conn.responseCode
+            if (responseCode == HttpURLConnection.HTTP_OK || responseCode == HttpURLConnection.HTTP_MOVED_TEMP) {
+                val reader = BufferedReader(InputStreamReader(conn.inputStream))
+                val response = StringBuilder()
+                var line: String?
+                while (reader.readLine().also { line = it } != null) {
+                    response.append(line)
+                }
+                reader.close()
+                conn.disconnect()
+
+                val alreadySynced = UserPrefs.getSyncedNumbers(context)
+                val contactsArray = JSONArray(response.toString())
+                var newCount = 0
+                for (i in 0 until contactsArray.length()) {
+                    val phone = contactsArray.getJSONObject(i).optString("whatsapp")
+                    if (phone.isNotEmpty() && !alreadySynced.contains(phone)) {
+                        newCount++
+                    }
+                }
+                newCount
+            } else {
+                conn.disconnect()
+                0
+            }
+        } catch (e: Exception) {
+            Log.e("SheetSync", "Error checking for new numbers", e)
+            0
+        }
+    }
+
     fun importAllContactsFromSheet(context: Context, callback: ((Int, Int) -> Unit)? = null) {
         thread {
             var submitted = 0
