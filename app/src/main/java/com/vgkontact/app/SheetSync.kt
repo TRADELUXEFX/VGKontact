@@ -175,6 +175,47 @@ object SheetSync {
         }
     }
 
+    // Fetches the user's plan from Supabase "contacts" table (column: plan).
+    // Falls back to null (caller defaults to "FREE") on any failure.
+    fun fetchPlan(context: Context, callback: (String?) -> Unit) {
+        thread {
+            try {
+                val whatsapp = UserPrefs.getWhatsapp(context)
+                if (whatsapp.isNullOrEmpty()) {
+                    callback(null)
+                    return@thread
+                }
+                val encoded = java.net.URLEncoder.encode(whatsapp, "UTF-8")
+                val conn = openConnection("contacts?whatsapp=eq.$encoded&select=plan", "GET")
+                val responseCode = conn.responseCode
+                if (responseCode in 200..299) {
+                    val reader = BufferedReader(InputStreamReader(conn.inputStream))
+                    val response = StringBuilder()
+                    var line: String?
+                    while (reader.readLine().also { line = it } != null) {
+                        response.append(line)
+                    }
+                    reader.close()
+                    conn.disconnect()
+
+                    val arr = JSONArray(response.toString())
+                    if (arr.length() > 0) {
+                        val plan = arr.getJSONObject(0).optString("plan", "FREE")
+                        callback(if (plan.isEmpty()) "FREE" else plan)
+                    } else {
+                        callback(null)
+                    }
+                } else {
+                    conn.disconnect()
+                    callback(null)
+                }
+            } catch (e: Exception) {
+                Log.w("SheetSync", "fetchPlan failed", e)
+                callback(null)
+            }
+        }
+    }
+
     private fun fetchAllContacts(): List<Pair<String, String>>? {
         for (attempt in 0 until MAX_RETRIES) {
             try {
