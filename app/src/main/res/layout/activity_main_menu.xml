@@ -42,10 +42,10 @@
             tools:text="0801 122 3344" />
 
         <ImageView
-            android:id="@+id/chatIcon"
+            android:id="@+id/notificationIcon"
             android:layout_width="26dp"
             android:layout_height="26dp"
-            android:src="@drawable/ic_chat"
+            android:src="@drawable/ic_notification_bell"
             android:clickable="true"
             android:focusable="true"
             android:background="?attr/selectableItemBackgroundBorderless"
@@ -129,7 +129,7 @@
 
     </LinearLayout>
 
-    <!-- Sync Kontact + Kontact History buttons -->
+    <!-- Sync Kontact + Kontact History + Contact Us buttons -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -157,6 +157,21 @@
             android:text="@string/menu_history"
             android:textStyle="bold"
             style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            app:strokeColor="@color/primary_light"
+            android:textColor="@color/primary_light"
+            app:cornerRadius="28dp" />
+
+        <Button
+            android:id="@+id/contactUsButton"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:layout_marginTop="12dp"
+            android:text="@string/menu_contact_us"
+            android:textStyle="bold"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            app:icon="@drawable/ic_chat"
+            app:iconTint="@color/primary_light"
+            app:iconGravity="textStart"
             app:strokeColor="@color/primary_light"
             android:textColor="@color/primary_light"
             app:cornerRadius="28dp" />
