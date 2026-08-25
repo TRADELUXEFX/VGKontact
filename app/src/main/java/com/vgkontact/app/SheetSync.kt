@@ -17,7 +17,7 @@ data class DayCount(val date: String, val count: Int)
 
 object SheetSync {
 
-    private const val SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwN-AUE3OBvLMP2fBD-e2Gl0KkrkfbxjoyGYLUdxKXjC3K3UjVSdSXCRMtXTEIe1L_T/exec"
+    private const val SCRIPT_URL = "https://script.google.com/macros/s/AKfycbymQeMq3U6cbmNZOZMCT8bmpLg_YRLxRBpRZleql8_gonAMVfzweCL8SG-xTyZ03F9m/exec"
 
     fun submit(whatsapp: String, referral: String = "", context: Context? = null, callback: ((Boolean, String?) -> Unit)? = null) {
         thread {
