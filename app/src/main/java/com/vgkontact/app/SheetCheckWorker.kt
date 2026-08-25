@@ -29,13 +29,15 @@ class SheetCheckWorker(context: Context, params: WorkerParameters) : CoroutineWo
     companion object {
         private const val WORK_NAME = "vgkontact_sheet_check"
 
-        fun schedule(context: Context) {
-            val request = PeriodicWorkRequestBuilder<SheetCheckWorker>(24, TimeUnit.HOURS)
+        // hours defaults to 24 but can be overridden by the user in Notification Settings
+        fun schedule(context: Context, hours: Int = UserPrefs.getNotificationFrequencyHours(context)) {
+            val safeHours = hours.coerceAtLeast(1)
+            val request = PeriodicWorkRequestBuilder<SheetCheckWorker>(safeHours.toLong(), TimeUnit.HOURS)
                 .build()
 
             WorkManager.getInstance(context).enqueueUniquePeriodicWork(
                 WORK_NAME,
-                ExistingPeriodicWorkPolicy.KEEP,
+                ExistingPeriodicWorkPolicy.REPLACE,
                 request
             )
         }
