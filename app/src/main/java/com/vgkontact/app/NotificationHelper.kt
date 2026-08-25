@@ -27,7 +27,9 @@ object NotificationHelper {
         val notificationManager =
             context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
-        val message = if (failed == 0) {
+        val message = if (submitted == 0 && failed == 0) {
+            "No new numbers"
+        } else if (failed == 0) {
             "Successfully synced $submitted kontacts"
         } else {
             "Synced $submitted kontacts, $failed failed"
