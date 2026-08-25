@@ -22,6 +22,9 @@ object SheetSync {
     private val SUPABASE_URL = BuildConfig.SUPABASE_URL
     private val SUPABASE_ANON_KEY = BuildConfig.SUPABASE_ANON_KEY
 
+    private const val MAX_RETRIES = 3
+    private const val BASE_DELAY_MS = 1000L
+
     fun isOnline(context: Context): Boolean {
         val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         val network = cm.activeNetwork ?: return false
@@ -42,50 +45,140 @@ object SheetSync {
         return conn
     }
 
+    // Returns true if this response/exception is worth retrying.
+    // 4xx client errors (bad request, conflict, etc.) won't succeed on retry.
+    // 5xx server errors and network exceptions are worth retrying.
+    private fun isRetryable(responseCode: Int?): Boolean {
+        if (responseCode == null) return true // exception/timeout case
+        return responseCode >= 500
+    }
+
+    private fun sleepBeforeRetry(attempt: Int) {
+        val delay = BASE_DELAY_MS * (1L shl attempt) // 1s, 2s, 4s
+        try {
+            Thread.sleep(delay)
+        } catch (e: InterruptedException) {
+            Thread.currentThread().interrupt()
+        }
+    }
+
     fun submit(whatsapp: String, referral: String = "", context: Context? = null, callback: ((Boolean, String?) -> Unit)? = null) {
         thread {
-            try {
-                val conn = openConnection("contacts", "POST")
-                conn.setRequestProperty("Prefer", "return=minimal")
-                conn.doOutput = true
+            var lastError: String? = null
 
-                val jsonParam = JSONObject().apply {
-                    put("whatsapp", whatsapp)
-                    put("referral", referral)
+            for (attempt in 0 until MAX_RETRIES) {
+                try {
+                    val conn = openConnection("contacts", "POST")
+                    conn.setRequestProperty("Prefer", "return=minimal")
+                    conn.doOutput = true
+
+                    val jsonParam = JSONObject().apply {
+                        put("whatsapp", whatsapp)
+                        put("referral", referral)
+                    }
+
+                    OutputStreamWriter(conn.outputStream).use { os ->
+                        os.write(jsonParam.toString())
+                        os.flush()
+                    }
+
+                    val responseCode = conn.responseCode
+                    conn.disconnect()
+
+                    if (responseCode in 200..299) {
+                        callback?.invoke(true, "Successfully registered")
+                        return@thread
+                    } else if (responseCode == 409) {
+                        callback?.invoke(false, "This number is already registered")
+                        return@thread
+                    } else if (!isRetryable(responseCode)) {
+                        callback?.invoke(false, "Server error code: $responseCode")
+                        return@thread
+                    } else {
+                        lastError = "Server error code: $responseCode"
+                        Log.w("SheetSync", "Submit attempt ${attempt + 1} failed with code $responseCode, retrying...")
+                    }
+                } catch (e: Exception) {
+                    lastError = e.message ?: "Failed to submit"
+                    Log.w("SheetSync", "Submit attempt ${attempt + 1} threw exception, retrying...", e)
                 }
 
-                OutputStreamWriter(conn.outputStream).use { os ->
-                    os.write(jsonParam.toString())
-                    os.flush()
+                if (attempt < MAX_RETRIES - 1) {
+                    sleepBeforeRetry(attempt)
                 }
-
-                val responseCode = conn.responseCode
-                conn.disconnect()
-
-                if (responseCode in 200..299) {
-                    callback?.invoke(true, "Successfully registered")
-                } else if (responseCode == 409) {
-                    callback?.invoke(false, "This number is already registered")
-                } else {
-                    callback?.invoke(false, "Server error code: $responseCode")
-                }
-            } catch (e: Exception) {
-                Log.e("SheetSync", "Error submitting user", e)
-                callback?.invoke(false, e.message ?: "Failed to submit")
             }
+
+            Log.e("SheetSync", "Submit failed after $MAX_RETRIES attempts: $lastError")
+            callback?.invoke(false, lastError ?: "Failed to submit after multiple attempts")
         }
     }
 
     fun fetchHistory(context: Context? = null, callback: ((List<DayCount>?, String?) -> Unit)? = null) {
         thread {
-            try {
-                val conn = openConnection("rpc/contact_history", "POST")
-                conn.doOutput = true
-                OutputStreamWriter(conn.outputStream).use { os ->
-                    os.write("{}")
-                    os.flush()
+            var lastError: String? = null
+
+            for (attempt in 0 until MAX_RETRIES) {
+                try {
+                    val conn = openConnection("rpc/contact_history", "POST")
+                    conn.doOutput = true
+                    OutputStreamWriter(conn.outputStream).use { os ->
+                        os.write("{}")
+                        os.flush()
+                    }
+
+                    val responseCode = conn.responseCode
+                    if (responseCode in 200..299) {
+                        val reader = BufferedReader(InputStreamReader(conn.inputStream))
+                        val response = StringBuilder()
+                        var line: String?
+                        while (reader.readLine().also { line = it } != null) {
+                            response.append(line)
+                        }
+                        reader.close()
+                        conn.disconnect()
+
+                        val daysArray = JSONArray(response.toString())
+                        var total = 0
+                        val historyList = ArrayList<DayCount>()
+                        val dailyEntries = ArrayList<DayCount>()
+                        for (i in 0 until daysArray.length()) {
+                            val dayObj = daysArray.getJSONObject(i)
+                            val count = dayObj.optInt("count", 0)
+                            total += count
+                            dailyEntries.add(DayCount(dayObj.optString("day"), count))
+                        }
+                        historyList.add(DayCount("Total Kontacts", total))
+                        historyList.addAll(dailyEntries)
+                        callback?.invoke(historyList, null)
+                        return@thread
+                    } else {
+                        conn.disconnect()
+                        if (!isRetryable(responseCode)) {
+                            callback?.invoke(null, "Server response error code: $responseCode")
+                            return@thread
+                        }
+                        lastError = "Server response error code: $responseCode"
+                        Log.w("SheetSync", "fetchHistory attempt ${attempt + 1} failed with code $responseCode, retrying...")
+                    }
+                } catch (e: Exception) {
+                    lastError = e.message ?: "Error connecting"
+                    Log.w("SheetSync", "fetchHistory attempt ${attempt + 1} threw exception, retrying...", e)
                 }
 
+                if (attempt < MAX_RETRIES - 1) {
+                    sleepBeforeRetry(attempt)
+                }
+            }
+
+            Log.e("SheetSync", "fetchHistory failed after $MAX_RETRIES attempts: $lastError")
+            callback?.invoke(null, lastError ?: "Error connecting after multiple attempts")
+        }
+    }
+
+    private fun fetchAllContacts(): List<Pair<String, String>>? {
+        for (attempt in 0 until MAX_RETRIES) {
+            try {
+                val conn = openConnection("contacts?select=whatsapp,referral", "GET")
                 val responseCode = conn.responseCode
                 if (responseCode in 200..299) {
                     val reader = BufferedReader(InputStreamReader(conn.inputStream))
@@ -97,59 +190,30 @@ object SheetSync {
                     reader.close()
                     conn.disconnect()
 
-                    val daysArray = JSONArray(response.toString())
-                    var total = 0
-                    val historyList = ArrayList<DayCount>()
-                    val dailyEntries = ArrayList<DayCount>()
-                    for (i in 0 until daysArray.length()) {
-                        val dayObj = daysArray.getJSONObject(i)
-                        val count = dayObj.optInt("count", 0)
-                        total += count
-                        dailyEntries.add(DayCount(dayObj.optString("day"), count))
+                    val arr = JSONArray(response.toString())
+                    val result = ArrayList<Pair<String, String>>()
+                    for (i in 0 until arr.length()) {
+                        val obj = arr.getJSONObject(i)
+                        result.add(Pair(obj.optString("whatsapp"), obj.optString("referral")))
                     }
-                    historyList.add(DayCount("Total Kontacts", total))
-                    historyList.addAll(dailyEntries)
-                    callback?.invoke(historyList, null)
+                    return result
                 } else {
                     conn.disconnect()
-                    callback?.invoke(null, "Server response error code: $responseCode")
+                    if (!isRetryable(responseCode)) {
+                        return null
+                    }
+                    Log.w("SheetSync", "fetchAllContacts attempt ${attempt + 1} failed with code $responseCode, retrying...")
                 }
             } catch (e: Exception) {
-                Log.e("SheetSync", "Error in fetchHistory", e)
-                callback?.invoke(null, e.message ?: "Error connecting")
+                Log.w("SheetSync", "fetchAllContacts attempt ${attempt + 1} threw exception, retrying...", e)
+            }
+
+            if (attempt < MAX_RETRIES - 1) {
+                sleepBeforeRetry(attempt)
             }
         }
-    }
-
-    private fun fetchAllContacts(): List<Pair<String, String>>? {
-        return try {
-            val conn = openConnection("contacts?select=whatsapp,referral", "GET")
-            val responseCode = conn.responseCode
-            if (responseCode in 200..299) {
-                val reader = BufferedReader(InputStreamReader(conn.inputStream))
-                val response = StringBuilder()
-                var line: String?
-                while (reader.readLine().also { line = it } != null) {
-                    response.append(line)
-                }
-                reader.close()
-                conn.disconnect()
-
-                val arr = JSONArray(response.toString())
-                val result = ArrayList<Pair<String, String>>()
-                for (i in 0 until arr.length()) {
-                    val obj = arr.getJSONObject(i)
-                    result.add(Pair(obj.optString("whatsapp"), obj.optString("referral")))
-                }
-                result
-            } else {
-                conn.disconnect()
-                null
-            }
-        } catch (e: Exception) {
-            Log.e("SheetSync", "Error fetching contacts", e)
-            null
-        }
+        Log.e("SheetSync", "fetchAllContacts failed after $MAX_RETRIES attempts")
+        return null
     }
 
     fun checkForNewNumbersSync(context: Context): Int {
