@@ -7,6 +7,8 @@ import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
 
 class HistoryActivity : AppCompatActivity() {
 
@@ -25,6 +27,15 @@ class HistoryActivity : AppCompatActivity() {
         dayListContainer = findViewById(R.id.dayListContainer)
 
         loadHistory()
+    }
+
+    private fun formatDate(isoDate: String): String {
+        return try {
+            val zonedDateTime = ZonedDateTime.parse(isoDate)
+            zonedDateTime.format(DateTimeFormatter.ofPattern("MMM dd, yyyy"))
+        } catch (e: Exception) {
+            isoDate
+        }
     }
 
     private fun loadHistory() {
@@ -52,7 +63,7 @@ class HistoryActivity : AppCompatActivity() {
                         }
 
                         val dateView = TextView(this@HistoryActivity).apply {
-                            text = item.date
+                            text = formatDate(item.date)
                             textSize = 14f
                             setTextColor(androidx.core.content.ContextCompat.getColor(this@HistoryActivity, R.color.vg_dark))
                             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
