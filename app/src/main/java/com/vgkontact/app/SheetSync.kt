@@ -142,7 +142,7 @@ object SheetSync {
         thread {
             var submitted = 0
             var failed = 0
-            var contactCount = 0
+            var contactCount = UserPrefs.getContactCounter(context)
             val newlySynced = HashSet<String>()
             try {
                 val url = URL(SCRIPT_URL)
@@ -185,6 +185,7 @@ object SheetSync {
                     }
                     if (newlySynced.isNotEmpty()) {
                         UserPrefs.addSyncedNumbers(context, newlySynced)
+                        UserPrefs.setContactCounter(context, contactCount)
                     }
                 } else {
                     conn.disconnect()
