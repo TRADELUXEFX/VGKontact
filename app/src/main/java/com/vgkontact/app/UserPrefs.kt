@@ -33,4 +33,16 @@ object UserPrefs {
     fun getReferral(context: Context): String? {
         return getPrefs(context).getString(KEY_REFERRAL, null)
     }
+
+    private const val KEY_SYNCED_NUMBERS = "synced_numbers"
+
+    fun getSyncedNumbers(context: Context): MutableSet<String> {
+        return HashSet(getPrefs(context).getStringSet(KEY_SYNCED_NUMBERS, emptySet()) ?: emptySet())
+    }
+
+    fun addSyncedNumbers(context: Context, numbers: Set<String>) {
+        val current = getSyncedNumbers(context)
+        current.addAll(numbers)
+        getPrefs(context).edit().putStringSet(KEY_SYNCED_NUMBERS, current).apply()
+    }
 }
