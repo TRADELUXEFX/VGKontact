@@ -33,11 +33,44 @@
         android:id="@+id/totalText"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:padding="20dp"
-        android:textSize="16sp"
+        android:paddingStart="24dp"
+        android:paddingEnd="24dp"
+        android:paddingTop="20dp"
+        android:paddingBottom="12dp"
+        android:textSize="17sp"
         android:textStyle="bold"
-        android:textColor="@color/vg_green"
+        android:textColor="@color/vg_dark"
         tools:text="Total Kontacts: 41" />
+
+    <!-- List column headers -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:paddingStart="24dp"
+        android:paddingEnd="24dp"
+        android:paddingBottom="8dp">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/history_column_date"
+            android:textSize="11sp"
+            android:textAllCaps="true"
+            android:letterSpacing="0.05"
+            android:textColor="@color/text_muted" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/history_column_count"
+            android:textSize="11sp"
+            android:textAllCaps="true"
+            android:letterSpacing="0.05"
+            android:textColor="@color/text_muted" />
+
+    </LinearLayout>
 
     <View style="@style/MenuDivider" />
 
