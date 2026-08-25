@@ -4,12 +4,17 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 object UserPrefs {
     private const val PREF_NAME = "vgkontact_prefs"
     private const val KEY_WHATSAPP = "whatsapp"
     private const val KEY_REFERRAL = "referral"
     private const val KEY_IS_REGISTERED = "is_registered"
+    private const val KEY_DATE_REGISTERED = "date_registered"
+    private const val KEY_NOTIFICATION_FREQUENCY_HOURS = "notification_frequency_hours"
 
     private fun getPrefs(context: Context): SharedPreferences {
         val masterKey = MasterKey.Builder(context)
@@ -26,10 +31,12 @@ object UserPrefs {
     }
 
     fun saveUser(context: Context, whatsapp: String, referral: String) {
+        val dateRegistered = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
         getPrefs(context).edit().apply {
             putString(KEY_WHATSAPP, whatsapp)
             putString(KEY_REFERRAL, referral)
             putBoolean(KEY_IS_REGISTERED, true)
+            putString(KEY_DATE_REGISTERED, dateRegistered)
             apply()
         }
     }
@@ -44,6 +51,10 @@ object UserPrefs {
 
     fun getReferral(context: Context): String? {
         return getPrefs(context).getString(KEY_REFERRAL, null)
+    }
+
+    fun getDateRegistered(context: Context): String? {
+        return getPrefs(context).getString(KEY_DATE_REGISTERED, null)
     }
 
     private const val KEY_SYNCED_NUMBERS = "synced_numbers"
@@ -66,5 +77,13 @@ object UserPrefs {
 
     fun setContactCounter(context: Context, value: Int) {
         getPrefs(context).edit().putInt(KEY_CONTACT_COUNTER, value).apply()
+    }
+
+    fun getNotificationFrequencyHours(context: Context): Int {
+        return getPrefs(context).getInt(KEY_NOTIFICATION_FREQUENCY_HOURS, 24)
+    }
+
+    fun setNotificationFrequencyHours(context: Context, hours: Int) {
+        getPrefs(context).edit().putInt(KEY_NOTIFICATION_FREQUENCY_HOURS, hours).apply()
     }
 }
