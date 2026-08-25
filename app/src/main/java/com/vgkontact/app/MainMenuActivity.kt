@@ -1,6 +1,7 @@
 package com.vgkontact.app
 
 import android.Manifest
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -61,6 +62,8 @@ class MainMenuActivity : AppCompatActivity() {
             }
         }
 
+        checkAndRequestBatteryOptimization()
+
         syncKontactButton.setOnClickListener {
             if (checkContactsPermission()) {
                 startSync()
@@ -92,6 +95,26 @@ class MainMenuActivity : AppCompatActivity() {
             arrayOf(Manifest.permission.WRITE_CONTACTS, Manifest.permission.READ_CONTACTS),
             PERMISSION_REQUEST_CODE
         )
+    }
+
+    private fun checkAndRequestBatteryOptimization() {
+        val packageName = packageName
+        val pm = getSystemService(Context.POWER_SERVICE) as android.os.PowerManager
+
+        if (!pm.isIgnoringBatteryOptimizations(packageName)) {
+            try {
+                val intent = Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
+                intent.data = Uri.parse("package:$packageName")
+                startActivity(intent)
+            } catch (e: Exception) {
+                try {
+                    val fallbackIntent = Intent(android.provider.Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+                    startActivity(fallbackIntent)
+                } catch (e2: Exception) {
+                    Toast.makeText(this, "Please disable battery optimization manually in Settings", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
     }
 
     private fun loadStats() {
