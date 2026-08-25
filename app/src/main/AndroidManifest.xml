@@ -42,6 +42,16 @@
             android:name=".HistoryActivity"
             android:exported="false" />
 
+        <!-- Notification Settings -->
+        <activity
+            android:name=".NotificationSettingsActivity"
+            android:exported="false" />
+
+        <!-- Profile View -->
+        <activity
+            android:name=".ProfileActivity"
+            android:exported="false" />
+
     </application>
 
 </manifest>
