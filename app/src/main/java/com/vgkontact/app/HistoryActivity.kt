@@ -37,12 +37,37 @@ class HistoryActivity : AppCompatActivity() {
                 if (list != null) {
                     totalText.text = "Total Kontacts: ${if (list.isNotEmpty()) list[0].count else 0}"
                     for (item in list.drop(1)) {
-                        val textView = TextView(this@HistoryActivity).apply {
-                            text = "${item.date}: ${item.count}"
-                            textSize = 16f
-                            setPadding(16, 16, 16, 16)
+                        val row = LinearLayout(this@HistoryActivity).apply {
+                            orientation = LinearLayout.HORIZONTAL
+                            setPadding(0, 14, 0, 14)
+                            val params = LinearLayout.LayoutParams(
+                                LinearLayout.LayoutParams.MATCH_PARENT,
+                                LinearLayout.LayoutParams.WRAP_CONTENT
+                            )
+                            layoutParams = params
+                            background = androidx.core.content.ContextCompat.getDrawable(
+                                this@HistoryActivity,
+                                R.drawable.history_row_divider
+                            )
                         }
-                        dayListContainer.addView(textView)
+
+                        val dateView = TextView(this@HistoryActivity).apply {
+                            text = item.date
+                            textSize = 14f
+                            setTextColor(androidx.core.content.ContextCompat.getColor(this@HistoryActivity, R.color.vg_dark))
+                            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+                        }
+
+                        val countView = TextView(this@HistoryActivity).apply {
+                            text = item.count.toString()
+                            textSize = 14f
+                            setTypeface(typeface, android.graphics.Typeface.BOLD)
+                            setTextColor(androidx.core.content.ContextCompat.getColor(this@HistoryActivity, R.color.vg_green))
+                        }
+
+                        row.addView(dateView)
+                        row.addView(countView)
+                        dayListContainer.addView(row)
                     }
                 } else {
                     emptyText.visibility = View.VISIBLE
