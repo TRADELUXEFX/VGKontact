@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.view.View
 import android.widget.Button
@@ -28,10 +29,14 @@ class MainMenuActivity : AppCompatActivity() {
     private lateinit var chatIcon: ImageView
 
     private val PERMISSION_REQUEST_CODE = 100
+    private val NOTIFICATION_PERMISSION_REQUEST_CODE = 101
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main_menu)
+
+        // Setup notification channel
+        NotificationHelper.createNotificationChannel(this)
 
         syncKontactButton = findViewById(R.id.syncKontactButton)
         kontactHistoryButton = findViewById(R.id.kontactHistoryButton)
@@ -43,6 +48,18 @@ class MainMenuActivity : AppCompatActivity() {
         chatIcon = findViewById(R.id.chatIcon)
 
         phoneNumberText.text = UserPrefs.getWhatsapp(this) ?: "N/A"
+
+        // Request notification permission if needed
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+                != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(
+                    this,
+                    arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+                    NOTIFICATION_PERMISSION_REQUEST_CODE
+                )
+            }
+        }
 
         syncKontactButton.setOnClickListener {
             if (checkContactsPermission()) {
@@ -95,9 +112,12 @@ class MainMenuActivity : AppCompatActivity() {
 
     private fun startSync() {
         Toast.makeText(this, "Starting Sync...", Toast.LENGTH_SHORT).show()
+        NotificationHelper.showSyncStartedNotification(this)
         SheetSync.importAllContactsFromSheet(this) { submitted, failed ->
             runOnUiThread {
                 Toast.makeText(this, "Synced: $submitted, Failed: $failed", Toast.LENGTH_LONG).show()
+                NotificationHelper.showSyncCompleteNotification(this, submitted, failed)
+                loadStats()
             }
         }
     }
