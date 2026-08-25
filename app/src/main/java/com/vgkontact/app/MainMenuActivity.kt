@@ -22,15 +22,18 @@ class MainMenuActivity : AppCompatActivity() {
 
     private lateinit var syncKontactButton: Button
     private lateinit var kontactHistoryButton: Button
+    private lateinit var contactUsButton: Button
     private lateinit var phoneNumberText: TextView
     private lateinit var statsCard: LinearLayout
     private lateinit var statsProgressBar: ProgressBar
     private lateinit var statsContent: LinearLayout
     private lateinit var statsTotalText: TextView
-    private lateinit var chatIcon: ImageView
+    private lateinit var notificationIcon: ImageView
+    private lateinit var profileIcon: ImageView
 
     private val PERMISSION_REQUEST_CODE = 100
     private val NOTIFICATION_PERMISSION_REQUEST_CODE = 101
+    private val CONTACT_US_WHATSAPP_NUMBER = "09110321143"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -41,12 +44,14 @@ class MainMenuActivity : AppCompatActivity() {
 
         syncKontactButton = findViewById(R.id.syncKontactButton)
         kontactHistoryButton = findViewById(R.id.kontactHistoryButton)
+        contactUsButton = findViewById(R.id.contactUsButton)
         phoneNumberText = findViewById(R.id.phoneNumberText)
         statsCard = findViewById(R.id.statsCard)
         statsProgressBar = findViewById(R.id.statsProgressBar)
         statsContent = findViewById(R.id.statsContent)
         statsTotalText = findViewById(R.id.statsTotalText)
-        chatIcon = findViewById(R.id.chatIcon)
+        notificationIcon = findViewById(R.id.notificationIcon)
+        profileIcon = findViewById(R.id.profileIcon)
 
         phoneNumberText.text = UserPrefs.getWhatsapp(this) ?: "N/A"
 
@@ -78,15 +83,32 @@ class MainMenuActivity : AppCompatActivity() {
             startActivity(Intent(this, HistoryActivity::class.java))
         }
 
-        chatIcon.setOnClickListener {
-            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://chat.whatsapp.com/"))
-            startActivity(intent)
+        contactUsButton.setOnClickListener {
+            openWhatsAppContactUs()
+        }
+
+        notificationIcon.setOnClickListener {
+            startActivity(Intent(this, NotificationSettingsActivity::class.java))
+        }
+
+        profileIcon.setOnClickListener {
+            startActivity(Intent(this, ProfileActivity::class.java))
         }
     }
 
     override fun onResume() {
         super.onResume()
         loadStats()
+    }
+
+    private fun openWhatsAppContactUs() {
+        val message = Uri.encode("Hi VG Kontact, I need help with...")
+        val uri = Uri.parse("https://wa.me/$CONTACT_US_WHATSAPP_NUMBER?text=$message")
+        try {
+            startActivity(Intent(Intent.ACTION_VIEW, uri))
+        } catch (e: Exception) {
+            Toast.makeText(this, "WhatsApp is not installed", Toast.LENGTH_SHORT).show()
+        }
     }
 
     private fun checkContactsPermission(): Boolean {
