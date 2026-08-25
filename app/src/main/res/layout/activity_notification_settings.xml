@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
@@ -36,16 +37,8 @@
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:background="@drawable/card_background"
-            android:padding="20dp">
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/notification_frequency_label"
-                android:textSize="13sp"
-                android:textStyle="bold"
-                android:textColor="@color/vg_dark"
-                android:paddingBottom="4dp" />
+            android:padding="20dp"
+            android:gravity="center_horizontal">
 
             <TextView
                 android:layout_width="match_parent"
@@ -53,47 +46,67 @@
                 android:text="@string/notification_frequency_desc"
                 android:textSize="12sp"
                 android:textColor="@color/text_muted"
-                android:paddingBottom="16dp" />
+                android:paddingBottom="20dp"
+                android:gravity="center" />
+
+            <!-- Input container with label and input field - centered -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingBottom="20dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Once every"
+                    android:textSize="16sp"
+                    android:textColor="@color/vg_dark"
+                    android:paddingEnd="8dp" />
+
+                <EditText
+                    android:id="@+id/hoursInputField"
+                    android:layout_width="70dp"
+                    android:layout_height="48dp"
+                    android:inputType="number"
+                    android:gravity="center"
+                    android:textSize="20sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/vg_green"
+                    android:backgroundTint="@color/vg_green"
+                    android:padding="8dp"
+                    android:maxLength="2"
+                    android:hint="0"
+                    android:textColorHint="@color/text_muted" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="hours"
+                    android:textSize="16sp"
+                    android:textColor="@color/vg_dark"
+                    android:paddingStart="8dp" />
+
+            </LinearLayout>
 
             <TextView
-                android:id="@+id/hoursValueText"
-                android:layout_width="match_parent"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:gravity="center"
-                android:textSize="28sp"
-                android:textStyle="bold"
-                android:textColor="@color/vg_green"
-                android:paddingBottom="8dp"
-                tools:text="24 hours"
-                xmlns:tools="http://schemas.android.com/tools" />
-
-            <SeekBar
-                android:id="@+id/hoursSeekBar"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:max="167"
-                android:progress="23" />
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="center"
                 android:textSize="11sp"
                 android:textColor="@color/text_muted"
-                android:paddingTop="4dp"
-                android:text="@string/notification_frequency_range" />
+                android:paddingBottom="20dp"
+                android:text="(Max is 24 hours)" />
 
             <Button
                 android:id="@+id/saveFrequencyButton"
                 android:layout_width="match_parent"
                 android:layout_height="52dp"
-                android:layout_marginTop="20dp"
                 android:text="@string/btn_save"
                 android:backgroundTint="@color/vg_green"
                 android:textColor="@color/white"
                 android:textStyle="bold"
-                app:cornerRadius="26dp"
-                xmlns:app="http://schemas.android.com/apk/res-auto" />
+                app:cornerRadius="26dp" />
 
         </LinearLayout>
 
