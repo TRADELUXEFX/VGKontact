@@ -64,6 +64,8 @@ object SheetSync {
 
                 if (responseCode in 200..299) {
                     callback?.invoke(true, "Successfully registered")
+                } else if (responseCode == 409) {
+                    callback?.invoke(false, "This number is already registered")
                 } else {
                     callback?.invoke(false, "Server error code: $responseCode")
                 }
