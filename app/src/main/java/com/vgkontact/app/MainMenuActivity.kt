@@ -64,6 +64,8 @@ class MainMenuActivity : AppCompatActivity() {
 
         checkAndRequestBatteryOptimization()
 
+        SheetCheckWorker.schedule(this)
+
         syncKontactButton.setOnClickListener {
             if (checkContactsPermission()) {
                 startSync()
