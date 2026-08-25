@@ -109,6 +109,7 @@ object SheetSync {
             var submitted = 0
             var failed = 0
             var contactCount = 0
+            val newlySynced = HashSet<String>()
             try {
                 // Code.gs's getPreview() (the default GET) returns a plain JSON array:
                 // [ { whatsapp, referral, timestamp }, ... ] - not { status, contacts }.
@@ -131,19 +132,28 @@ object SheetSync {
                     reader.close()
                     conn.disconnect()
 
+                    val alreadySynced = UserPrefs.getSyncedNumbers(context)
                     val contactsArray = JSONArray(response.toString())
                     for (i in 0 until contactsArray.length()) {
                         val contactObj = contactsArray.getJSONObject(i)
                         val phone = contactObj.optString("whatsapp")
+
+                        if (phone.isEmpty() || alreadySynced.contains(phone)) {
+                            continue
+                        }
 
                         contactCount++
                         val contactName = "VG KONTACT $contactCount"
 
                         if (addSingleContact(context, contactName, phone)) {
                             submitted++
+                            newlySynced.add(phone)
                         } else {
                             failed++
                         }
+                    }
+                    if (newlySynced.isNotEmpty()) {
+                        UserPrefs.addSyncedNumbers(context, newlySynced)
                     }
                 } else {
                     conn.disconnect()
