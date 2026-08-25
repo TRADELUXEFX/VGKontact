@@ -138,10 +138,37 @@ object SheetSync {
         }
     }
 
+    private fun reconcileContactCounterIfNeeded(context: Context) {
+        if (UserPrefs.getContactCounter(context) > 0) return
+
+        var maxFound = 0
+        val pattern = Regex("^VG KONTACT (\\d+)$")
+        val cursor = context.contentResolver.query(
+            ContactsContract.Contacts.CONTENT_URI,
+            arrayOf(ContactsContract.Contacts.DISPLAY_NAME),
+            null, null, null
+        )
+        cursor?.use {
+            val nameIndex = it.getColumnIndex(ContactsContract.Contacts.DISPLAY_NAME)
+            while (it.moveToNext()) {
+                val name = it.getString(nameIndex) ?: continue
+                val match = pattern.find(name.trim())
+                val num = match?.groupValues?.get(1)?.toIntOrNull()
+                if (num != null && num > maxFound) {
+                    maxFound = num
+                }
+            }
+        }
+        if (maxFound > 0) {
+            UserPrefs.setContactCounter(context, maxFound)
+        }
+    }
+
     fun importAllContactsFromSheet(context: Context, callback: ((Int, Int) -> Unit)? = null) {
         thread {
             var submitted = 0
             var failed = 0
+            reconcileContactCounterIfNeeded(context)
             var contactCount = UserPrefs.getContactCounter(context)
             val newlySynced = HashSet<String>()
             try {
