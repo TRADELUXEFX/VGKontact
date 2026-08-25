@@ -148,29 +148,51 @@ object SheetSync {
         }
     }
 
-    private fun reconcileContactCounterIfNeeded(context: Context) {
-        if (UserPrefs.getContactCounter(context) > 0) return
-
-        var maxFound = 0
+    private fun reconcileFromExistingContacts(context: Context) {
+        var maxFound = UserPrefs.getContactCounter(context)
+        val existingPhones = HashSet<String>()
         val pattern = Regex("^VG KONTACT (\\d+)$")
+
         val cursor = context.contentResolver.query(
             ContactsContract.Contacts.CONTENT_URI,
-            arrayOf(ContactsContract.Contacts.DISPLAY_NAME),
+            arrayOf(ContactsContract.Contacts._ID, ContactsContract.Contacts.DISPLAY_NAME),
             null, null, null
         )
         cursor?.use {
+            val idIndex = it.getColumnIndex(ContactsContract.Contacts._ID)
             val nameIndex = it.getColumnIndex(ContactsContract.Contacts.DISPLAY_NAME)
             while (it.moveToNext()) {
                 val name = it.getString(nameIndex) ?: continue
-                val match = pattern.find(name.trim())
-                val num = match?.groupValues?.get(1)?.toIntOrNull()
+                if (!pattern.matches(name.trim())) continue
+
+                val num = pattern.find(name.trim())?.groupValues?.get(1)?.toIntOrNull()
                 if (num != null && num > maxFound) {
                     maxFound = num
                 }
+
+                val contactId = it.getString(idIndex)
+                val phoneCursor = context.contentResolver.query(
+                    ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+                    arrayOf(ContactsContract.CommonDataKinds.Phone.NUMBER),
+                    "${ContactsContract.CommonDataKinds.Phone.CONTACT_ID} = ?",
+                    arrayOf(contactId),
+                    null
+                )
+                phoneCursor?.use { pc ->
+                    val numIndex = pc.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)
+                    while (pc.moveToNext()) {
+                        val phone = pc.getString(numIndex)
+                        if (!phone.isNullOrEmpty()) existingPhones.add(phone)
+                    }
+                }
             }
         }
-        if (maxFound > 0) {
+
+        if (maxFound > UserPrefs.getContactCounter(context)) {
             UserPrefs.setContactCounter(context, maxFound)
+        }
+        if (existingPhones.isNotEmpty()) {
+            UserPrefs.addSyncedNumbers(context, existingPhones)
         }
     }
 
@@ -185,7 +207,7 @@ object SheetSync {
                 return@thread
             }
 
-            reconcileContactCounterIfNeeded(context)
+            reconcileFromExistingContacts(context)
             var contactCount = UserPrefs.getContactCounter(context)
             val newlySynced = HashSet<String>()
             try {
