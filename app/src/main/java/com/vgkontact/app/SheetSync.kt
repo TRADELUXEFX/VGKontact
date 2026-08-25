@@ -19,7 +19,8 @@ data class DayCount(val date: String, val count: Int)
 
 object SheetSync {
 
-    private const val SCRIPT_URL = "https://script.google.com/macros/s/AKfycbymQeMq3U6cbmNZOZMCT8bmpLg_YRLxRBpRZleql8_gonAMVfzweCL8SG-xTyZ03F9m/exec"
+    private const val SUPABASE_URL = "https://ixniesqmbdemeaskkhvy.supabase.co"
+    private const val SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml4bmllc3FtYmRlbWVhc2traHZ5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2NjM0MjksImV4cCI6MjEwMzIzOTQyOX0.I9mWqP4JPjlYNHWMs1vR1bcVB9-XuXzO73ai2IZUEwQ"
 
     fun isOnline(context: Context): Boolean {
         val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
@@ -29,17 +30,24 @@ object SheetSync {
                capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
     }
 
+    private fun openConnection(path: String, method: String): HttpURLConnection {
+        val url = URL("$SUPABASE_URL/rest/v1/$path")
+        val conn = url.openConnection() as HttpURLConnection
+        conn.requestMethod = method
+        conn.setRequestProperty("apikey", SUPABASE_ANON_KEY)
+        conn.setRequestProperty("Authorization", "Bearer $SUPABASE_ANON_KEY")
+        conn.setRequestProperty("Content-Type", "application/json")
+        conn.connectTimeout = 15000
+        conn.readTimeout = 15000
+        return conn
+    }
+
     fun submit(whatsapp: String, referral: String = "", context: Context? = null, callback: ((Boolean, String?) -> Unit)? = null) {
         thread {
             try {
-                val url = URL(SCRIPT_URL)
-                val conn = url.openConnection() as HttpURLConnection
-                conn.requestMethod = "POST"
-                conn.setRequestProperty("Content-Type", "application/json; utf-8")
-                conn.setRequestProperty("Accept", "application/json")
+                val conn = openConnection("contacts", "POST")
+                conn.setRequestProperty("Prefer", "return=minimal")
                 conn.doOutput = true
-                conn.connectTimeout = 15000
-                conn.readTimeout = 15000
 
                 val jsonParam = JSONObject().apply {
                     put("whatsapp", whatsapp)
@@ -54,7 +62,7 @@ object SheetSync {
                 val responseCode = conn.responseCode
                 conn.disconnect()
 
-                if (responseCode == HttpURLConnection.HTTP_OK || responseCode == HttpURLConnection.HTTP_MOVED_TEMP) {
+                if (responseCode in 200..299) {
                     callback?.invoke(true, "Successfully registered")
                 } else {
                     callback?.invoke(false, "Server error code: $responseCode")
@@ -69,34 +77,36 @@ object SheetSync {
     fun fetchHistory(context: Context? = null, callback: ((List<DayCount>?, String?) -> Unit)? = null) {
         thread {
             try {
-                val url = URL("$SCRIPT_URL?action=history")
-                val conn = url.openConnection() as HttpURLConnection
-                conn.requestMethod = "GET"
-                conn.connectTimeout = 15000
-                conn.readTimeout = 15000
+                val conn = openConnection("rpc/contact_history", "POST")
+                conn.doOutput = true
+                OutputStreamWriter(conn.outputStream).use { os ->
+                    os.write("{}")
+                    os.flush()
+                }
 
                 val responseCode = conn.responseCode
-                if (responseCode == HttpURLConnection.HTTP_OK || responseCode == HttpURLConnection.HTTP_MOVED_TEMP) {
+                if (responseCode in 200..299) {
                     val reader = BufferedReader(InputStreamReader(conn.inputStream))
                     val response = StringBuilder()
                     var line: String?
-
                     while (reader.readLine().also { line = it } != null) {
                         response.append(line)
                     }
                     reader.close()
                     conn.disconnect()
 
-                    val jsonObject = JSONObject(response.toString())
-                    val total = jsonObject.optInt("total", 0)
-                    val daysArray = jsonObject.optJSONArray("days") ?: JSONArray()
-
+                    val daysArray = JSONArray(response.toString())
+                    var total = 0
                     val historyList = ArrayList<DayCount>()
-                    historyList.add(DayCount("Total Kontacts", total))
+                    val dailyEntries = ArrayList<DayCount>()
                     for (i in 0 until daysArray.length()) {
                         val dayObj = daysArray.getJSONObject(i)
-                        historyList.add(DayCount(dayObj.optString("date"), dayObj.optInt("count", 0)))
+                        val count = dayObj.optInt("count", 0)
+                        total += count
+                        dailyEntries.add(DayCount(dayObj.optString("day"), count))
                     }
+                    historyList.add(DayCount("Total Kontacts", total))
+                    historyList.addAll(dailyEntries)
                     callback?.invoke(historyList, null)
                 } else {
                     conn.disconnect()
@@ -109,16 +119,11 @@ object SheetSync {
         }
     }
 
-    fun checkForNewNumbersSync(context: Context): Int {
+    private fun fetchAllContacts(): List<Pair<String, String>>? {
         return try {
-            val url = URL(SCRIPT_URL)
-            val conn = url.openConnection() as HttpURLConnection
-            conn.requestMethod = "GET"
-            conn.connectTimeout = 15000
-            conn.readTimeout = 15000
-
+            val conn = openConnection("contacts?select=whatsapp,referral", "GET")
             val responseCode = conn.responseCode
-            if (responseCode == HttpURLConnection.HTTP_OK || responseCode == HttpURLConnection.HTTP_MOVED_TEMP) {
+            if (responseCode in 200..299) {
                 val reader = BufferedReader(InputStreamReader(conn.inputStream))
                 val response = StringBuilder()
                 var line: String?
@@ -128,24 +133,33 @@ object SheetSync {
                 reader.close()
                 conn.disconnect()
 
-                val alreadySynced = UserPrefs.getSyncedNumbers(context)
-                val contactsArray = JSONArray(response.toString())
-                var newCount = 0
-                for (i in 0 until contactsArray.length()) {
-                    val phone = contactsArray.getJSONObject(i).optString("whatsapp")
-                    if (phone.isNotEmpty() && !alreadySynced.contains(phone)) {
-                        newCount++
-                    }
+                val arr = JSONArray(response.toString())
+                val result = ArrayList<Pair<String, String>>()
+                for (i in 0 until arr.length()) {
+                    val obj = arr.getJSONObject(i)
+                    result.add(Pair(obj.optString("whatsapp"), obj.optString("referral")))
                 }
-                newCount
+                result
             } else {
                 conn.disconnect()
-                0
+                null
             }
         } catch (e: Exception) {
-            Log.e("SheetSync", "Error checking for new numbers", e)
-            0
+            Log.e("SheetSync", "Error fetching contacts", e)
+            null
         }
+    }
+
+    fun checkForNewNumbersSync(context: Context): Int {
+        val contacts = fetchAllContacts() ?: return 0
+        val alreadySynced = UserPrefs.getSyncedNumbers(context)
+        var newCount = 0
+        for ((phone, _) in contacts) {
+            if (phone.isNotEmpty() && !alreadySynced.contains(phone)) {
+                newCount++
+            }
+        }
+        return newCount
     }
 
     private fun reconcileFromExistingContacts(context: Context) {
@@ -210,54 +224,34 @@ object SheetSync {
             reconcileFromExistingContacts(context)
             var contactCount = UserPrefs.getContactCounter(context)
             val newlySynced = HashSet<String>()
+
             try {
-                val url = URL(SCRIPT_URL)
-                val conn = url.openConnection() as HttpURLConnection
-                conn.requestMethod = "GET"
-                conn.connectTimeout = 15000
-                conn.readTimeout = 15000
+                val contacts = fetchAllContacts()
+                if (contacts == null) {
+                    callback?.invoke(0, 1, "Failed to fetch contacts from server")
+                    return@thread
+                }
 
-                val responseCode = conn.responseCode
-                if (responseCode == HttpURLConnection.HTTP_OK || responseCode == HttpURLConnection.HTTP_MOVED_TEMP) {
-                    val reader = BufferedReader(InputStreamReader(conn.inputStream))
-                    val response = StringBuilder()
-                    var line: String?
-
-                    while (reader.readLine().also { line = it } != null) {
-                        response.append(line)
+                val alreadySynced = UserPrefs.getSyncedNumbers(context)
+                for ((phone, _) in contacts) {
+                    if (phone.isEmpty() || alreadySynced.contains(phone)) {
+                        continue
                     }
-                    reader.close()
-                    conn.disconnect()
 
-                    val alreadySynced = UserPrefs.getSyncedNumbers(context)
-                    val contactsArray = JSONArray(response.toString())
-                    for (i in 0 until contactsArray.length()) {
-                        val contactObj = contactsArray.getJSONObject(i)
-                        val phone = contactObj.optString("whatsapp")
-
-                        if (phone.isEmpty() || alreadySynced.contains(phone)) {
-                            continue
-                        }
-
-                        val candidateName = "VG KONTACT ${contactCount + 1}"
-                        val (ok, err) = addSingleContactDetailed(context, candidateName, phone)
-                        if (ok) {
-                            contactCount++
-                            submitted++
-                            newlySynced.add(phone)
-                        } else {
-                            failed++
-                            if (errorDetail == null) errorDetail = err
-                        }
+                    val candidateName = "VG KONTACT ${contactCount + 1}"
+                    val (ok, err) = addSingleContactDetailed(context, candidateName, phone)
+                    if (ok) {
+                        contactCount++
+                        submitted++
+                        newlySynced.add(phone)
+                    } else {
+                        failed++
+                        if (errorDetail == null) errorDetail = err
                     }
-                    if (newlySynced.isNotEmpty()) {
-                        UserPrefs.addSyncedNumbers(context, newlySynced)
-                        UserPrefs.setContactCounter(context, contactCount)
-                    }
-                } else {
-                    conn.disconnect()
-                    failed++
-                    errorDetail = "Server responded with code $responseCode"
+                }
+                if (newlySynced.isNotEmpty()) {
+                    UserPrefs.addSyncedNumbers(context, newlySynced)
+                    UserPrefs.setContactCounter(context, contactCount)
                 }
             } catch (e: Exception) {
                 Log.e("SheetSync", "Error importing contacts", e)
