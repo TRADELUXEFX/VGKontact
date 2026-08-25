@@ -6,6 +6,7 @@
     <string name="btn_pick_contact">Pick from Contacts</string>
     <string name="btn_continue">Continue</string>
     <string name="btn_sync_kontact">Sync Kontact</string>
+    <string name="btn_save">Save</string>
     <string name="stats_total_label">Total Kontacts Synced</string>
     <string name="error_whatsapp_required">Please enter your WhatsApp number</string>
     <string name="error_referral_required">Please enter a referral WhatsApp number</string>
@@ -22,4 +23,17 @@
     <string name="history_load_failed">Could not load history. Check your connection and try again.</string>
     <string name="history_column_date">Date</string>
     <string name="history_column_count">Count</string>
+
+    <!-- Notification settings -->
+    <string name="title_notification_settings">Notification Settings</string>
+    <string name="notification_frequency_label">Check Frequency</string>
+    <string name="notification_frequency_desc">How often should VG Kontact check for new numbers and notify you?</string>
+    <string name="notification_frequency_range">1 hour \u2013 168 hours (7 days)</string>
+
+    <!-- Profile -->
+    <string name="title_profile">My Profile</string>
+    <string name="profile_label_number">Number</string>
+    <string name="profile_label_referral">Referral Number</string>
+    <string name="profile_label_date_registered">Date Registered</string>
+    <string name="profile_label_plan">VG Kontact Plan</string>
 </resources>
