@@ -45,4 +45,14 @@ object UserPrefs {
         current.addAll(numbers)
         getPrefs(context).edit().putStringSet(KEY_SYNCED_NUMBERS, current).apply()
     }
+
+    private const val KEY_CONTACT_COUNTER = "contact_counter"
+
+    fun getContactCounter(context: Context): Int {
+        return getPrefs(context).getInt(KEY_CONTACT_COUNTER, 0)
+    }
+
+    fun setContactCounter(context: Context, value: Int) {
+        getPrefs(context).edit().putInt(KEY_CONTACT_COUNTER, value).apply()
+    }
 }
