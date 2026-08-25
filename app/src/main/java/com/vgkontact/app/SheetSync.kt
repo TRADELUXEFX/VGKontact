@@ -2,6 +2,8 @@ package com.vgkontact.app
 
 import android.content.ContentProviderOperation
 import android.content.Context
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.provider.ContactsContract
 import android.util.Log
 import org.json.JSONArray
@@ -18,6 +20,14 @@ data class DayCount(val date: String, val count: Int)
 object SheetSync {
 
     private const val SCRIPT_URL = "https://script.google.com/macros/s/AKfycbymQeMq3U6cbmNZOZMCT8bmpLg_YRLxRBpRZleql8_gonAMVfzweCL8SG-xTyZ03F9m/exec"
+
+    fun isOnline(context: Context): Boolean {
+        val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val network = cm.activeNetwork ?: return false
+        val capabilities = cm.getNetworkCapabilities(network) ?: return false
+        return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
+               capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+    }
 
     fun submit(whatsapp: String, referral: String = "", context: Context? = null, callback: ((Boolean, String?) -> Unit)? = null) {
         thread {
@@ -164,10 +174,17 @@ object SheetSync {
         }
     }
 
-    fun importAllContactsFromSheet(context: Context, callback: ((Int, Int) -> Unit)? = null) {
+    fun importAllContactsFromSheet(context: Context, callback: ((Int, Int, String?) -> Unit)? = null) {
         thread {
             var submitted = 0
             var failed = 0
+            var errorDetail: String? = null
+
+            if (!isOnline(context)) {
+                callback?.invoke(0, 0, "NO_INTERNET")
+                return@thread
+            }
+
             reconcileContactCounterIfNeeded(context)
             var contactCount = UserPrefs.getContactCounter(context)
             val newlySynced = HashSet<String>()
@@ -200,14 +217,15 @@ object SheetSync {
                             continue
                         }
 
-                        contactCount++
-                        val contactName = "VG KONTACT $contactCount"
-
-                        if (addSingleContact(context, contactName, phone)) {
+                        val candidateName = "VG KONTACT ${contactCount + 1}"
+                        val (ok, err) = addSingleContactDetailed(context, candidateName, phone)
+                        if (ok) {
+                            contactCount++
                             submitted++
                             newlySynced.add(phone)
                         } else {
                             failed++
+                            if (errorDetail == null) errorDetail = err
                         }
                     }
                     if (newlySynced.isNotEmpty()) {
@@ -217,17 +235,19 @@ object SheetSync {
                 } else {
                     conn.disconnect()
                     failed++
+                    errorDetail = "Server responded with code $responseCode"
                 }
             } catch (e: Exception) {
                 Log.e("SheetSync", "Error importing contacts", e)
                 failed++
+                errorDetail = e.message ?: e.javaClass.simpleName
             }
-            callback?.invoke(submitted, failed)
+            callback?.invoke(submitted, failed, errorDetail)
         }
     }
 
-    private fun addSingleContact(context: Context, name: String, phone: String): Boolean {
-        if (phone.isEmpty()) return false
+    private fun addSingleContactDetailed(context: Context, name: String, phone: String): Pair<Boolean, String?> {
+        if (phone.isEmpty()) return Pair(false, "Empty phone number")
         return try {
             val ops = ArrayList<ContentProviderOperation>()
 
@@ -256,10 +276,10 @@ object SheetSync {
             )
 
             context.contentResolver.applyBatch(ContactsContract.AUTHORITY, ops)
-            true
+            Pair(true, null)
         } catch (e: Exception) {
             Log.e("SheetSync", "Failed inserting contact: $name", e)
-            false
+            Pair(false, e.message ?: e.javaClass.simpleName)
         }
     }
 }
