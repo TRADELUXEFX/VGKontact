@@ -141,17 +141,23 @@ class MainMenuActivity : AppCompatActivity() {
     private fun startSync() {
         Toast.makeText(this, "Checking for new Kontacts...", Toast.LENGTH_SHORT).show()
         NotificationHelper.showSyncStartedNotification(this)
-        SheetSync.importAllContactsFromSheet(this) { submitted, failed ->
+        SheetSync.importAllContactsFromSheet(this) { submitted, failed, errorDetail ->
             runOnUiThread {
+                if (errorDetail == "NO_INTERNET") {
+                    Toast.makeText(this, "No internet connection", Toast.LENGTH_LONG).show()
+                    NotificationHelper.showNoInternetNotification(this)
+                    return@runOnUiThread
+                }
                 if (submitted == 0 && failed == 0) {
                     Toast.makeText(this, "No new numbers", Toast.LENGTH_LONG).show()
                 } else if (submitted > 0 && failed == 0) {
                     val label = if (submitted == 1) "number" else "numbers"
                     Toast.makeText(this, "$submitted new $label added", Toast.LENGTH_LONG).show()
                 } else {
-                    Toast.makeText(this, "$submitted new added, $failed failed", Toast.LENGTH_LONG).show()
+                    val extra = if (errorDetail != null) ": $errorDetail" else ""
+                    Toast.makeText(this, "$submitted new added, $failed failed$extra", Toast.LENGTH_LONG).show()
                 }
-                NotificationHelper.showSyncCompleteNotification(this, submitted, failed)
+                NotificationHelper.showSyncCompleteNotification(this, submitted, failed, errorDetail)
                 loadStats()
             }
         }
