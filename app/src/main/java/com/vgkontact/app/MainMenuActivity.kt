@@ -143,8 +143,11 @@ class MainMenuActivity : AppCompatActivity() {
             runOnUiThread {
                 if (submitted == 0 && failed == 0) {
                     Toast.makeText(this, "No new numbers", Toast.LENGTH_LONG).show()
+                } else if (submitted > 0 && failed == 0) {
+                    val label = if (submitted == 1) "number" else "numbers"
+                    Toast.makeText(this, "$submitted new $label added", Toast.LENGTH_LONG).show()
                 } else {
-                    Toast.makeText(this, "Synced: $submitted, Failed: $failed", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this, "$submitted new added, $failed failed", Toast.LENGTH_LONG).show()
                 }
                 NotificationHelper.showSyncCompleteNotification(this, submitted, failed)
                 loadStats()
