@@ -20,4 +20,6 @@
     <string name="history_total_prefix">Total Kontacts: </string>
     <string name="history_empty">No kontacts synced yet.</string>
     <string name="history_load_failed">Could not load history. Check your connection and try again.</string>
+    <string name="history_column_date">Date</string>
+    <string name="history_column_count">Count</string>
 </resources>
