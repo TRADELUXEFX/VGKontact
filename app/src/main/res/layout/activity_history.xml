@@ -4,7 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="@color/white">
+    android:background="@color/stats_card_fill">
 
     <!-- Green gradient header -->
     <LinearLayout
@@ -28,52 +28,6 @@
 
     </LinearLayout>
 
-    <!-- Total Kontacts banner -->
-    <TextView
-        android:id="@+id/totalText"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:paddingStart="24dp"
-        android:paddingEnd="24dp"
-        android:paddingTop="20dp"
-        android:paddingBottom="12dp"
-        android:textSize="17sp"
-        android:textStyle="bold"
-        android:textColor="@color/vg_dark"
-        tools:text="Total Kontacts: 41" />
-
-    <!-- List column headers -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:paddingStart="24dp"
-        android:paddingEnd="24dp"
-        android:paddingBottom="8dp">
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="@string/history_column_date"
-            android:textSize="11sp"
-            android:textAllCaps="true"
-            android:letterSpacing="0.05"
-            android:textColor="@color/text_muted" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/history_column_count"
-            android:textSize="11sp"
-            android:textAllCaps="true"
-            android:letterSpacing="0.05"
-            android:textColor="@color/text_muted" />
-
-    </LinearLayout>
-
-    <View style="@style/MenuDivider" />
-
     <!-- Loading indicator, shown while fetching -->
     <ProgressBar
         android:id="@+id/progressBar"
@@ -93,19 +47,82 @@
         android:textColor="@color/vg_dark"
         android:visibility="gone" />
 
-    <!-- Full scrollable list of day-by-day counts, fills the rest of the screen -->
+    <!-- Scrollable card containing total + column headers + list -->
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1">
 
         <LinearLayout
-            android:id="@+id/dayListContainer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:paddingStart="24dp"
-            android:paddingEnd="24dp" />
+            android:paddingStart="20dp"
+            android:paddingEnd="20dp"
+            android:paddingTop="24dp"
+            android:paddingBottom="24dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@drawable/card_background"
+                android:padding="20dp">
+
+                <!-- Total Kontacts -->
+                <TextView
+                    android:id="@+id/totalText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textSize="17sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/vg_dark"
+                    android:paddingBottom="16dp"
+                    tools:text="Total Kontacts: 41" />
+
+                <!-- List column headers -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:paddingBottom="8dp">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/history_column_date"
+                        android:textSize="11sp"
+                        android:textAllCaps="true"
+                        android:letterSpacing="0.05"
+                        android:textColor="@color/text_muted" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/history_column_count"
+                        android:textSize="11sp"
+                        android:textAllCaps="true"
+                        android:letterSpacing="0.05"
+                        android:textColor="@color/text_muted" />
+
+                </LinearLayout>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="@color/stats_card_border" />
+
+                <!-- Day-by-day counts list -->
+                <LinearLayout
+                    android:id="@+id/dayListContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical" />
+
+            </LinearLayout>
+
+        </LinearLayout>
 
     </ScrollView>
 
