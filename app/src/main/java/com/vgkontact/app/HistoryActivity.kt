@@ -56,10 +56,6 @@ class HistoryActivity : AppCompatActivity() {
                                 LinearLayout.LayoutParams.WRAP_CONTENT
                             )
                             layoutParams = params
-                            background = androidx.core.content.ContextCompat.getDrawable(
-                                this@HistoryActivity,
-                                R.drawable.history_row_divider
-                            )
                         }
 
                         val dateView = TextView(this@HistoryActivity).apply {
