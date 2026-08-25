@@ -80,7 +80,10 @@ class MainMenuActivity : AppCompatActivity() {
             val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://chat.whatsapp.com/"))
             startActivity(intent)
         }
+    }
 
+    override fun onResume() {
+        super.onResume()
         loadStats()
     }
 
@@ -134,11 +137,15 @@ class MainMenuActivity : AppCompatActivity() {
     }
 
     private fun startSync() {
-        Toast.makeText(this, "Starting Sync...", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, "Checking for new Kontacts...", Toast.LENGTH_SHORT).show()
         NotificationHelper.showSyncStartedNotification(this)
         SheetSync.importAllContactsFromSheet(this) { submitted, failed ->
             runOnUiThread {
-                Toast.makeText(this, "Synced: $submitted, Failed: $failed", Toast.LENGTH_LONG).show()
+                if (submitted == 0 && failed == 0) {
+                    Toast.makeText(this, "No new numbers", Toast.LENGTH_LONG).show()
+                } else {
+                    Toast.makeText(this, "Synced: $submitted, Failed: $failed", Toast.LENGTH_LONG).show()
+                }
                 NotificationHelper.showSyncCompleteNotification(this, submitted, failed)
                 loadStats()
             }
