@@ -105,8 +105,12 @@ class MainMenuActivity : AppCompatActivity() {
     private fun checkAndRequestBatteryOptimization() {
         val packageName = packageName
         val pm = getSystemService(Context.POWER_SERVICE) as android.os.PowerManager
+        val alreadyAsked = getSharedPreferences("vgkontact_prefs", Context.MODE_PRIVATE)
+            .getBoolean("battery_optimization_asked", false)
 
-        if (!pm.isIgnoringBatteryOptimizations(packageName)) {
+        if (!pm.isIgnoringBatteryOptimizations(packageName) && !alreadyAsked) {
+            getSharedPreferences("vgkontact_prefs", Context.MODE_PRIVATE)
+                .edit().putBoolean("battery_optimization_asked", true).apply()
             try {
                 val intent = Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
                 intent.data = Uri.parse("package:$packageName")
