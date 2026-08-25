@@ -19,8 +19,8 @@ data class DayCount(val date: String, val count: Int)
 
 object SheetSync {
 
-    private const val SUPABASE_URL = "https://ixniesqmbdemeaskkhvy.supabase.co"
-    private const val SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml4bmllc3FtYmRlbWVhc2traHZ5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2NjM0MjksImV4cCI6MjEwMzIzOTQyOX0.I9mWqP4JPjlYNHWMs1vR1bcVB9-XuXzO73ai2IZUEwQ"
+    private val SUPABASE_URL = BuildConfig.SUPABASE_URL
+    private val SUPABASE_ANON_KEY = BuildConfig.SUPABASE_ANON_KEY
 
     fun isOnline(context: Context): Boolean {
         val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
