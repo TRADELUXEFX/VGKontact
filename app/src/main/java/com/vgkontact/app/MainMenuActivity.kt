@@ -51,6 +51,7 @@ class MainMenuActivity : AppCompatActivity() {
     private var latestPermissionStatus: PermissionHealth.Status? = null
 
     private val PERMISSION_REQUEST_CODE = 100
+    private val NOTIFICATION_PERMISSION_REQUEST_CODE = 101
     private val CONTACT_US_WHATSAPP_NUMBER = "09110321143"
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -80,7 +81,7 @@ class MainMenuActivity : AppCompatActivity() {
 
         permissionWarningBanner.setOnClickListener {
             latestPermissionStatus?.let { status ->
-                PermissionHealth.openFixForWorstIssue(this, status)
+                fixWorstPermissionIssue(status)
             }
         }
 
@@ -175,6 +176,34 @@ class MainMenuActivity : AppCompatActivity() {
         if (background is GradientDrawable) {
             background.setColor(ContextCompat.getColor(this, colorRes))
         }
+    }
+
+    /**
+     * Handles the banner's "FIX" tap. Contacts and notifications are runtime
+     * permissions - Android can show the native grant popup directly, so we
+     * ask for those the same way PermissionSetupActivity does, rather than
+     * sending the user away to Settings. Battery optimization is the one
+     * exception: Android has no popup for that, only a special
+     * Settings-style system screen, so that one still has to go there.
+     */
+    private fun fixWorstPermissionIssue(status: PermissionHealth.Status) {
+        when {
+            !status.contactsGranted -> requestContactsPermission()
+            !status.batteryExempted -> PermissionHealth.openFixForWorstIssue(this, status)
+            !status.notificationsGranted -> requestNotificationPermission()
+            else -> PermissionHealth.openFixForWorstIssue(this, status)
+        }
+    }
+
+    private fun requestNotificationPermission() {
+        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.TIRAMISU) {
+            return // not applicable pre-Android 13
+        }
+        ActivityCompat.requestPermissions(
+            this,
+            arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+            NOTIFICATION_PERMISSION_REQUEST_CODE
+        )
     }
 
     private fun openWhatsAppContactUs() {
@@ -272,16 +301,24 @@ class MainMenuActivity : AppCompatActivity() {
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == PERMISSION_REQUEST_CODE) {
-            if (grantResults.isNotEmpty() && grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
-                // Permission was just granted, so the stats we last loaded (with
-                // permission denied) are stale/generic. Refresh them before syncing
-                // so the dashboard reflects the real on-device numbers right away.
-                loadStats()
+        when (requestCode) {
+            PERMISSION_REQUEST_CODE -> {
+                if (grantResults.isNotEmpty() && grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
+                    // Permission was just granted, so the stats we last loaded (with
+                    // permission denied) are stale/generic. Refresh them before syncing
+                    // so the dashboard reflects the real on-device numbers right away.
+                    loadStats()
+                    refreshPermissionHealth()
+                    startSync()
+                } else {
+                    refreshPermissionHealth()
+                    Toast.makeText(this, "Permission required to sync contacts", Toast.LENGTH_SHORT).show()
+                }
+            }
+            NOTIFICATION_PERMISSION_REQUEST_CODE -> {
+                // Advance/refresh regardless of grant or deny - denial just means the
+                // banner stays up for that one item, it never blocks anything else.
                 refreshPermissionHealth()
-                startSync()
-            } else {
-                Toast.makeText(this, "Permission required to sync contacts", Toast.LENGTH_SHORT).show()
             }
         }
     }
