@@ -28,6 +28,7 @@ class MainMenuActivity : AppCompatActivity() {
     private lateinit var statsProgressBar: ProgressBar
     private lateinit var statsContent: LinearLayout
     private lateinit var statsTotalText: TextView
+    private lateinit var statsTodayText: TextView
     private lateinit var statsDatabaseTotalText: TextView
     private lateinit var statsAvailableText: TextView
     private lateinit var notificationIcon: ImageView
@@ -54,6 +55,7 @@ class MainMenuActivity : AppCompatActivity() {
         statsProgressBar = findViewById(R.id.statsProgressBar)
         statsContent = findViewById(R.id.statsContent)
         statsTotalText = findViewById(R.id.statsTotalText)
+        statsTodayText = findViewById(R.id.statsTodayText)
         statsDatabaseTotalText = findViewById(R.id.statsDatabaseTotalText)
         statsAvailableText = findViewById(R.id.statsAvailableText)
         notificationIcon = findViewById(R.id.notificationIcon)
@@ -183,6 +185,14 @@ class MainMenuActivity : AppCompatActivity() {
                     statsTotalText.text = list[0].count.toString()
                 }
             }
+        }
+
+        val todayCount = UserPrefs.getTodaySyncedCount(this)
+        statsTodayText.text = if (todayCount > 0) {
+            val label = if (todayCount == 1) "kontact" else "kontacts"
+            "$todayCount $label synced today"
+        } else {
+            getString(R.string.stats_no_sync_today)
         }
 
         // TODO: once a FREE-plan import cap is decided, replace this with:
