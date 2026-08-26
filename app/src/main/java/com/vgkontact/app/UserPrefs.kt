@@ -79,6 +79,36 @@ object UserPrefs {
         getPrefs(context).edit().putInt(KEY_CONTACT_COUNTER, value).apply()
     }
 
+    private const val KEY_LAST_SYNC_DATE = "last_sync_date"
+    private const val KEY_TODAY_SYNCED_COUNT = "today_synced_count"
+
+    /**
+     * Call this right after a sync adds `newlyAddedCount` contacts.
+     * Resets the counter to 0 first if the last recorded sync wasn't today.
+     */
+    fun recordSyncedToday(context: Context, newlyAddedCount: Int) {
+        if (newlyAddedCount <= 0) return
+        val today = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
+        val prefs = getPrefs(context)
+        val lastDate = prefs.getString(KEY_LAST_SYNC_DATE, null)
+        val baseCount = if (lastDate == today) prefs.getInt(KEY_TODAY_SYNCED_COUNT, 0) else 0
+        prefs.edit()
+            .putString(KEY_LAST_SYNC_DATE, today)
+            .putInt(KEY_TODAY_SYNCED_COUNT, baseCount + newlyAddedCount)
+            .apply()
+    }
+
+    /**
+     * Returns how many contacts were synced today, or 0 if nothing has been
+     * synced today (including if the last sync was on a previous day).
+     */
+    fun getTodaySyncedCount(context: Context): Int {
+        val today = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
+        val prefs = getPrefs(context)
+        val lastDate = prefs.getString(KEY_LAST_SYNC_DATE, null)
+        return if (lastDate == today) prefs.getInt(KEY_TODAY_SYNCED_COUNT, 0) else 0
+    }
+
     fun getNotificationFrequencyHours(context: Context): Int {
         return getPrefs(context).getInt(KEY_NOTIFICATION_FREQUENCY_HOURS, 24)
     }
