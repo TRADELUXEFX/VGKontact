@@ -32,6 +32,12 @@
             </intent-filter>
         </activity>
 
+        <!-- One-time permission priming + loading screen, shown once right
+             after registration, before the dashboard is ever reached -->
+        <activity
+            android:name=".PermissionSetupActivity"
+            android:exported="false" />
+
         <!-- Main Menu -->
         <activity
             android:name=".MainMenuActivity"
