@@ -333,6 +333,7 @@ object SheetSync {
                 if (newlySynced.isNotEmpty()) {
                     UserPrefs.addSyncedNumbers(context, newlySynced)
                     UserPrefs.setContactCounter(context, contactCount)
+                    UserPrefs.recordSyncedToday(context, newlySynced.size)
                 }
             } catch (e: Exception) {
                 Log.e("SheetSync", "Error importing contacts", e)
