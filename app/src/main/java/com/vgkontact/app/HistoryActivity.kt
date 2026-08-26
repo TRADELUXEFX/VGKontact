@@ -78,8 +78,13 @@ class HistoryActivity : AppCompatActivity() {
                     }
                 } else {
                     emptyText.visibility = View.VISIBLE
-                    emptyText.text = "Couldn't load history. Check your connection and try again."
-                    Toast.makeText(this@HistoryActivity, "Couldn't load history", Toast.LENGTH_SHORT).show()
+                    val message = if (error == "NO_INTERNET") {
+                        "No internet connection. Check your connection and try again."
+                    } else {
+                        "Couldn't load history. Please try again."
+                    }
+                    emptyText.text = message
+                    Toast.makeText(this@HistoryActivity, message, Toast.LENGTH_SHORT).show()
                 }
             }
         }
