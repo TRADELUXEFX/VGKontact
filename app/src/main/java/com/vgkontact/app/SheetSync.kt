@@ -61,9 +61,11 @@ object SheetSync {
         }
     }
 
+    private const val GENERIC_ERROR = "Something went wrong. Please try again."
+
     private fun readErrorBody(conn: HttpURLConnection): String {
-        return try {
-            val stream = conn.errorStream ?: return "Server error: ${conn.responseCode}"
+        val raw = try {
+            val stream = conn.errorStream ?: return GENERIC_ERROR
             val reader = BufferedReader(InputStreamReader(stream))
             val response = StringBuilder()
             var line: String?
@@ -72,7 +74,7 @@ object SheetSync {
             }
             reader.close()
             val body = response.toString()
-            if (body.isEmpty()) return "Server error: ${conn.responseCode}"
+            if (body.isEmpty()) return GENERIC_ERROR
 
             // Supabase/PostgREST errors come back as JSON with a "message" field
             try {
@@ -84,7 +86,30 @@ object SheetSync {
                 body
             }
         } catch (e: Exception) {
-            "Server error: ${conn.responseCode}"
+            return GENERIC_ERROR
+        }
+        return friendlyErrorMessage(raw)
+    }
+
+    /**
+     * Converts raw backend/Postgres error text into plain, user-facing language.
+     * Nothing from Supabase/PostgREST (constraint names, SQL wording, error codes)
+     * should ever reach the UI directly.
+     */
+    private fun friendlyErrorMessage(raw: String): String {
+        val lower = raw.lowercase()
+        return when {
+            lower.contains("duplicate key") || lower.contains("unique constraint") || lower.contains("already exists") ->
+                "This WhatsApp number is already registered."
+            lower.contains("timeout") || lower.contains("timed out") ->
+                "The request timed out. Please check your connection and try again."
+            lower.contains("network") || lower.contains("unable to resolve host") || lower.contains("connection") ->
+                "No internet connection. Please try again."
+            lower.contains("jwt") || lower.contains("unauthor") || lower.contains("permission denied") ->
+                "You're not authorized to do this. Please restart the app and try again."
+            lower.contains("not-null") || lower.contains("null value") ->
+                "Please fill in all required fields."
+            else -> GENERIC_ERROR
         }
     }
 
