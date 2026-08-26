@@ -19,7 +19,10 @@ class OnboardingActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
 
         if (UserPrefs.isRegistered(this)) {
-            startActivity(Intent(this, MainMenuActivity::class.java))
+            // Already registered - route through the same gate the first-time
+            // flow uses. PermissionSetupActivity skips itself immediately if
+            // setup was already completed, so this is a no-op for returning users.
+            startActivity(Intent(this, PermissionSetupActivity::class.java))
             finish()
             return
         }
@@ -58,7 +61,7 @@ class OnboardingActivity : AppCompatActivity() {
                     continueButton.text = getString(R.string.btn_continue)
                     if (success) {
                         UserPrefs.saveUser(this, whatsapp, referral)
-                        startActivity(Intent(this, MainMenuActivity::class.java))
+                        startActivity(Intent(this, PermissionSetupActivity::class.java))
                         finish()
                     } else {
                         Toast.makeText(this, message ?: "Submission failed", Toast.LENGTH_SHORT).show()
