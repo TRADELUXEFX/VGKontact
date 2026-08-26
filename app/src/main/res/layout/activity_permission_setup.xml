@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/stats_card_fill">
+
+    <!-- ===================== PERMISSION STEP UI ===================== -->
+    <LinearLayout
+        android:id="@+id/permissionStepContainer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <!-- Green gradient header -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@drawable/header_gradient"
+            android:paddingTop="48dp"
+            android:paddingBottom="36dp"
+            android:paddingStart="24dp"
+            android:paddingEnd="24dp"
+            android:gravity="center">
+
+            <TextView
+                android:id="@+id/stepCounterText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:textAllCaps="true"
+                android:letterSpacing="0.08"
+                android:textColor="@color/white"
+                android:alpha="0.85"
+                tools:text="STEP 1 OF 3" />
+
+            <TextView
+                android:id="@+id/stepTitleText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:textSize="24sp"
+                android:textStyle="bold"
+                android:textColor="@color/white"
+                android:gravity="center"
+                tools:text="Contacts Access" />
+
+        </LinearLayout>
+
+        <!-- Card content -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:paddingStart="24dp"
+            android:paddingEnd="24dp"
+            android:paddingTop="32dp"
+            android:gravity="top|center_horizontal">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:background="@drawable/card_background"
+                android:padding="28dp">
+
+                <ImageView
+                    android:id="@+id/stepIcon"
+                    android:layout_width="64dp"
+                    android:layout_height="64dp"
+                    android:padding="14dp"
+                    android:background="@drawable/avatar_circle_background"
+                    android:src="@drawable/ic_contacts"
+                    app:tint="@color/vg_green" />
+
+                <TextView
+                    android:id="@+id/stepDescriptionText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="20dp"
+                    android:textSize="14sp"
+                    android:textColor="@color/text_muted"
+                    android:gravity="center"
+                    android:lineSpacingExtra="4dp"
+                    tools:text="VG Kontact needs contacts access to add and sync numbers on your phone." />
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <!-- Action button -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="24dp">
+
+            <Button
+                android:id="@+id/stepActionButton"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:backgroundTint="@color/vg_green"
+                android:textColor="@color/white"
+                app:cornerRadius="28dp"
+                tools:text="Allow Contacts Access" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <!-- ===================== LOADING SCREEN ===================== -->
+    <LinearLayout
+        android:id="@+id/loadingContainer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:background="@color/white"
+        android:visibility="gone">
+
+        <ProgressBar
+            android:id="@+id/loadingSpinner"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:indeterminateTint="@color/vg_green" />
+
+        <TextView
+            android:id="@+id/loadingText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:textSize="13sp"
+            android:textColor="@color/text_muted"
+            android:text="Setting things up..." />
+
+    </LinearLayout>
+
+</FrameLayout>
