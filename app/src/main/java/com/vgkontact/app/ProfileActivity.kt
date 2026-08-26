@@ -1,6 +1,8 @@
 package com.vgkontact.app
 
+import android.content.Intent
 import android.os.Bundle
+import android.widget.Button
 import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
@@ -11,6 +13,7 @@ class ProfileActivity : AppCompatActivity() {
     private lateinit var profileReferralText: TextView
     private lateinit var profileDateRegisteredText: TextView
     private lateinit var profilePlanText: TextView
+    private lateinit var upgradePlanButton: Button
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -20,6 +23,7 @@ class ProfileActivity : AppCompatActivity() {
         profileReferralText = findViewById(R.id.profileReferralText)
         profileDateRegisteredText = findViewById(R.id.profileDateRegisteredText)
         profilePlanText = findViewById(R.id.profilePlanText)
+        upgradePlanButton = findViewById(R.id.upgradePlanButton)
 
         profileNumberText.text = UserPrefs.getWhatsapp(this) ?: "N/A"
         val referral = UserPrefs.getReferral(this)
@@ -32,6 +36,11 @@ class ProfileActivity : AppCompatActivity() {
             runOnUiThread {
                 profilePlanText.text = plan ?: "FREE"
             }
+        }
+
+        upgradePlanButton.setOnClickListener {
+            // TODO: point this at your actual upgrade/checkout flow
+            startActivity(Intent(this, UpgradePlanActivity::class.java))
         }
     }
 }
