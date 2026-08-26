@@ -286,19 +286,45 @@ object SheetSync {
             PackageManager.PERMISSION_GRANTED
     }
 
-    /** Every phone number currently saved on the device, for stats cross-checking. */
+    /**
+     * Phone numbers belonging ONLY to contacts this app itself created (i.e. named
+     * "VG KONTACT <number>"). We deliberately do NOT scan the user's whole address
+     * book here - a stranger's pre-existing contact could coincidentally share a
+     * number with a row in our database, which would wrongly count as "already
+     * synced" for a brand new user who never synced anything. Scoping to our own
+     * naming pattern avoids that false match.
+     */
     private fun getDevicePhoneNumbers(context: Context): Set<String> {
         val numbers = HashSet<String>()
+        val pattern = Regex("^VG KONTACT (\\d+)$")
+
         val cursor = context.contentResolver.query(
-            ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
-            arrayOf(ContactsContract.CommonDataKinds.Phone.NUMBER),
+            ContactsContract.Contacts.CONTENT_URI,
+            arrayOf(ContactsContract.Contacts._ID, ContactsContract.Contacts.DISPLAY_NAME),
             null, null, null
         )
         cursor?.use {
-            val numIndex = it.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)
+            val idIndex = it.getColumnIndex(ContactsContract.Contacts._ID)
+            val nameIndex = it.getColumnIndex(ContactsContract.Contacts.DISPLAY_NAME)
             while (it.moveToNext()) {
-                val num = it.getString(numIndex)
-                if (!num.isNullOrEmpty()) numbers.add(num)
+                val name = it.getString(nameIndex) ?: continue
+                if (!pattern.matches(name.trim())) continue
+
+                val contactId = it.getString(idIndex)
+                val phoneCursor = context.contentResolver.query(
+                    ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+                    arrayOf(ContactsContract.CommonDataKinds.Phone.NUMBER),
+                    "${ContactsContract.CommonDataKinds.Phone.CONTACT_ID} = ?",
+                    arrayOf(contactId),
+                    null
+                )
+                phoneCursor?.use { pc ->
+                    val numIndex = pc.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)
+                    while (pc.moveToNext()) {
+                        val num = pc.getString(numIndex)
+                        if (!num.isNullOrEmpty()) numbers.add(num)
+                    }
+                }
             }
         }
         return numbers
