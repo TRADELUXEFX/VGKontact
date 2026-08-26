@@ -1,11 +1,14 @@
 package com.vgkontact.app
 
+import android.Manifest
 import android.content.ContentProviderOperation
 import android.content.Context
+import android.content.pm.PackageManager
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.provider.ContactsContract
 import android.util.Log
+import androidx.core.content.ContextCompat
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.BufferedReader
@@ -183,11 +186,63 @@ object SheetSync {
                 return@thread
             }
             val totalInDatabase = contacts.count { it.first.isNotEmpty() }
-            val alreadySynced = UserPrefs.getSyncedNumbers(context)
-            val syncedToPhone = contacts.count { it.first.isNotEmpty() && alreadySynced.contains(it.first) }
+
+            // Cross-check against numbers actually saved on the device (not just our
+            // own sync history), so contacts added outside the app - or lost via an
+            // app reinstall/data clear - still count as already-synced.
+            val knownSynced = UserPrefs.getSyncedNumbers(context).map { normalizePhone(it) }.toSet()
+            val onDevice = if (checkContactsPermission(context))
+                getDevicePhoneNumbers(context).map { normalizePhone(it) }.toSet()
+            else emptySet()
+            val syncedToPhone = contacts.count {
+                it.first.isNotEmpty() &&
+                    normalizePhone(it.first).let { n -> knownSynced.contains(n) || onDevice.contains(n) }
+            }
+
             val availableToImport = (totalInDatabase - syncedToPhone).coerceAtLeast(0)
             callback(ImportStats(totalInDatabase, syncedToPhone, availableToImport))
         }
+    }
+
+    /**
+     * Normalizes a Nigerian phone number for comparison purposes only (not for
+     * storage/display). Strips spaces/dashes and collapses +234 / 234 / 0 prefixes
+     * down to the bare 10-digit subscriber number, e.g.:
+     *   "+2348012345678" -> "8012345678"
+     *   "08012345678"     -> "8012345678"
+     *   "2348012345678"   -> "8012345678"
+     */
+    private fun normalizePhone(raw: String): String {
+        var digits = raw.filter { it.isDigit() }
+        if (digits.startsWith("234")) {
+            digits = digits.removePrefix("234")
+        } else if (digits.startsWith("0")) {
+            digits = digits.removePrefix("0")
+        }
+        return digits
+    }
+
+    private fun checkContactsPermission(context: Context): Boolean {
+        return ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CONTACTS) ==
+            PackageManager.PERMISSION_GRANTED
+    }
+
+    /** Every phone number currently saved on the device, for stats cross-checking. */
+    private fun getDevicePhoneNumbers(context: Context): Set<String> {
+        val numbers = HashSet<String>()
+        val cursor = context.contentResolver.query(
+            ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+            arrayOf(ContactsContract.CommonDataKinds.Phone.NUMBER),
+            null, null, null
+        )
+        cursor?.use {
+            val numIndex = it.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)
+            while (it.moveToNext()) {
+                val num = it.getString(numIndex)
+                if (!num.isNullOrEmpty()) numbers.add(num)
+            }
+        }
+        return numbers
     }
 
     private fun fetchAllContacts(): List<Pair<String, String>>? {
@@ -233,10 +288,10 @@ object SheetSync {
 
     fun checkForNewNumbersSync(context: Context): Int {
         val contacts = fetchAllContacts() ?: return 0
-        val alreadySynced = UserPrefs.getSyncedNumbers(context)
+        val alreadySynced = UserPrefs.getSyncedNumbers(context).map { normalizePhone(it) }.toSet()
         var newCount = 0
         for ((phone, _) in contacts) {
-            if (phone.isNotEmpty() && !alreadySynced.contains(phone)) {
+            if (phone.isNotEmpty() && !alreadySynced.contains(normalizePhone(phone))) {
                 newCount++
             }
         }
@@ -313,9 +368,9 @@ object SheetSync {
                     return@thread
                 }
 
-                val alreadySynced = UserPrefs.getSyncedNumbers(context)
+                val alreadySynced = UserPrefs.getSyncedNumbers(context).map { normalizePhone(it) }.toSet()
                 for ((phone, _) in contacts) {
-                    if (phone.isEmpty() || alreadySynced.contains(phone)) {
+                    if (phone.isEmpty() || alreadySynced.contains(normalizePhone(phone))) {
                         continue
                     }
 
