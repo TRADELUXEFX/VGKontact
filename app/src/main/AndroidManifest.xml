@@ -52,6 +52,11 @@
             android:name=".ProfileActivity"
             android:exported="false" />
 
+        <!-- Upgrade Plan -->
+        <activity
+            android:name=".UpgradePlanActivity"
+            android:exported="false" />
+
     </application>
 
 </manifest>
