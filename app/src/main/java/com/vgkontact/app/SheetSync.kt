@@ -17,6 +17,8 @@ import kotlin.concurrent.thread
 
 data class DayCount(val date: String, val count: Int)
 
+data class ImportStats(val totalInDatabase: Int, val syncedToPhone: Int, val availableToImport: Int)
+
 object SheetSync {
 
     private val SUPABASE_URL = BuildConfig.SUPABASE_URL
@@ -29,8 +31,7 @@ object SheetSync {
         val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         val network = cm.activeNetwork ?: return false
         val capabilities = cm.getNetworkCapabilities(network) ?: return false
-        return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
-               capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+        return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
     }
 
     private fun openConnection(path: String, method: String): HttpURLConnection {
@@ -45,18 +46,13 @@ object SheetSync {
         return conn
     }
 
-    // Returns true if this response/exception is worth retrying.
-    // 4xx client errors (bad request, conflict, etc.) won't succeed on retry.
-    // 5xx server errors and network exceptions are worth retrying.
     private fun isRetryable(responseCode: Int?): Boolean {
-        if (responseCode == null) return true // exception/timeout case
-        return responseCode >= 500
+        return responseCode == null || responseCode >= 500 || responseCode == 429
     }
 
     private fun sleepBeforeRetry(attempt: Int) {
-        val delay = BASE_DELAY_MS * (1L shl attempt) // 1s, 2s, 4s
         try {
-            Thread.sleep(delay)
+            Thread.sleep(BASE_DELAY_MS * (attempt + 1))
         } catch (e: InterruptedException) {
             Thread.currentThread().interrupt()
         }
@@ -64,119 +60,72 @@ object SheetSync {
 
     fun submit(whatsapp: String, referral: String = "", context: Context? = null, callback: ((Boolean, String?) -> Unit)? = null) {
         thread {
-            var lastError: String? = null
-
             for (attempt in 0 until MAX_RETRIES) {
                 try {
                     val conn = openConnection("contacts", "POST")
                     conn.setRequestProperty("Prefer", "return=minimal")
                     conn.doOutput = true
 
-                    val jsonParam = JSONObject().apply {
-                        put("whatsapp", whatsapp)
-                        put("referral", referral)
-                    }
+                    val json = JSONObject()
+                    json.put("whatsapp", whatsapp)
+                    json.put("referral", referral)
 
-                    OutputStreamWriter(conn.outputStream).use { os ->
-                        os.write(jsonParam.toString())
-                        os.flush()
-                    }
+                    val writer = OutputStreamWriter(conn.outputStream)
+                    writer.write(json.toString())
+                    writer.flush()
+                    writer.close()
 
                     val responseCode = conn.responseCode
                     conn.disconnect()
 
                     if (responseCode in 200..299) {
-                        callback?.invoke(true, "Successfully registered")
-                        return@thread
-                    } else if (responseCode == 409) {
-                        callback?.invoke(false, "This number is already registered")
+                        callback?.invoke(true, null)
                         return@thread
                     } else if (!isRetryable(responseCode)) {
-                        callback?.invoke(false, "Server error code: $responseCode")
+                        callback?.invoke(false, "Server error: $responseCode")
                         return@thread
-                    } else {
-                        lastError = "Server error code: $responseCode"
-                        Log.w("SheetSync", "Submit attempt ${attempt + 1} failed with code $responseCode, retrying...")
                     }
+                    Log.w("SheetSync", "submit attempt ${attempt + 1} failed with code $responseCode, retrying...")
                 } catch (e: Exception) {
-                    lastError = e.message ?: "Failed to submit"
-                    Log.w("SheetSync", "Submit attempt ${attempt + 1} threw exception, retrying...", e)
+                    Log.w("SheetSync", "submit attempt ${attempt + 1} threw exception, retrying...", e)
                 }
 
                 if (attempt < MAX_RETRIES - 1) {
                     sleepBeforeRetry(attempt)
                 }
             }
-
-            Log.e("SheetSync", "Submit failed after $MAX_RETRIES attempts: $lastError")
-            callback?.invoke(false, lastError ?: "Failed to submit after multiple attempts")
+            callback?.invoke(false, "Failed after $MAX_RETRIES attempts")
         }
     }
 
     fun fetchHistory(context: Context? = null, callback: ((List<DayCount>?, String?) -> Unit)? = null) {
         thread {
-            var lastError: String? = null
-
-            for (attempt in 0 until MAX_RETRIES) {
-                try {
-                    val conn = openConnection("rpc/contact_history", "POST")
-                    conn.doOutput = true
-                    OutputStreamWriter(conn.outputStream).use { os ->
-                        os.write("{}")
-                        os.flush()
+            try {
+                val conn = openConnection("contacts?select=created_at", "GET")
+                val responseCode = conn.responseCode
+                if (responseCode in 200..299) {
+                    val reader = BufferedReader(InputStreamReader(conn.inputStream))
+                    val response = StringBuilder()
+                    var line: String?
+                    while (reader.readLine().also { line = it } != null) {
+                        response.append(line)
                     }
+                    reader.close()
+                    conn.disconnect()
 
-                    val responseCode = conn.responseCode
-                    if (responseCode in 200..299) {
-                        val reader = BufferedReader(InputStreamReader(conn.inputStream))
-                        val response = StringBuilder()
-                        var line: String?
-                        while (reader.readLine().also { line = it } != null) {
-                            response.append(line)
-                        }
-                        reader.close()
-                        conn.disconnect()
-
-                        val daysArray = JSONArray(response.toString())
-                        var total = 0
-                        val historyList = ArrayList<DayCount>()
-                        val dailyEntries = ArrayList<DayCount>()
-                        for (i in 0 until daysArray.length()) {
-                            val dayObj = daysArray.getJSONObject(i)
-                            val count = dayObj.optInt("count", 0)
-                            total += count
-                            dailyEntries.add(DayCount(dayObj.optString("day"), count))
-                        }
-                        historyList.add(DayCount("Total Kontacts", total))
-                        historyList.addAll(dailyEntries)
-                        callback?.invoke(historyList, null)
-                        return@thread
-                    } else {
-                        conn.disconnect()
-                        if (!isRetryable(responseCode)) {
-                            callback?.invoke(null, "Server response error code: $responseCode")
-                            return@thread
-                        }
-                        lastError = "Server response error code: $responseCode"
-                        Log.w("SheetSync", "fetchHistory attempt ${attempt + 1} failed with code $responseCode, retrying...")
-                    }
-                } catch (e: Exception) {
-                    lastError = e.message ?: "Error connecting"
-                    Log.w("SheetSync", "fetchHistory attempt ${attempt + 1} threw exception, retrying...", e)
+                    val arr = JSONArray(response.toString())
+                    callback?.invoke(listOf(DayCount("all", arr.length())), null)
+                } else {
+                    conn.disconnect()
+                    callback?.invoke(null, "Server error: $responseCode")
                 }
-
-                if (attempt < MAX_RETRIES - 1) {
-                    sleepBeforeRetry(attempt)
-                }
+            } catch (e: Exception) {
+                Log.w("SheetSync", "fetchHistory failed", e)
+                callback?.invoke(null, e.message ?: e.javaClass.simpleName)
             }
-
-            Log.e("SheetSync", "fetchHistory failed after $MAX_RETRIES attempts: $lastError")
-            callback?.invoke(null, lastError ?: "Error connecting after multiple attempts")
         }
     }
 
-    // Fetches the user's plan from Supabase "contacts" table (column: plan).
-    // Falls back to null (caller defaults to "FREE") on any failure.
     fun fetchPlan(context: Context, callback: (String?) -> Unit) {
         thread {
             try {
@@ -213,6 +162,31 @@ object SheetSync {
                 Log.w("SheetSync", "fetchPlan failed", e)
                 callback(null)
             }
+        }
+    }
+
+    /**
+     * Returns the 3-way breakdown shown on the main dashboard:
+     * - totalInDatabase: every whatsapp row in Supabase (the full pool for everyone)
+     * - syncedToPhone: how many of those this specific user already has saved locally
+     * - availableToImport: totalInDatabase - syncedToPhone
+     *
+     * NOTE: this does NOT apply any plan limit yet. Once a FREE-plan cap is decided,
+     * availableToImport should become: min(planLimit, totalInDatabase) - syncedToPhone
+     * (see TODO in MainMenuActivity where this is consumed).
+     */
+    fun fetchImportStats(context: Context, callback: (ImportStats?) -> Unit) {
+        thread {
+            val contacts = fetchAllContacts()
+            if (contacts == null) {
+                callback(null)
+                return@thread
+            }
+            val totalInDatabase = contacts.count { it.first.isNotEmpty() }
+            val alreadySynced = UserPrefs.getSyncedNumbers(context)
+            val syncedToPhone = contacts.count { it.first.isNotEmpty() && alreadySynced.contains(it.first) }
+            val availableToImport = (totalInDatabase - syncedToPhone).coerceAtLeast(0)
+            callback(ImportStats(totalInDatabase, syncedToPhone, availableToImport))
         }
     }
 
@@ -370,17 +344,14 @@ object SheetSync {
     }
 
     private fun addSingleContactDetailed(context: Context, name: String, phone: String): Pair<Boolean, String?> {
-        if (phone.isEmpty()) return Pair(false, "Empty phone number")
         return try {
             val ops = ArrayList<ContentProviderOperation>()
-
             ops.add(
                 ContentProviderOperation.newInsert(ContactsContract.RawContacts.CONTENT_URI)
                     .withValue(ContactsContract.RawContacts.ACCOUNT_TYPE, null)
                     .withValue(ContactsContract.RawContacts.ACCOUNT_NAME, null)
                     .build()
             )
-
             ops.add(
                 ContentProviderOperation.newInsert(ContactsContract.Data.CONTENT_URI)
                     .withValueBackReference(ContactsContract.Data.RAW_CONTACT_ID, 0)
@@ -388,7 +359,6 @@ object SheetSync {
                     .withValue(ContactsContract.CommonDataKinds.StructuredName.DISPLAY_NAME, name)
                     .build()
             )
-
             ops.add(
                 ContentProviderOperation.newInsert(ContactsContract.Data.CONTENT_URI)
                     .withValueBackReference(ContactsContract.Data.RAW_CONTACT_ID, 0)
@@ -397,11 +367,9 @@ object SheetSync {
                     .withValue(ContactsContract.CommonDataKinds.Phone.TYPE, ContactsContract.CommonDataKinds.Phone.TYPE_MOBILE)
                     .build()
             )
-
             context.contentResolver.applyBatch(ContactsContract.AUTHORITY, ops)
             Pair(true, null)
         } catch (e: Exception) {
-            Log.e("SheetSync", "Failed inserting contact: $name", e)
             Pair(false, e.message ?: e.javaClass.simpleName)
         }
     }
