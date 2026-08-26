@@ -61,6 +61,33 @@ object SheetSync {
         }
     }
 
+    private fun readErrorBody(conn: HttpURLConnection): String {
+        return try {
+            val stream = conn.errorStream ?: return "Server error: ${conn.responseCode}"
+            val reader = BufferedReader(InputStreamReader(stream))
+            val response = StringBuilder()
+            var line: String?
+            while (reader.readLine().also { line = it } != null) {
+                response.append(line)
+            }
+            reader.close()
+            val body = response.toString()
+            if (body.isEmpty()) return "Server error: ${conn.responseCode}"
+
+            // Supabase/PostgREST errors come back as JSON with a "message" field
+            try {
+                val obj = JSONObject(body)
+                obj.optString("message").takeIf { it.isNotEmpty() }
+                    ?: obj.optString("error_description").takeIf { it.isNotEmpty() }
+                    ?: body
+            } catch (e: Exception) {
+                body
+            }
+        } catch (e: Exception) {
+            "Server error: ${conn.responseCode}"
+        }
+    }
+
     fun submit(whatsapp: String, referral: String = "", context: Context? = null, callback: ((Boolean, String?) -> Unit)? = null) {
         thread {
             for (attempt in 0 until MAX_RETRIES) {
@@ -79,15 +106,18 @@ object SheetSync {
                     writer.close()
 
                     val responseCode = conn.responseCode
-                    conn.disconnect()
 
                     if (responseCode in 200..299) {
+                        conn.disconnect()
                         callback?.invoke(true, null)
                         return@thread
                     } else if (!isRetryable(responseCode)) {
-                        callback?.invoke(false, "Server error: $responseCode")
+                        val errorText = readErrorBody(conn)
+                        conn.disconnect()
+                        callback?.invoke(false, errorText)
                         return@thread
                     }
+                    conn.disconnect()
                     Log.w("SheetSync", "submit attempt ${attempt + 1} failed with code $responseCode, retrying...")
                 } catch (e: Exception) {
                     Log.w("SheetSync", "submit attempt ${attempt + 1} threw exception, retrying...", e)
@@ -119,8 +149,9 @@ object SheetSync {
                     val arr = JSONArray(response.toString())
                     callback?.invoke(listOf(DayCount("all", arr.length())), null)
                 } else {
+                    val errorText = readErrorBody(conn)
                     conn.disconnect()
-                    callback?.invoke(null, "Server error: $responseCode")
+                    callback?.invoke(null, errorText)
                 }
             } catch (e: Exception) {
                 Log.w("SheetSync", "fetchHistory failed", e)
