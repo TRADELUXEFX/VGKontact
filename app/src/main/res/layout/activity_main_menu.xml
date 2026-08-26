@@ -63,13 +63,13 @@
 
         <ImageView
             android:id="@+id/notificationIcon"
-            android:layout_width="26dp"
-            android:layout_height="26dp"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:padding="11dp"
             android:src="@drawable/ic_notification_bell"
+            android:background="@drawable/notification_circle_background"
             android:clickable="true"
             android:focusable="true"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:padding="2dp"
             app:tint="@color/white" />
 
     </LinearLayout>
