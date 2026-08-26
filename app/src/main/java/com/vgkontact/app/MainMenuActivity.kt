@@ -128,6 +128,9 @@ class MainMenuActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        // Covers the case where the user granted contacts permission via the
+        // system Settings screen (not the in-app prompt) and returned here -
+        // stats should reflect the real on-device numbers, not the stale/denied state.
         loadStats()
     }
 
@@ -215,10 +218,15 @@ class MainMenuActivity : AppCompatActivity() {
     }
 
     private fun startSync() {
+        syncKontactButton.isEnabled = false
+        val originalButtonText = syncKontactButton.text
+        syncKontactButton.text = "Syncing..."
         Toast.makeText(this, "Checking for new Kontacts...", Toast.LENGTH_SHORT).show()
         NotificationHelper.showSyncStartedNotification(this)
         SheetSync.importAllContactsFromSheet(this) { submitted, failed, errorDetail ->
             runOnUiThread {
+                syncKontactButton.isEnabled = true
+                syncKontactButton.text = originalButtonText
                 if (errorDetail == "NO_INTERNET") {
                     Toast.makeText(this, "No internet connection", Toast.LENGTH_LONG).show()
                     NotificationHelper.showNoInternetNotification(this)
@@ -242,6 +250,10 @@ class MainMenuActivity : AppCompatActivity() {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == PERMISSION_REQUEST_CODE) {
             if (grantResults.isNotEmpty() && grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
+                // Permission was just granted, so the stats we last loaded (with
+                // permission denied) are stale/generic. Refresh them before syncing
+                // so the dashboard reflects the real on-device numbers right away.
+                loadStats()
                 startSync()
             } else {
                 Toast.makeText(this, "Permission required to sync contacts", Toast.LENGTH_SHORT).show()
