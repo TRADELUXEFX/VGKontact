@@ -78,8 +78,8 @@ class HistoryActivity : AppCompatActivity() {
                     }
                 } else {
                     emptyText.visibility = View.VISIBLE
-                    emptyText.text = error ?: "Failed to fetch history"
-                    Toast.makeText(this@HistoryActivity, error ?: "Failed to fetch history", Toast.LENGTH_SHORT).show()
+                    emptyText.text = "Couldn't load history. Check your connection and try again."
+                    Toast.makeText(this@HistoryActivity, "Couldn't load history", Toast.LENGTH_SHORT).show()
                 }
             }
         }
