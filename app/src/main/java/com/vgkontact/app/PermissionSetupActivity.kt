@@ -46,6 +46,7 @@ class PermissionSetupActivity : AppCompatActivity() {
     private lateinit var stepActionButton: Button
 
     private var currentStep: Step = Step.CONTACTS
+    private var batterySettingsLaunched: Boolean = false
 
     private val CONTACTS_REQUEST_CODE = 200
     private val NOTIFICATIONS_REQUEST_CODE = 201
@@ -164,21 +165,30 @@ class PermissionSetupActivity : AppCompatActivity() {
             val intent = Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
             intent.data = Uri.parse("package:$packageName")
             startActivity(intent)
+            batterySettingsLaunched = true
         } catch (e: Exception) {
             try {
                 startActivity(Intent(android.provider.Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+                batterySettingsLaunched = true
             } catch (e2: Exception) {
                 Toast.makeText(this, "Please allow background activity manually in Settings", Toast.LENGTH_LONG).show()
+                // Couldn't open Settings at all - nothing to wait for, so don't
+                // block the user here; let them proceed.
+                advanceTo(Step.DONE)
             }
         }
-        // No callback for a Settings screen - we check the real state again in onResume.
+        // No callback for a Settings screen - we check the real state again in onResume,
+        // but only once we know we actually left for Settings (see batterySettingsLaunched).
     }
 
     override fun onResume() {
         super.onResume()
-        // Only relevant for the battery step: user just returned from the system
-        // Settings screen (there is no onActivityResult for this intent).
-        if (currentStep == Step.BATTERY) {
+        // Only relevant for the battery step, and only once the user has actually
+        // been sent to the system Settings screen and come back - otherwise the
+        // very first onResume() after showStep(BATTERY) would skip the step
+        // before the user ever saw or tapped the button.
+        if (currentStep == Step.BATTERY && batterySettingsLaunched) {
+            batterySettingsLaunched = false
             advanceTo(Step.DONE)
         }
     }
