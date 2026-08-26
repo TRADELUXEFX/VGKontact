@@ -35,8 +35,7 @@ object NotificationHelper {
             val label = if (submitted == 1) "number" else "numbers"
             "$submitted new $label added"
         } else {
-            val base = "$submitted new added, $failed failed"
-            if (errorDetail != null) "$base: $errorDetail" else base
+            "$submitted new added, $failed failed - tap to retry"
         }
 
         val builder = NotificationCompat.Builder(context, CHANNEL_ID)
