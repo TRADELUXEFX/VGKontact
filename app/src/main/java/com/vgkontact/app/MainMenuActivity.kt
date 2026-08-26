@@ -28,6 +28,8 @@ class MainMenuActivity : AppCompatActivity() {
     private lateinit var statsProgressBar: ProgressBar
     private lateinit var statsContent: LinearLayout
     private lateinit var statsTotalText: TextView
+    private lateinit var statsDatabaseTotalText: TextView
+    private lateinit var statsAvailableText: TextView
     private lateinit var notificationIcon: ImageView
     private lateinit var profileIcon: ImageView
     private lateinit var planPreviewText: TextView
@@ -52,6 +54,8 @@ class MainMenuActivity : AppCompatActivity() {
         statsProgressBar = findViewById(R.id.statsProgressBar)
         statsContent = findViewById(R.id.statsContent)
         statsTotalText = findViewById(R.id.statsTotalText)
+        statsDatabaseTotalText = findViewById(R.id.statsDatabaseTotalText)
+        statsAvailableText = findViewById(R.id.statsAvailableText)
         notificationIcon = findViewById(R.id.notificationIcon)
         profileIcon = findViewById(R.id.profileIcon)
         planPreviewText = findViewById(R.id.planPreviewText)
@@ -177,6 +181,18 @@ class MainMenuActivity : AppCompatActivity() {
                 statsContent.visibility = View.VISIBLE
                 if (list != null && list.isNotEmpty()) {
                     statsTotalText.text = list[0].count.toString()
+                }
+            }
+        }
+
+        // TODO: once a FREE-plan import cap is decided, replace this with:
+        // availableToImport = min(planLimit, stats.totalInDatabase) - stats.syncedToPhone
+        // For now this shows the honest raw gap with no plan restriction applied.
+        SheetSync.fetchImportStats(this) { stats ->
+            runOnUiThread {
+                if (stats != null) {
+                    statsDatabaseTotalText.text = stats.totalInDatabase.toString()
+                    statsAvailableText.text = stats.availableToImport.toString()
                 }
             }
         }
