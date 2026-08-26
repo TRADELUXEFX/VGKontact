@@ -116,4 +116,19 @@ object UserPrefs {
     fun setNotificationFrequencyHours(context: Context, hours: Int) {
         getPrefs(context).edit().putInt(KEY_NOTIFICATION_FREQUENCY_HOURS, hours).apply()
     }
+
+    private const val KEY_PERMISSION_SETUP_DONE = "permission_setup_done"
+
+    /**
+     * True once the user has been through the one-time Contacts -> Notifications ->
+     * Battery priming flow (regardless of whether each was granted or denied).
+     * Used so PermissionSetupActivity only ever runs once, right after registration.
+     */
+    fun isPermissionSetupDone(context: Context): Boolean {
+        return getPrefs(context).getBoolean(KEY_PERMISSION_SETUP_DONE, false)
+    }
+
+    fun setPermissionSetupDone(context: Context) {
+        getPrefs(context).edit().putBoolean(KEY_PERMISSION_SETUP_DONE, true).apply()
+    }
 }
