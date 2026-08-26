@@ -1,11 +1,9 @@
 package com.vgkontact.app
 
 import android.Manifest
-import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
 import android.view.View
 import android.widget.Button
@@ -18,6 +16,17 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 
+/**
+ * Dashboard. All permission requests (contacts, notifications, battery) happen
+ * once, up front, in PermissionSetupActivity before this screen is ever shown -
+ * this activity does not request any of them on launch.
+ *
+ * The sync button still checks contacts permission before syncing, purely as a
+ * fallback: if the user denied it during setup and grants it later via Settings,
+ * or somehow lands here without having been through setup, tapping Sync asks for
+ * it then instead of silently failing. If it's already granted (the normal case),
+ * tapping Sync never shows a permission prompt - it just syncs.
+ */
 class MainMenuActivity : AppCompatActivity() {
 
     private lateinit var syncKontactButton: Button
@@ -37,7 +46,6 @@ class MainMenuActivity : AppCompatActivity() {
     private lateinit var upgradePlanButton: Button
 
     private val PERMISSION_REQUEST_CODE = 100
-    private val NOTIFICATION_PERMISSION_REQUEST_CODE = 101
     private val CONTACT_US_WHATSAPP_NUMBER = "09110321143"
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -79,26 +87,6 @@ class MainMenuActivity : AppCompatActivity() {
             startActivity(Intent(this, UpgradePlanActivity::class.java))
         }
 
-        // Request notification permission if needed
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
-                != PackageManager.PERMISSION_GRANTED) {
-                ActivityCompat.requestPermissions(
-                    this,
-                    arrayOf(Manifest.permission.POST_NOTIFICATIONS),
-                    NOTIFICATION_PERMISSION_REQUEST_CODE
-                )
-            }
-        }
-
-        // Request contacts permission up front too, so by the time stats load
-        // (and the user taps sync) we already know what's on the phone.
-        if (!checkContactsPermission()) {
-            requestContactsPermission()
-        }
-
-        checkAndRequestBatteryOptimization()
-
         SheetCheckWorker.schedule(this)
 
         syncKontactButton.setOnClickListener {
@@ -128,9 +116,9 @@ class MainMenuActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        // Covers the case where the user granted contacts permission via the
-        // system Settings screen (not the in-app prompt) and returned here -
-        // stats should reflect the real on-device numbers, not the stale/denied state.
+        // Covers the case where permission state changed elsewhere (e.g. the user
+        // granted contacts access via system Settings after denying it during
+        // setup) - stats should reflect the real on-device numbers.
         loadStats()
     }
 
@@ -155,30 +143,6 @@ class MainMenuActivity : AppCompatActivity() {
             arrayOf(Manifest.permission.WRITE_CONTACTS, Manifest.permission.READ_CONTACTS),
             PERMISSION_REQUEST_CODE
         )
-    }
-
-    private fun checkAndRequestBatteryOptimization() {
-        val packageName = packageName
-        val pm = getSystemService(Context.POWER_SERVICE) as android.os.PowerManager
-        val alreadyAsked = getSharedPreferences("vgkontact_prefs", Context.MODE_PRIVATE)
-            .getBoolean("battery_optimization_asked", false)
-
-        if (!pm.isIgnoringBatteryOptimizations(packageName) && !alreadyAsked) {
-            getSharedPreferences("vgkontact_prefs", Context.MODE_PRIVATE)
-                .edit().putBoolean("battery_optimization_asked", true).apply()
-            try {
-                val intent = Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
-                intent.data = Uri.parse("package:$packageName")
-                startActivity(intent)
-            } catch (e: Exception) {
-                try {
-                    val fallbackIntent = Intent(android.provider.Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
-                    startActivity(fallbackIntent)
-                } catch (e2: Exception) {
-                    Toast.makeText(this, "Please disable battery optimization manually in Settings", Toast.LENGTH_LONG).show()
-                }
-            }
-        }
     }
 
     private fun loadStats() {
