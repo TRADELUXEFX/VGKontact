@@ -230,8 +230,7 @@ class MainMenuActivity : AppCompatActivity() {
                     val label = if (submitted == 1) "number" else "numbers"
                     Toast.makeText(this, "$submitted new $label added", Toast.LENGTH_LONG).show()
                 } else {
-                    val extra = if (errorDetail != null) ": $errorDetail" else ""
-                    Toast.makeText(this, "$submitted new added, $failed failed$extra", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this, "$submitted new added, $failed failed - tap to retry", Toast.LENGTH_LONG).show()
                 }
                 NotificationHelper.showSyncCompleteNotification(this, submitted, failed, errorDetail)
                 loadStats()
