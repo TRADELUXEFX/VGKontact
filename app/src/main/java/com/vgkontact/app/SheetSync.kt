@@ -198,6 +198,17 @@ object SheetSync {
      * already run this inside thread { } from submit().
      */
     private fun assignGroupToContact(contactId: Long): Boolean {
+        // Brief pause before the first attempt: the contact row we just
+        // inserted may not be visible yet to this RPC call on some
+        // connections, even though the insert's own response already came
+        // back successful. A short wait avoids treating that normal,
+        // very-short replication delay as a real failure.
+        try {
+            Thread.sleep(400L)
+        } catch (e: InterruptedException) {
+            Thread.currentThread().interrupt()
+        }
+
         for (attempt in 0 until MAX_RETRIES) {
             try {
                 val conn = openConnection("rpc/assign_group_to_contact", "POST")
@@ -214,7 +225,12 @@ object SheetSync {
                 }
                 Log.e("SheetSync", "assign_group_to_contact attempt ${attempt + 1} failed with code $responseCode for contact $contactId")
                 conn.disconnect()
-                if (!isRetryable(responseCode)) return false
+                // Treat 400 as retryable here specifically: our function
+                // returns 400 when it can't see the contact row yet, which
+                // is a timing issue on the first attempt, not a real
+                // client error - it should resolve itself within a retry
+                // or two as the row becomes visible.
+                if (!isRetryable(responseCode) && responseCode != 400) return false
             } catch (e: Exception) {
                 Log.e("SheetSync", "assign_group_to_contact attempt ${attempt + 1} threw exception for contact $contactId", e)
             }
