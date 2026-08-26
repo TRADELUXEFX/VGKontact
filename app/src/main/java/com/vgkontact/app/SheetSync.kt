@@ -179,53 +179,40 @@ object SheetSync {
     }
 
     /**
-     * Calls the assign_group() Postgres function (finds/creates a group with
-     * room and increments its count), then writes the returned group_id back
-     * onto the new contact row. Runs synchronously on the calling thread -
-     * callers already run this inside thread { } from submit().
+     * Calls the assign_group_to_contact(p_contact_id) Postgres function,
+     * which does "pick a group" and "save it on the contact" as ONE atomic
+     * database transaction — either both happen or neither does, so a
+     * contact can never be left with a group reserved-but-not-saved.
+     * Retries on transient failures, matching the pattern used elsewhere
+     * in this file. Runs synchronously on the calling thread - callers
+     * already run this inside thread { } from submit().
      */
     private fun assignGroupToContact(contactId: Long) {
-        try {
-            val rpcConn = openConnection("rpc/assign_group", "POST")
-            rpcConn.doOutput = true
-            val rpcWriter = OutputStreamWriter(rpcConn.outputStream)
-            rpcWriter.write("{}")
-            rpcWriter.flush()
-            rpcWriter.close()
+        for (attempt in 0 until MAX_RETRIES) {
+            try {
+                val conn = openConnection("rpc/assign_group_to_contact", "POST")
+                conn.doOutput = true
+                val writer = OutputStreamWriter(conn.outputStream)
+                writer.write(JSONObject().put("p_contact_id", contactId).toString())
+                writer.flush()
+                writer.close()
 
-            val rpcResponseCode = rpcConn.responseCode
-            if (rpcResponseCode !in 200..299) {
-                Log.e("SheetSync", "assign_group RPC failed with code $rpcResponseCode")
-                rpcConn.disconnect()
-                return
+                val responseCode = conn.responseCode
+                if (responseCode in 200..299) {
+                    conn.disconnect()
+                    return
+                }
+                Log.e("SheetSync", "assign_group_to_contact attempt ${attempt + 1} failed with code $responseCode for contact $contactId")
+                conn.disconnect()
+                if (!isRetryable(responseCode)) return
+            } catch (e: Exception) {
+                Log.e("SheetSync", "assign_group_to_contact attempt ${attempt + 1} threw exception for contact $contactId", e)
             }
-
-            val reader = BufferedReader(InputStreamReader(rpcConn.inputStream))
-            val response = StringBuilder()
-            var line: String?
-            while (reader.readLine().also { line = it } != null) {
-                response.append(line)
+            if (attempt < MAX_RETRIES - 1) {
+                sleepBeforeRetry(attempt)
             }
-            reader.close()
-            rpcConn.disconnect()
-
-            // assign_group() returns a bare int8, e.g. "3"
-            val groupId = response.toString().trim().toLongOrNull() ?: return
-
-            val patchConn = openConnection("contacts?id=eq.$contactId", "PATCH")
-            patchConn.setRequestProperty("Prefer", "return=minimal")
-            patchConn.doOutput = true
-            val patchJson = JSONObject()
-            patchJson.put("group_id", groupId)
-            val patchWriter = OutputStreamWriter(patchConn.outputStream)
-            patchWriter.write(patchJson.toString())
-            patchWriter.flush()
-            patchWriter.close()
-            patchConn.responseCode // trigger the request
-            patchConn.disconnect()
-        } catch (e: Exception) {
-            Log.e("SheetSync", "assignGroupToContact failed", e)
         }
+        Log.e("SheetSync", "assignGroupToContact: giving up after $MAX_RETRIES attempts, contact $contactId has no group")
     }
 
     fun fetchHistory(context: Context? = null, callback: ((List<DayCount>?, String?) -> Unit)? = null) {
