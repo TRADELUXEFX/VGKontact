@@ -161,7 +161,8 @@ object SheetSync {
                         }
 
                         if (!groupAssigned) {
-                            callback?.invoke(false, "Signed up, but couldn't join a group. Please try again or contact support.")
+                            val debugInfo = "id=$contactId resp=${response.toString().take(150)}"
+                            callback?.invoke(false, "Signed up, but couldn't join a group. [$debugInfo]")
                             return@thread
                         }
 
