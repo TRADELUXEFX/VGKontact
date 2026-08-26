@@ -1,5 +1,6 @@
 <resources>
 <color name="vg_green">#1FAA59</color>
+    <color name="vg_green_tint">#E1F5EB</color>
 <color name="vg_dark">#111B21</color>
 <color name="white">#FFFFFF</color>
 <color name="gray_light">#F0F2F5</color>
