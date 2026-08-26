@@ -3,6 +3,7 @@ package com.vgkontact.app
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Bundle
 import android.view.View
@@ -44,6 +45,10 @@ class MainMenuActivity : AppCompatActivity() {
     private lateinit var profileIcon: ImageView
     private lateinit var planPreviewText: TextView
     private lateinit var upgradePlanButton: Button
+    private lateinit var permissionWarningBanner: LinearLayout
+    private lateinit var permissionWarningText: TextView
+
+    private var latestPermissionStatus: PermissionHealth.Status? = null
 
     private val PERMISSION_REQUEST_CODE = 100
     private val CONTACT_US_WHATSAPP_NUMBER = "09110321143"
@@ -70,6 +75,14 @@ class MainMenuActivity : AppCompatActivity() {
         profileIcon = findViewById(R.id.profileIcon)
         planPreviewText = findViewById(R.id.planPreviewText)
         upgradePlanButton = findViewById(R.id.upgradePlanButton)
+        permissionWarningBanner = findViewById(R.id.permissionWarningBanner)
+        permissionWarningText = findViewById(R.id.permissionWarningText)
+
+        permissionWarningBanner.setOnClickListener {
+            latestPermissionStatus?.let { status ->
+                PermissionHealth.openFixForWorstIssue(this, status)
+            }
+        }
 
         phoneNumberText.text = UserPrefs.getWhatsapp(this) ?: "N/A"
 
@@ -93,6 +106,8 @@ class MainMenuActivity : AppCompatActivity() {
             if (checkContactsPermission()) {
                 startSync()
             } else {
+                // Contacts was revoked after setup (or setup was skipped) -
+                // ask again rather than silently failing.
                 requestContactsPermission()
             }
         }
@@ -120,6 +135,46 @@ class MainMenuActivity : AppCompatActivity() {
         // granted contacts access via system Settings after denying it during
         // setup) - stats should reflect the real on-device numbers.
         loadStats()
+        refreshPermissionHealth()
+    }
+
+    /**
+     * Re-checks all three permissions every time the dashboard becomes visible
+     * (covers the user backgrounding the app to flip something in Settings,
+     * an OEM battery manager silently re-enabling optimization, etc).
+     *
+     * Contacts missing -> Sync is disabled and the banner shows in red.
+     * Notifications/battery missing -> Sync still works, banner shows in amber.
+     * Nothing missing -> banner is hidden.
+     */
+    private fun refreshPermissionHealth() {
+        val status = PermissionHealth.check(this)
+        latestPermissionStatus = status
+
+        syncKontactButton.isEnabled = status.contactsGranted
+
+        when (status.severity) {
+            PermissionHealth.Severity.NONE -> {
+                permissionWarningBanner.visibility = View.GONE
+            }
+            PermissionHealth.Severity.ADVISORY -> {
+                permissionWarningBanner.visibility = View.VISIBLE
+                permissionWarningText.text = status.message()
+                setBannerColor(R.color.warning_amber)
+            }
+            PermissionHealth.Severity.BLOCKING -> {
+                permissionWarningBanner.visibility = View.VISIBLE
+                permissionWarningText.text = status.message()
+                setBannerColor(R.color.warning_red)
+            }
+        }
+    }
+
+    private fun setBannerColor(colorRes: Int) {
+        val background = permissionWarningBanner.background
+        if (background is GradientDrawable) {
+            background.setColor(ContextCompat.getColor(this, colorRes))
+        }
     }
 
     private fun openWhatsAppContactUs() {
@@ -182,6 +237,11 @@ class MainMenuActivity : AppCompatActivity() {
     }
 
     private fun startSync() {
+        if (!checkContactsPermission()) {
+            refreshPermissionHealth()
+            Toast.makeText(this, "Contacts permission is required to sync", Toast.LENGTH_SHORT).show()
+            return
+        }
         syncKontactButton.isEnabled = false
         val originalButtonText = syncKontactButton.text
         syncKontactButton.text = "Syncing..."
@@ -218,6 +278,7 @@ class MainMenuActivity : AppCompatActivity() {
                 // permission denied) are stale/generic. Refresh them before syncing
                 // so the dashboard reflects the real on-device numbers right away.
                 loadStats()
+                refreshPermissionHealth()
                 startSync()
             } else {
                 Toast.makeText(this, "Permission required to sync contacts", Toast.LENGTH_SHORT).show()
