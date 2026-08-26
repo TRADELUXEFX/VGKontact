@@ -162,6 +162,7 @@
                     android:textSize="36sp"
                     android:textStyle="bold"
                     android:textColor="@color/vg_green"
+                    android:visibility="gone"
                     tools:text="41" />
 
                 <TextView
@@ -173,7 +174,8 @@
                     android:textStyle="bold"
                     android:textAllCaps="true"
                     android:letterSpacing="0.05"
-                    android:textColor="@color/text_muted" />
+                    android:textColor="@color/text_muted"
+                    android:visibility="gone" />
 
                 <View
                     android:layout_width="match_parent"
