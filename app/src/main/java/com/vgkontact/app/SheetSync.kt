@@ -153,9 +153,12 @@ object SheetSync {
                     conn.disconnect()
                     callback?.invoke(null, errorText)
                 }
+            } catch (e: java.io.IOException) {
+                Log.w("SheetSync", "fetchHistory failed - network error", e)
+                callback?.invoke(null, "NO_INTERNET")
             } catch (e: Exception) {
                 Log.w("SheetSync", "fetchHistory failed", e)
-                callback?.invoke(null, e.message ?: e.javaClass.simpleName)
+                callback?.invoke(null, "Couldn't load history right now")
             }
         }
     }
