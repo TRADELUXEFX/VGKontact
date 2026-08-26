@@ -30,6 +30,8 @@ class MainMenuActivity : AppCompatActivity() {
     private lateinit var statsTotalText: TextView
     private lateinit var notificationIcon: ImageView
     private lateinit var profileIcon: ImageView
+    private lateinit var planPreviewText: TextView
+    private lateinit var upgradePlanButton: Button
 
     private val PERMISSION_REQUEST_CODE = 100
     private val NOTIFICATION_PERMISSION_REQUEST_CODE = 101
@@ -52,8 +54,24 @@ class MainMenuActivity : AppCompatActivity() {
         statsTotalText = findViewById(R.id.statsTotalText)
         notificationIcon = findViewById(R.id.notificationIcon)
         profileIcon = findViewById(R.id.profileIcon)
+        planPreviewText = findViewById(R.id.planPreviewText)
+        upgradePlanButton = findViewById(R.id.upgradePlanButton)
 
         phoneNumberText.text = UserPrefs.getWhatsapp(this) ?: "N/A"
+
+        // Fetch plan from Supabase (defaults to FREE PLAN if row doesn't exist yet)
+        planPreviewText.text = "FREE PLAN"
+        SheetSync.fetchPlan(this) { plan ->
+            runOnUiThread {
+                val resolvedPlan = plan ?: "FREE"
+                planPreviewText.text = "$resolvedPlan PLAN"
+            }
+        }
+
+        upgradePlanButton.setOnClickListener {
+            // TODO: point this at your actual upgrade/checkout flow
+            startActivity(Intent(this, UpgradePlanActivity::class.java))
+        }
 
         // Request notification permission if needed
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
