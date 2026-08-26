@@ -1,337 +1,318 @@
-<?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/apk/res-android"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:background="@color/stats_card_fill">
+package com.vgkontact.app
 
-    <!-- Green gradient header -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:background="@drawable/header_gradient"
-        android:gravity="center_vertical"
-        android:paddingTop="48dp"
-        android:paddingBottom="24dp"
-        android:paddingStart="20dp"
-        android:paddingEnd="20dp">
+import android.Manifest
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.graphics.drawable.GradientDrawable
+import android.net.Uri
+import android.os.Bundle
+import android.view.View
+import android.widget.Button
+import android.widget.ImageView
+import android.widget.LinearLayout
+import android.widget.ProgressBar
+import android.widget.TextView
+import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 
-        <ImageView
-            android:id="@+id/profileIcon"
-            android:layout_width="44dp"
-            android:layout_height="44dp"
-            android:padding="9dp"
-            android:src="@drawable/ic_profile"
-            android:background="@drawable/avatar_circle_background"
-            android:clickable="true"
-            android:focusable="true"
-            app:tint="@color/vg_green" />
+/**
+ * Dashboard. All permission requests (contacts, notifications, battery) happen
+ * once, up front, in PermissionSetupActivity before this screen is ever shown -
+ * this activity does not request any of them on launch.
+ *
+ * The sync button still checks contacts permission before syncing, purely as a
+ * fallback: if the user denied it during setup and grants it later via Settings,
+ * or somehow lands here without having been through setup, tapping Sync asks for
+ * it then instead of silently failing. If it's already granted (the normal case),
+ * tapping Sync never shows a permission prompt - it just syncs.
+ */
+class MainMenuActivity : AppCompatActivity() {
 
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:layout_marginStart="12dp"
-            android:orientation="vertical">
+    private lateinit var syncKontactButton: Button
+    private lateinit var kontactHistoryButton: Button
+    private lateinit var contactUsButton: Button
+    private lateinit var phoneNumberText: TextView
+    private lateinit var statsCard: LinearLayout
+    private lateinit var statsProgressBar: ProgressBar
+    private lateinit var statsContent: LinearLayout
+    private lateinit var statsTotalText: TextView
+    private lateinit var statsTodayText: TextView
+    private lateinit var statsDatabaseTotalText: TextView
+    private lateinit var statsAvailableText: TextView
+    private lateinit var notificationIcon: ImageView
+    private lateinit var profileIcon: ImageView
+    private lateinit var planPreviewText: TextView
+    private lateinit var upgradePlanButton: Button
+    private lateinit var permissionWarningBanner: LinearLayout
+    private lateinit var permissionWarningText: TextView
 
-            <TextView
-                android:id="@+id/phoneNumberText"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textSize="17sp"
-                android:textStyle="bold"
-                android:textColor="@color/white"
-                tools:text="0801 122 3344" />
+    private var latestPermissionStatus: PermissionHealth.Status? = null
 
-            <TextView
-                android:id="@+id/planPreviewText"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
-                android:textSize="11sp"
-                android:textStyle="bold"
-                android:textAllCaps="true"
-                android:letterSpacing="0.05"
-                android:textColor="@color/white"
-                android:alpha="0.85"
-                tools:text="FREE PLAN" />
+    private val PERMISSION_REQUEST_CODE = 100
+    private val NOTIFICATION_PERMISSION_REQUEST_CODE = 101
+    private val CONTACT_US_WHATSAPP_NUMBER = "09110321143"
 
-        </LinearLayout>
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_main_menu)
 
-        <ImageView
-            android:id="@+id/notificationIcon"
-            android:layout_width="44dp"
-            android:layout_height="44dp"
-            android:padding="11dp"
-            android:src="@drawable/ic_notification_bell"
-            android:background="@drawable/notification_circle_background"
-            android:clickable="true"
-            android:focusable="true"
-            app:tint="@color/white" />
+        // Setup notification channel
+        NotificationHelper.createNotificationChannel(this)
 
-    </LinearLayout>
+        syncKontactButton = findViewById(R.id.syncKontactButton)
+        kontactHistoryButton = findViewById(R.id.kontactHistoryButton)
+        contactUsButton = findViewById(R.id.contactUsButton)
+        phoneNumberText = findViewById(R.id.phoneNumberText)
+        statsCard = findViewById(R.id.statsCard)
+        statsProgressBar = findViewById(R.id.statsProgressBar)
+        statsContent = findViewById(R.id.statsContent)
+        statsTotalText = findViewById(R.id.statsTotalText)
+        statsTodayText = findViewById(R.id.statsTodayText)
+        statsDatabaseTotalText = findViewById(R.id.statsDatabaseTotalText)
+        statsAvailableText = findViewById(R.id.statsAvailableText)
+        notificationIcon = findViewById(R.id.notificationIcon)
+        profileIcon = findViewById(R.id.profileIcon)
+        planPreviewText = findViewById(R.id.planPreviewText)
+        upgradePlanButton = findViewById(R.id.upgradePlanButton)
+        permissionWarningBanner = findViewById(R.id.permissionWarningBanner)
+        permissionWarningText = findViewById(R.id.permissionWarningText)
 
-    <!-- Permission health banner: hidden unless something needs attention.
-         Contacts missing -> shown as a blocking warning (Sync is disabled).
-         Notifications/Battery missing -> shown as a softer heads-up; nothing
-         is blocked, tapping just deep-links to the right Settings screen. -->
-    <LinearLayout
-        android:id="@+id/permissionWarningBanner"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:background="@drawable/permission_banner_background"
-        android:padding="14dp"
-        android:layout_marginStart="20dp"
-        android:layout_marginEnd="20dp"
-        android:layout_marginTop="16dp"
-        android:visibility="gone"
-        android:clickable="true"
-        android:focusable="true">
+        permissionWarningBanner.setOnClickListener {
+            latestPermissionStatus?.let { status ->
+                fixWorstPermissionIssue(status)
+            }
+        }
 
-        <ImageView
-            android:id="@+id/permissionWarningIcon"
-            android:layout_width="22dp"
-            android:layout_height="22dp"
-            android:src="@drawable/ic_battery"
-            app:tint="@color/white" />
+        phoneNumberText.text = UserPrefs.getWhatsapp(this) ?: "N/A"
 
-        <TextView
-            android:id="@+id/permissionWarningText"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:layout_marginStart="10dp"
-            android:textSize="13sp"
-            android:textStyle="bold"
-            android:textColor="@color/white"
-            tools:text="Contacts permission is off - Sync is disabled" />
+        // Fetch plan from Supabase (defaults to FREE PLAN if row doesn't exist yet)
+        planPreviewText.text = "FREE PLAN"
+        SheetSync.fetchPlan(this) { plan ->
+            runOnUiThread {
+                val resolvedPlan = plan ?: "FREE"
+                planPreviewText.text = "$resolvedPlan PLAN"
+            }
+        }
 
-        <TextView
-            android:id="@+id/permissionWarningAction"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="FIX"
-            android:textSize="12sp"
-            android:textStyle="bold"
-            android:textColor="@color/white"
-            android:paddingStart="10dp"
-            android:paddingEnd="4dp" />
+        upgradePlanButton.setOnClickListener {
+            // TODO: point this at your actual upgrade/checkout flow
+            startActivity(Intent(this, UpgradePlanActivity::class.java))
+        }
 
-    </LinearLayout>
+        SheetCheckWorker.schedule(this)
 
-    <!-- Synced-total stat card: fills the middle space with live data -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:orientation="vertical"
-        android:gravity="top|center_horizontal"
-        android:paddingTop="28dp"
-        android:paddingStart="20dp"
-        android:paddingEnd="20dp">
+        syncKontactButton.setOnClickListener {
+            if (checkContactsPermission()) {
+                startSync()
+            } else {
+                // Contacts was revoked after setup (or setup was skipped) -
+                // ask again rather than silently failing.
+                requestContactsPermission()
+            }
+        }
 
-        <LinearLayout
-            android:id="@+id/statsCard"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:gravity="center"
-            android:background="@drawable/stats_card_background"
-            android:padding="24dp"
-            android:visibility="gone">
+        kontactHistoryButton.setOnClickListener {
+            startActivity(Intent(this, HistoryActivity::class.java))
+        }
 
-            <ProgressBar
-                android:id="@+id/statsProgressBar"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content" />
+        contactUsButton.setOnClickListener {
+            openWhatsAppContactUs()
+        }
 
-            <LinearLayout
-                android:id="@+id/statsContent"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:gravity="center"
-                android:visibility="gone">
+        notificationIcon.setOnClickListener {
+            startActivity(Intent(this, NotificationSettingsActivity::class.java))
+        }
 
-                <TextView
-                    android:id="@+id/statsTotalText"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:textSize="36sp"
-                    android:textStyle="bold"
-                    android:textColor="@color/vg_green"
-                    tools:text="41" />
+        profileIcon.setOnClickListener {
+            startActivity(Intent(this, ProfileActivity::class.java))
+        }
+    }
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:text="@string/stats_total_label"
-                    android:textSize="10sp"
-                    android:textStyle="bold"
-                    android:textAllCaps="true"
-                    android:letterSpacing="0.05"
-                    android:textColor="@color/text_muted" />
+    override fun onResume() {
+        super.onResume()
+        // Covers the case where permission state changed elsewhere (e.g. the user
+        // granted contacts access via system Settings after denying it during
+        // setup) - stats should reflect the real on-device numbers.
+        loadStats()
+        refreshPermissionHealth()
+    }
 
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:layout_marginTop="16dp"
-                    android:layout_marginBottom="12dp"
-                    android:background="@color/stats_card_border" />
+    /**
+     * Re-checks all three permissions every time the dashboard becomes visible
+     * (covers the user backgrounding the app to flip something in Settings,
+     * an OEM battery manager silently re-enabling optimization, etc).
+     *
+     * Contacts missing -> Sync is disabled and the banner shows in red.
+     * Notifications/battery missing -> Sync still works, banner shows in amber.
+     * Nothing missing -> banner is hidden.
+     */
+    private fun refreshPermissionHealth() {
+        val status = PermissionHealth.check(this)
+        latestPermissionStatus = status
 
-                <TextView
-                    android:id="@+id/statsTodayText"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:textSize="11sp"
-                    android:textColor="@color/text_muted"
-                    tools:text="6 added today" />
+        syncKontactButton.isEnabled = status.contactsGranted
 
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:layout_marginTop="16dp"
-                    android:layout_marginBottom="16dp"
-                    android:background="@color/stats_card_border" />
+        when (status.severity) {
+            PermissionHealth.Severity.NONE -> {
+                permissionWarningBanner.visibility = View.GONE
+            }
+            PermissionHealth.Severity.ADVISORY -> {
+                permissionWarningBanner.visibility = View.VISIBLE
+                permissionWarningText.text = status.message()
+                setBannerColor(R.color.warning_amber)
+            }
+            PermissionHealth.Severity.BLOCKING -> {
+                permissionWarningBanner.visibility = View.VISIBLE
+                permissionWarningText.text = status.message()
+                setBannerColor(R.color.warning_red)
+            }
+        }
+    }
 
-                <!-- Total in database / Available to import breakdown -->
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal">
+    private fun setBannerColor(colorRes: Int) {
+        val background = permissionWarningBanner.background
+        if (background is GradientDrawable) {
+            background.setColor(ContextCompat.getColor(this, colorRes))
+        }
+    }
 
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:orientation="vertical"
-                        android:gravity="center">
+    /**
+     * Handles the banner's "FIX" tap. Contacts and notifications are runtime
+     * permissions - Android can show the native grant popup directly, so we
+     * ask for those the same way PermissionSetupActivity does, rather than
+     * sending the user away to Settings. Battery optimization is the one
+     * exception: Android has no popup for that, only a special
+     * Settings-style system screen, so that one still has to go there.
+     */
+    private fun fixWorstPermissionIssue(status: PermissionHealth.Status) {
+        when {
+            !status.contactsGranted -> requestContactsPermission()
+            !status.batteryExempted -> PermissionHealth.openFixForWorstIssue(this, status)
+            !status.notificationsGranted -> requestNotificationPermission()
+            else -> PermissionHealth.openFixForWorstIssue(this, status)
+        }
+    }
 
-                        <TextView
-                            android:id="@+id/statsDatabaseTotalText"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:textSize="20sp"
-                            android:textStyle="bold"
-                            android:textColor="@color/vg_dark"
-                            tools:text="1000" />
+    private fun requestNotificationPermission() {
+        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.TIRAMISU) {
+            return // not applicable pre-Android 13
+        }
+        ActivityCompat.requestPermissions(
+            this,
+            arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+            NOTIFICATION_PERMISSION_REQUEST_CODE
+        )
+    }
 
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="2dp"
-                            android:text="@string/stats_database_total_label"
-                            android:textSize="9sp"
-                            android:textStyle="bold"
-                            android:textAllCaps="true"
-                            android:letterSpacing="0.05"
-                            android:textColor="@color/text_muted"
-                            android:gravity="center" />
+    private fun openWhatsAppContactUs() {
+        val message = Uri.encode("Hi VG Kontact, I need help with...")
+        val uri = Uri.parse("https://wa.me/$CONTACT_US_WHATSAPP_NUMBER?text=$message")
+        try {
+            startActivity(Intent(Intent.ACTION_VIEW, uri))
+        } catch (e: Exception) {
+            Toast.makeText(this, "WhatsApp is not installed", Toast.LENGTH_SHORT).show()
+        }
+    }
 
-                    </LinearLayout>
+    private fun checkContactsPermission(): Boolean {
+        return ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_CONTACTS) == PackageManager.PERMISSION_GRANTED &&
+               ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED
+    }
 
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:orientation="vertical"
-                        android:gravity="center">
+    private fun requestContactsPermission() {
+        ActivityCompat.requestPermissions(
+            this,
+            arrayOf(Manifest.permission.WRITE_CONTACTS, Manifest.permission.READ_CONTACTS),
+            PERMISSION_REQUEST_CODE
+        )
+    }
 
-                        <TextView
-                            android:id="@+id/statsAvailableText"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:textSize="20sp"
-                            android:textStyle="bold"
-                            android:textColor="@color/vg_green"
-                            tools:text="988" />
+    private fun loadStats() {
+        statsCard.visibility = View.VISIBLE
+        statsProgressBar.visibility = View.VISIBLE
+        statsContent.visibility = View.GONE
 
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="2dp"
-                            android:text="@string/stats_available_label"
-                            android:textSize="9sp"
-                            android:textStyle="bold"
-                            android:textAllCaps="true"
-                            android:letterSpacing="0.05"
-                            android:textColor="@color/text_muted"
-                            android:gravity="center" />
+        val todayCount = UserPrefs.getTodaySyncedCount(this)
+        statsTodayText.text = if (todayCount > 0) {
+            val label = if (todayCount == 1) "kontact" else "kontacts"
+            "$todayCount $label synced today"
+        } else {
+            getString(R.string.stats_no_sync_today)
+        }
 
-                    </LinearLayout>
+        // SINGLE call - fetchImportStats has everything we need
+        SheetSync.fetchImportStats(this) { stats ->
+            runOnUiThread {
+                statsProgressBar.visibility = View.GONE
+                statsContent.visibility = View.VISIBLE
+                if (stats != null) {
+                    // Show total database count ONCE in the main display
+                    statsTotalText.text = stats.totalInDatabase.toString()
+                    // Still show the breakdown (already have it)
+                    statsDatabaseTotalText.text = stats.totalInDatabase.toString()
+                    statsAvailableText.text = stats.availableToImport.toString()
+                }
+            }
+        }
+    }
 
-                </LinearLayout>
+    private fun startSync() {
+        if (!checkContactsPermission()) {
+            refreshPermissionHealth()
+            Toast.makeText(this, "Contacts permission is required to sync", Toast.LENGTH_SHORT).show()
+            return
+        }
+        syncKontactButton.isEnabled = false
+        val originalButtonText = syncKontactButton.text
+        syncKontactButton.text = "Syncing..."
+        Toast.makeText(this, "Checking for new Kontacts...", Toast.LENGTH_SHORT).show()
+        NotificationHelper.showSyncStartedNotification(this)
+        SheetSync.importAllContactsFromSheet(this) { submitted, failed, errorDetail ->
+            runOnUiThread {
+                syncKontactButton.isEnabled = true
+                syncKontactButton.text = originalButtonText
+                if (errorDetail == "NO_INTERNET") {
+                    Toast.makeText(this, "No internet connection", Toast.LENGTH_LONG).show()
+                    NotificationHelper.showNoInternetNotification(this)
+                    return@runOnUiThread
+                }
+                if (submitted == 0 && failed == 0) {
+                    Toast.makeText(this, "No new numbers", Toast.LENGTH_LONG).show()
+                } else if (submitted > 0 && failed == 0) {
+                    val label = if (submitted == 1) "number" else "numbers"
+                    Toast.makeText(this, "$submitted new $label added", Toast.LENGTH_LONG).show()
+                } else {
+                    Toast.makeText(this, "$submitted new added, $failed failed - tap to retry", Toast.LENGTH_LONG).show()
+                }
+                NotificationHelper.showSyncCompleteNotification(this, submitted, failed, errorDetail)
+                loadStats()
+            }
+        }
+    }
 
-            </LinearLayout>
-
-        </LinearLayout>
-
-    </LinearLayout>
-
-    <!-- Sync Kontact + Upgrade Plan + Kontact History + Contact Us buttons -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="20dp">
-
-        <Button
-            android:id="@+id/syncKontactButton"
-            android:layout_width="match_parent"
-            android:layout_height="56dp"
-            android:text="@string/btn_sync_kontact"
-            android:backgroundTint="@color/vg_green"
-            android:textColor="@color/white"
-            android:textStyle="bold"
-            app:icon="@drawable/ic_sync"
-            app:iconTint="@color/white"
-            app:iconGravity="textStart"
-            app:cornerRadius="28dp" />
-
-        <Button
-            android:id="@+id/upgradePlanButton"
-            android:layout_width="match_parent"
-            android:layout_height="56dp"
-            android:layout_marginTop="12dp"
-            android:text="@string/btn_upgrade_plan"
-            android:backgroundTint="@color/vg_green"
-            android:textColor="@color/white"
-            android:textStyle="bold"
-            app:cornerRadius="28dp" />
-
-        <Button
-            android:id="@+id/kontactHistoryButton"
-            android:layout_width="match_parent"
-            android:layout_height="56dp"
-            android:layout_marginTop="12dp"
-            android:text="@string/menu_history"
-            android:textStyle="bold"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-            app:strokeColor="@color/primary_light"
-            android:textColor="@color/primary_light"
-            app:cornerRadius="28dp" />
-
-        <Button
-            android:id="@+id/contactUsButton"
-            android:layout_width="match_parent"
-            android:layout_height="56dp"
-            android:layout_marginTop="12dp"
-            android:text="@string/menu_contact_us"
-            android:textStyle="bold"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-            app:icon="@drawable/ic_chat"
-            app:iconTint="@color/primary_light"
-            app:iconGravity="textStart"
-            app:strokeColor="@color/primary_light"
-            android:textColor="@color/primary_light"
-            app:cornerRadius="28dp" />
-
-    </LinearLayout>
-
-</LinearLayout>
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        when (requestCode) {
+            PERMISSION_REQUEST_CODE -> {
+                if (grantResults.isNotEmpty() && grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
+                    // Permission was just granted, so the stats we last loaded (with
+                    // permission denied) are stale/generic. Refresh them before syncing
+                    // so the dashboard reflects the real on-device numbers right away.
+                    loadStats()
+                    refreshPermissionHealth()
+                    startSync()
+                } else {
+                    refreshPermissionHealth()
+                    Toast.makeText(this, "Permission required to sync contacts", Toast.LENGTH_SHORT).show()
+                }
+            }
+            NOTIFICATION_PERMISSION_REQUEST_CODE -> {
+                // Advance/refresh regardless of grant or deny - denial just means the
+                // banner stays up for that one item, it never blocks anything else.
+                refreshPermissionHealth()
+            }
+        }
+    }
+}
