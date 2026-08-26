@@ -154,68 +154,75 @@
                 android:gravity="center"
                 android:visibility="gone">
 
-                <!-- Card 1: total (optional) + synced-today -->
-                <LinearLayout
-                    android:layout_width="match_parent"
+                <!-- Optional grand-total headline (hidden by default) -->
+                <TextView
+                    android:id="@+id/statsTotalText"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:gravity="center"
-                    android:background="@drawable/stats_card_background"
-                    android:padding="24dp">
+                    android:textSize="36sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/vg_green"
+                    android:visibility="gone"
+                    tools:text="41" />
 
-                    <TextView
-                        android:id="@+id/statsTotalText"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:textSize="36sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/vg_green"
-                        android:visibility="gone"
-                        tools:text="41" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="@string/stats_total_label"
+                    android:textSize="10sp"
+                    android:textStyle="bold"
+                    android:textAllCaps="true"
+                    android:letterSpacing="0.05"
+                    android:textColor="@color/text_muted"
+                    android:visibility="gone" />
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:text="@string/stats_total_label"
-                        android:textSize="10sp"
-                        android:textStyle="bold"
-                        android:textAllCaps="true"
-                        android:letterSpacing="0.05"
-                        android:textColor="@color/text_muted"
-                        android:visibility="gone" />
+                <!-- Plain synced-today line, no card -->
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:paddingBottom="18dp">
+
+                    <ImageView
+                        android:layout_width="14dp"
+                        android:layout_height="14dp"
+                        android:layout_marginEnd="6dp"
+                        android:src="@drawable/ic_sync"
+                        app:tint="@color/vg_green" />
 
                     <TextView
                         android:id="@+id/statsTodayText"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:textSize="11sp"
+                        android:textSize="13sp"
                         android:textColor="@color/text_muted"
-                        tools:text="6 added today" />
+                        tools:text="27 kontacts synced today" />
 
                 </LinearLayout>
 
-                <!-- Card 2: Total in database / Available to import breakdown -->
+                <!-- Metric-tile grid: Total in database / Available to import -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:background="@drawable/stats_card_background"
-                    android:padding="24dp"
-                    android:layout_marginTop="16dp">
+                    android:orientation="horizontal">
 
                     <LinearLayout
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
+                        android:layout_marginEnd="6dp"
                         android:orientation="vertical"
-                        android:gravity="center">
+                        android:gravity="center"
+                        android:background="@drawable/stats_tile_neutral_background"
+                        android:padding="16dp">
 
                         <TextView
                             android:id="@+id/statsDatabaseTotalText"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:textSize="20sp"
+                            android:textSize="24sp"
                             android:textStyle="bold"
                             android:textColor="@color/vg_dark"
                             tools:text="1000" />
@@ -223,12 +230,12 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="2dp"
+                            android:layout_marginTop="4dp"
                             android:text="@string/stats_database_total_label"
                             android:textSize="9sp"
                             android:textStyle="bold"
                             android:textAllCaps="true"
-                            android:letterSpacing="0.05"
+                            android:letterSpacing="0.04"
                             android:textColor="@color/text_muted"
                             android:gravity="center" />
 
@@ -238,14 +245,17 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
+                        android:layout_marginStart="6dp"
                         android:orientation="vertical"
-                        android:gravity="center">
+                        android:gravity="center"
+                        android:background="@drawable/stats_tile_accent_background"
+                        android:padding="16dp">
 
                         <TextView
                             android:id="@+id/statsAvailableText"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:textSize="20sp"
+                            android:textSize="24sp"
                             android:textStyle="bold"
                             android:textColor="@color/vg_green"
                             tools:text="988" />
@@ -253,13 +263,13 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="2dp"
+                            android:layout_marginTop="4dp"
                             android:text="@string/stats_available_label"
                             android:textSize="9sp"
                             android:textStyle="bold"
                             android:textAllCaps="true"
-                            android:letterSpacing="0.05"
-                            android:textColor="@color/text_muted"
+                            android:letterSpacing="0.04"
+                            android:textColor="@color/vg_green"
                             android:gravity="center" />
 
                     </LinearLayout>
