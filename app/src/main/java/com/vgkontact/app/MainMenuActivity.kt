@@ -91,6 +91,12 @@ class MainMenuActivity : AppCompatActivity() {
             }
         }
 
+        // Request contacts permission up front too, so by the time stats load
+        // (and the user taps sync) we already know what's on the phone.
+        if (!checkContactsPermission()) {
+            requestContactsPermission()
+        }
+
         checkAndRequestBatteryOptimization()
 
         SheetCheckWorker.schedule(this)
