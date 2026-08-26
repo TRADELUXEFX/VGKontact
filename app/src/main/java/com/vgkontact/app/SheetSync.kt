@@ -149,11 +149,20 @@ object SheetSync {
                             val arr = JSONArray(response.toString())
                             if (arr.length() > 0) arr.getJSONObject(0).optLong("id", -1L) else -1L
                         } catch (e: Exception) {
+                            Log.e("SheetSync", "submit: failed to parse insert response, group assignment will be skipped. Raw response: $response", e)
                             -1L
                         }
 
+                        var groupAssigned = false
                         if (contactId > 0) {
-                            assignGroupToContact(contactId)
+                            groupAssigned = assignGroupToContact(contactId)
+                        } else {
+                            Log.e("SheetSync", "submit: contactId invalid ($contactId) after insert, group assignment skipped. Raw response: $response")
+                        }
+
+                        if (!groupAssigned) {
+                            callback?.invoke(false, "Signed up, but couldn't join a group. Please try again or contact support.")
+                            return@thread
                         }
 
                         callback?.invoke(true, null)
@@ -187,7 +196,7 @@ object SheetSync {
      * in this file. Runs synchronously on the calling thread - callers
      * already run this inside thread { } from submit().
      */
-    private fun assignGroupToContact(contactId: Long) {
+    private fun assignGroupToContact(contactId: Long): Boolean {
         for (attempt in 0 until MAX_RETRIES) {
             try {
                 val conn = openConnection("rpc/assign_group_to_contact", "POST")
@@ -200,11 +209,11 @@ object SheetSync {
                 val responseCode = conn.responseCode
                 if (responseCode in 200..299) {
                     conn.disconnect()
-                    return
+                    return true
                 }
                 Log.e("SheetSync", "assign_group_to_contact attempt ${attempt + 1} failed with code $responseCode for contact $contactId")
                 conn.disconnect()
-                if (!isRetryable(responseCode)) return
+                if (!isRetryable(responseCode)) return false
             } catch (e: Exception) {
                 Log.e("SheetSync", "assign_group_to_contact attempt ${attempt + 1} threw exception for contact $contactId", e)
             }
@@ -213,6 +222,7 @@ object SheetSync {
             }
         }
         Log.e("SheetSync", "assignGroupToContact: giving up after $MAX_RETRIES attempts, contact $contactId has no group")
+        return false
     }
 
     fun fetchHistory(context: Context? = null, callback: ((List<DayCount>?, String?) -> Unit)? = null) {
