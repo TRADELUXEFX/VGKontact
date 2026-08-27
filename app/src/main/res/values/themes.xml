@@ -12,6 +12,14 @@
 
         <!-- Disable Force Dark Mode Engine -->
         <item name="android:forceDarkAllowed">false</item>
+
+        <!-- App-wide font: Inter, downloaded at runtime via Google Play
+             Services font provider (see res/font/inter.xml). No font
+             files are bundled into the APK. If a device has no Google
+             Play Services, this falls back to the system default font
+             automatically - no crash. -->
+        <item name="android:fontFamily">@font/inter</item>
+        <item name="fontFamily">@font/inter</item>
     </style>
 
     <!-- Missing Divider Style required by activity_history.xml -->
