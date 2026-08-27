@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Kontact Groups screen. Pulled out of the dashboard so the dashboard only
+    needs a single "Kontact Groups" entry point instead of a summary card
+    plus two separate buttons (View Groups / Join More Groups). This screen
+    now owns both: it shows what you've joined, and the one button to go
+    join more (still the same UpgradePlanActivity key-redeem flow).
+-->
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/stats_card_fill"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <!-- Green gradient header, consistent with History/Upgrade screens -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@drawable/header_gradient"
+            android:paddingTop="48dp"
+            android:paddingBottom="36dp"
+            android:paddingStart="24dp"
+            android:paddingEnd="24dp"
+            android:gravity="center">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/title_groups"
+                android:textSize="22sp"
+                android:textStyle="bold"
+                android:textColor="@color/white" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="20dp">
+
+            <!-- Joined-groups summary card - same data/fields the dashboard
+                 used to show (joinedGroupsTitleText / joinedGroupsMetaText /
+                 groupsCountText), just relocated to their own screen. -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="10dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Your Kontact Groups"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/vg_dark"
+                    android:fontFamily="sans-serif-medium" />
+
+                <TextView
+                    android:id="@+id/groupsCountText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textSize="11.5sp"
+                    android:textColor="@color/text_muted"
+                    tools:text="1 joined" />
+
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:background="@drawable/stats_tile_accent_background"
+                android:paddingStart="14dp"
+                android:paddingEnd="14dp"
+                android:paddingTop="13dp"
+                android:paddingBottom="13dp"
+                android:layout_marginBottom="24dp">
+
+                <ImageView
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:background="@drawable/check_circle_background"
+                    android:padding="3.5dp"
+                    android:src="@drawable/ic_check"
+                    app:tint="@color/vg_green_dark" />
+
+                <TextView
+                    android:id="@+id/joinedGroupsTitleText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/vg_green_dark"
+                    android:fontFamily="sans-serif-medium"
+                    tools:text="1 Group" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="4dp"
+                    android:text="\u00B7"
+                    android:textSize="13sp"
+                    android:textColor="@color/vg_green_dark" />
+
+                <TextView
+                    android:id="@+id/joinedGroupsMetaText"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="4dp"
+                    android:textSize="13sp"
+                    android:textColor="@color/vg_green_dark"
+                    tools:text="4 kontacts" />
+
+            </LinearLayout>
+
+            <!-- Single entry point to join more groups (key-redeem flow) -->
+            <Button
+                android:id="@+id/joinGroupsButton"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:text="@string/btn_join_groups"
+                android:textAllCaps="true"
+                android:letterSpacing="0.02"
+                android:backgroundTint="@color/vg_green"
+                android:textColor="@color/white"
+                android:textStyle="bold"
+                app:icon="@drawable/ic_add"
+                app:iconTint="@color/white"
+                app:iconGravity="textStart"
+                app:cornerRadius="16dp" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</androidx.core.widget.NestedScrollView>
