@@ -9,7 +9,7 @@
     <string name="btn_upgrade_plan">Upgrade Plan</string>
     <string name="btn_save">Save</string>
     <string name="stats_total_label">Total Kontacts Synced</string>
-    <string name="stats_database_total_label">Total in database</string>
+    <string name="stats_database_total_label">Total Kontacts</string>
     <string name="stats_available_label">Available to import</string>
     <string name="stats_no_sync_today">No kontacts synced today</string>
     <string name="error_whatsapp_required">Please enter your WhatsApp number</string>
