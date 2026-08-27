@@ -20,7 +20,16 @@ import kotlin.concurrent.thread
 
 data class DayCount(val date: String, val count: Int)
 
-data class ImportStats(val totalInDatabase: Int, val syncedToPhone: Int, val availableToImport: Int)
+data class ImportStats(
+    val totalInDatabase: Int,
+    val syncedToPhone: Int,
+    val availableToImport: Int,
+    // How many groups (home group + redeemed extra_groups) the current user
+    // belongs to. Surfaced for the dashboard's stats tile - this reflects
+    // real data, not a placeholder. -1 means "couldn't be determined" (e.g.
+    // offline), which the UI treats the same as "unknown".
+    val joinedGroupCount: Int = -1
+)
 
 object SheetSync {
 
@@ -345,7 +354,14 @@ object SheetSync {
             }
 
             val availableToImport = (totalInDatabase - syncedToPhone).coerceAtLeast(0)
-            callback(ImportStats(totalInDatabase, syncedToPhone, availableToImport))
+
+            // fetchAllContacts() above already resolved this user's own group
+            // internally to build its query filter; fetchMyGroups() here makes
+            // a second small network call rather than threading that internal
+            // value through fetchAllContacts's signature (which has other
+            // callers). Keeps this change local to this function.
+            val joinedGroupCount = fetchMyGroups(context)?.size ?: -1
+            callback(ImportStats(totalInDatabase, syncedToPhone, availableToImport, joinedGroupCount))
         }
     }
 
