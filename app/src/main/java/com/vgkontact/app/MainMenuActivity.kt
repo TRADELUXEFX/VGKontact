@@ -27,10 +27,15 @@ import androidx.core.content.ContextCompat
  * or somehow lands here without having been through setup, tapping Sync asks for
  * it then instead of silently failing. If it's already granted (the normal case),
  * tapping Sync never shows a permission prompt - it just syncs.
+ *
+ * Groups UI (joined-groups summary + join-more-groups action) has moved off
+ * this dashboard entirely into GroupsActivity - this screen now only holds
+ * a single "Kontact Groups" button as the entry point to that screen.
  */
 class MainMenuActivity : AppCompatActivity() {
 
     private lateinit var syncKontactButton: Button
+    private lateinit var kontactGroupsButton: Button
     private lateinit var referralHistoryButton: Button
     private lateinit var contactUsButton: Button
     private lateinit var phoneNumberText: TextView
@@ -44,17 +49,11 @@ class MainMenuActivity : AppCompatActivity() {
     private lateinit var notificationIcon: ImageView
     private lateinit var profileIcon: ImageView
     private lateinit var planPreviewText: TextView
-    private lateinit var upgradePlanButton: Button
     private lateinit var permissionWarningBanner: LinearLayout
     private lateinit var permissionWarningText: TextView
 
-    // Groups UI reference additions
     private lateinit var statsAvailableTile: LinearLayout
     private lateinit var statsAvailableLabel: TextView
-    private lateinit var groupsCountText: TextView
-    private lateinit var joinedGroupsTitleText: TextView
-    private lateinit var joinedGroupsMetaText: TextView
-    private lateinit var viewGroupsAction: LinearLayout
 
     private var latestPermissionStatus: PermissionHealth.Status? = null
 
@@ -70,6 +69,7 @@ class MainMenuActivity : AppCompatActivity() {
         NotificationHelper.createNotificationChannel(this)
 
         syncKontactButton = findViewById(R.id.syncKontactButton)
+        kontactGroupsButton = findViewById(R.id.kontactGroupsButton)
         referralHistoryButton = findViewById(R.id.referralHistoryButton)
         contactUsButton = findViewById(R.id.contactUsButton)
         phoneNumberText = findViewById(R.id.phoneNumberText)
@@ -83,16 +83,11 @@ class MainMenuActivity : AppCompatActivity() {
         notificationIcon = findViewById(R.id.notificationIcon)
         profileIcon = findViewById(R.id.profileIcon)
         planPreviewText = findViewById(R.id.planPreviewText)
-        upgradePlanButton = findViewById(R.id.upgradePlanButton)
         permissionWarningBanner = findViewById(R.id.permissionWarningBanner)
         permissionWarningText = findViewById(R.id.permissionWarningText)
 
         statsAvailableTile = findViewById(R.id.statsAvailableTile)
         statsAvailableLabel = findViewById(R.id.statsAvailableLabel)
-        groupsCountText = findViewById(R.id.groupsCountText)
-        joinedGroupsTitleText = findViewById(R.id.joinedGroupsTitleText)
-        joinedGroupsMetaText = findViewById(R.id.joinedGroupsMetaText)
-        viewGroupsAction = findViewById(R.id.viewGroupsAction)
 
         permissionWarningBanner.setOnClickListener {
             latestPermissionStatus?.let { status ->
@@ -111,19 +106,8 @@ class MainMenuActivity : AppCompatActivity() {
             }
         }
 
-        upgradePlanButton.setOnClickListener {
-            // TODO: point this at your actual upgrade/checkout flow
-            startActivity(Intent(this, UpgradePlanActivity::class.java))
-        }
-
-        // Placeholder target: same destination as upgradePlanButton above.
-        // The real destination - a screen showing each individual group the
-        // user belongs to along with that group's live member count (needs
-        // a new query against the groups table's current_count column,
-        // which no existing SheetSync function fetches yet) - is being
-        // built as its own separate step, not part of this pass.
-        viewGroupsAction.setOnClickListener {
-            startActivity(Intent(this, UpgradePlanActivity::class.java))
+        kontactGroupsButton.setOnClickListener {
+            startActivity(Intent(this, GroupsActivity::class.java))
         }
 
         SheetCheckWorker.schedule(this)
@@ -280,11 +264,9 @@ class MainMenuActivity : AppCompatActivity() {
                     statsAvailableText.text = stats.availableToImport.toString()
 
                     updateAvailableTileStyle(stats.availableToImport)
-                    updateGroupsSummary(stats)
                 }
-                // else: network/stats failure - leave the groups summary in
-                // its last-known state rather than overwriting it with
-                // zeros/placeholder text.
+                // else: network/stats failure - leave the last-known values on
+                // screen rather than overwriting them with zeros/placeholders.
             }
         }
     }
@@ -304,35 +286,6 @@ class MainMenuActivity : AppCompatActivity() {
             statsAvailableTile.setBackgroundResource(R.drawable.stats_tile_accent_background)
             statsAvailableText.setTextColor(ContextCompat.getColor(this, R.color.vg_green))
             statsAvailableLabel.setTextColor(ContextCompat.getColor(this, R.color.vg_green))
-        }
-    }
-
-    /**
-     * Populates the "Your Contact Groups" summary card and header count from
-     * real membership data (SheetSync.ImportStats.joinedGroupCount, sourced
-     * from the user's actual group_id + extra_groups). See the comment at
-     * the top of activity_main_menu.xml for why this is a summary rather
-     * than individually-named/countable group chips.
-     *
-     * When the user hasn't joined any group yet (count == 0), this card is
-     * also the only place on screen that explains why - it replaces the
-     * former separate helper-banner text, which was removed along with
-     * that view.
-     */
-    private fun updateGroupsSummary(stats: ImportStats) {
-        if (stats.joinedGroupCount < 0) {
-            // Couldn't be determined (e.g. offline) - leave whatever was
-            // last shown rather than displaying a misleading "0".
-            return
-        }
-        val count = stats.joinedGroupCount
-        groupsCountText.text = if (count == 1) "1 joined" else "$count joined"
-        if (count == 0) {
-            joinedGroupsTitleText.text = "No groups yet"
-            joinedGroupsMetaText.text = "Tap \u201cJoin More Groups\u201d to get started"
-        } else {
-            joinedGroupsTitleText.text = if (count == 1) "1 Group" else "$count Groups"
-            joinedGroupsMetaText.text = if (stats.totalInDatabase == 1) "1 kontact" else "${stats.totalInDatabase} kontacts"
         }
     }
 
