@@ -4,7 +4,7 @@
     revision (one filled primary button instead of three, no duplicate
     "Join More Groups" entry point, no separate helper-banner text block).
 
-    IMPORTANT - what the "Your Groups" section does and does NOT do:
+    IMPORTANT - what the "Your Contact Groups" section does and does NOT do:
     A fully-detailed groups UI would show individually-named,
     individually-countable group chips ("Group 1 - 5 members", "Group 2 -
     Locked", etc). That level of detail needs a backend endpoint that
@@ -352,8 +352,8 @@
 
                     </LinearLayout>
 
-                    <!-- Sync Kontact - moved here (above Your Groups) per
-                         user request. Same button/caption, same id, just
+                    <!-- Sync Kontact - moved here (above Your Contact Groups)
+                         per user request. Same button/caption id, just
                          relocated from the former ACTIONS block below. -->
                     <Button
                         android:id="@+id/syncKontactButton"
@@ -371,20 +371,8 @@
                         app:iconGravity="textStart"
                         app:cornerRadius="16dp" />
 
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:text="Pulls new numbers from your joined groups into your phone contacts."
-                        android:textSize="11sp"
-                        android:textColor="@color/text_muted"
-                        android:gravity="center"
-                        android:lineSpacingMultiplier="1.2"
-                        android:paddingStart="10dp"
-                        android:paddingEnd="10dp" />
-
-                    <!-- ============ YOUR GROUPS (reference: .section-label
-                         + .groups-scroll) ============
+                    <!-- ============ YOUR CONTACT GROUPS (reference:
+                         .section-label + .groups-scroll) ============
                          See the file-level comment at the top for why this
                          is a summary card rather than per-group chips. -->
                     <LinearLayout
@@ -398,7 +386,7 @@
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="Your Groups"
+                            android:text="Your Contact Groups"
                             android:textSize="13sp"
                             android:textStyle="bold"
                             android:textColor="@color/vg_dark"
@@ -543,11 +531,11 @@
                 app:cornerRadius="16dp" />
 
             <Button
-                android:id="@+id/kontactHistoryButton"
+                android:id="@+id/referralHistoryButton"
                 android:layout_width="match_parent"
                 android:layout_height="56dp"
                 android:layout_marginTop="12dp"
-                android:text="@string/menu_history"
+                android:text="@string/menu_referral_history"
                 android:textAllCaps="true"
                 android:letterSpacing="0.02"
                 android:textStyle="bold"
