@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Reference: .stat-card { background:var(--stats-fill); border:1px solid
-     var(--stats-border); border-radius:16px; } -->
+<!-- Reference: .stat-card { background:var(-stats-fill); border:1px solid
+     var(-stats-border); border-radius:16px; } -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android"
     android:shape="rectangle">
 
