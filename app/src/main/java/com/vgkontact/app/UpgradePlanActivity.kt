@@ -1,32 +1,63 @@
 package com.vgkontact.app
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.view.View
 import android.widget.Button
 import android.widget.ProgressBar
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.textfield.TextInputEditText
 
 /**
- * Key redemption screen. User types in a code (given to them by the admin);
- * on success, the unlocked groups get merged into their extra_groups server
- * side (see redeem_key() Postgres function / SheetSync.redeemKey()), and the
- * next Sync on the main menu will pull contacts from those groups too.
+ * Key redemption / "unlock" screen. User types in a code (given to them by
+ * the admin); on success, the unlocked groups get merged into their
+ * extra_groups server side (see redeem_key() Postgres function /
+ * SheetSync.redeemKey()), and the next Sync on the main menu will pull
+ * contacts from those groups too.
+ *
+ * Can be opened two ways:
+ *  - Generic, from the "Join Kontact Groups" button on GroupsActivity - no
+ *    extra passed, shows the default "Unlock More Kontacts" copy.
+ *  - Targeted, by tapping a specific group row on GroupsActivity - passes
+ *    EXTRA_TARGET_GROUP_ID, which swaps the title/subtitle to reference
+ *    that group by number and personalizes the "don't have a code"
+ *    WhatsApp message with the group number too.
  */
 class UpgradePlanActivity : AppCompatActivity() {
 
+    companion object {
+        const val EXTRA_TARGET_GROUP_ID = "extra_target_group_id"
+    }
+
+    private lateinit var upgradeTitleText: TextView
+    private lateinit var upgradeSubtitleText: TextView
     private lateinit var keyCodeInput: TextInputEditText
     private lateinit var redeemKeyButton: Button
+    private lateinit var noCodeContactUsButton: Button
     private lateinit var redeemProgressBar: ProgressBar
+
+    private val CONTACT_US_WHATSAPP_NUMBER = "09110321143"
+
+    private var targetGroupId: Long? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_upgrade_plan)
 
+        upgradeTitleText = findViewById(R.id.upgradeTitleText)
+        upgradeSubtitleText = findViewById(R.id.upgradeSubtitleText)
         keyCodeInput = findViewById(R.id.keyCodeInput)
         redeemKeyButton = findViewById(R.id.redeemKeyButton)
+        noCodeContactUsButton = findViewById(R.id.noCodeContactUsButton)
         redeemProgressBar = findViewById(R.id.redeemProgressBar)
+
+        val incomingId = intent.getLongExtra(EXTRA_TARGET_GROUP_ID, -1L)
+        targetGroupId = if (incomingId > 0) incomingId else null
+
+        applyTargetGroupCopy()
 
         redeemKeyButton.setOnClickListener {
             val code = keyCodeInput.text.toString().trim()
@@ -56,6 +87,37 @@ class UpgradePlanActivity : AppCompatActivity() {
                     }
                 }
             }
+        }
+
+        noCodeContactUsButton.setOnClickListener {
+            openWhatsAppForUnlockCode()
+        }
+    }
+
+    private fun applyTargetGroupCopy() {
+        val groupId = targetGroupId
+        if (groupId == null) {
+            upgradeTitleText.text = getString(R.string.title_upgrade_plan)
+            upgradeSubtitleText.text = getString(R.string.upgrade_plan_coming_soon)
+        } else {
+            upgradeTitleText.text = getString(R.string.title_upgrade_plan_for_group, groupId)
+            upgradeSubtitleText.text = getString(R.string.upgrade_plan_coming_soon_for_group, groupId)
+        }
+    }
+
+    private fun openWhatsAppForUnlockCode() {
+        val groupId = targetGroupId
+        val messageText = if (groupId == null) {
+            "Hi VG Kontact, I don't have an unlock code yet and would like to join more groups."
+        } else {
+            "Hi VG Kontact, I don't have an unlock code yet and would like to join Group $groupId kontacts"
+        }
+        val message = Uri.encode(messageText)
+        val uri = Uri.parse("https://wa.me/$CONTACT_US_WHATSAPP_NUMBER?text=$message")
+        try {
+            startActivity(Intent(Intent.ACTION_VIEW, uri))
+        } catch (e: Exception) {
+            Toast.makeText(this, "WhatsApp is not installed", Toast.LENGTH_SHORT).show()
         }
     }
 
