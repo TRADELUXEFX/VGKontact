@@ -4,22 +4,11 @@
     revision (one filled primary button instead of three, no duplicate
     "Join More Groups" entry point, no separate helper-banner text block).
 
-    IMPORTANT - what the "Your Contact Groups" section does and does NOT do:
-    A fully-detailed groups UI would show individually-named,
-    individually-countable group chips ("Group 1 - 5 members", "Group 2 -
-    Locked", etc). That level of detail needs a backend endpoint that
-    lists each group's id, name, member count, and lock status for the
-    current user - SheetSync.kt currently only exposes fetchMyGroups() (a
-    list of group IDs the user already belongs to, no names/counts/
-    lock-state for OTHER groups). Rather than fabricate that data
-    client-side, the section below shows a single honest summary card
-    (how many groups you've joined, how many members) sourced from real
-    data. "Join More Groups" lives only as the standalone button further
-    down (wired to the existing key-redeem flow, UpgradePlanActivity) -
-    it used to also appear as a second chip here, which was a duplicate
-    of that same action and has been removed. Swap this card for a real
-    per-group list the moment a "list groups with member counts" endpoint
-    exists.
+    Kontact Groups (joined-groups summary + join-more-groups action) has
+    been moved off this dashboard entirely into its own screen,
+    GroupsActivity/activity_groups.xml. This screen now only needs a
+    single "Kontact Groups" button as the entry point to that screen -
+    see kontactGroupsButton below.
 -->
 <androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -352,9 +341,7 @@
 
                     </LinearLayout>
 
-                    <!-- Sync Kontact - moved here (above Your Contact Groups)
-                         per user request. Same button/caption id, just
-                         relocated from the former ACTIONS block below. -->
+                    <!-- Sync Kontact -->
                     <Button
                         android:id="@+id/syncKontactButton"
                         android:layout_width="match_parent"
@@ -370,135 +357,6 @@
                         app:iconTint="@color/white"
                         app:iconGravity="textStart"
                         app:cornerRadius="16dp" />
-
-                    <!-- ============ YOUR CONTACT GROUPS (reference:
-                         .section-label + .groups-scroll) ============
-                         See the file-level comment at the top for why this
-                         is a summary card rather than per-group chips. -->
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="22dp"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical">
-
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="Your Contact Groups"
-                            android:textSize="13sp"
-                            android:textStyle="bold"
-                            android:textColor="@color/vg_dark"
-                            android:fontFamily="sans-serif-medium" />
-
-                        <TextView
-                            android:id="@+id/groupsCountText"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:textSize="11.5sp"
-                            android:textColor="@color/text_muted"
-                            tools:text="1 joined" />
-
-                    </LinearLayout>
-
-                    <!-- Single full-width groups summary card (replaces the
-                         former two-chip scroll row). "Join More Groups"
-                         already exists as its own button further down the
-                         screen, so this card no longer needs its own
-                         duplicate entry point for that action - it just
-                         states what you've joined. When joinedGroupCount is
-                         0, MainMenuActivity swaps the title/meta text here
-                         to explain that instead (see updateGroupsSummary). -->
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="10dp"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical"
-                        android:background="@drawable/stats_tile_accent_background"
-                        android:paddingStart="14dp"
-                        android:paddingEnd="14dp"
-                        android:paddingTop="13dp"
-                        android:paddingBottom="13dp">
-
-                        <ImageView
-                            android:layout_width="16dp"
-                            android:layout_height="16dp"
-                            android:background="@drawable/check_circle_background"
-                            android:padding="3.5dp"
-                            android:src="@drawable/ic_check"
-                            app:tint="@color/vg_green_dark" />
-
-                        <TextView
-                            android:id="@+id/joinedGroupsTitleText"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="10dp"
-                            android:textSize="13sp"
-                            android:textStyle="bold"
-                            android:textColor="@color/vg_green_dark"
-                            android:fontFamily="sans-serif-medium"
-                            tools:text="1 Group" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="4dp"
-                            android:text="\u00B7"
-                            android:textSize="13sp"
-                            android:textColor="@color/vg_green_dark" />
-
-                        <TextView
-                            android:id="@+id/joinedGroupsMetaText"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:layout_marginStart="4dp"
-                            android:textSize="13sp"
-                            android:textColor="@color/vg_green_dark"
-                            tools:text="2 kontacts" />
-
-                        <!-- "View Groups" action (eye icon). Wired to
-                             UpgradePlanActivity for now, same as Join More
-                             Groups below - this is a placeholder target
-                             until the real per-group preview screen
-                             (individual groups + their live member counts,
-                             pulled from the groups table) is built as its
-                             own separate step. See viewGroupsAction in
-                             MainMenuActivity. -->
-                        <LinearLayout
-                            android:id="@+id/viewGroupsAction"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:orientation="horizontal"
-                            android:gravity="center_vertical"
-                            android:clickable="true"
-                            android:focusable="true"
-                            android:paddingStart="8dp"
-                            android:paddingEnd="2dp"
-                            android:paddingTop="4dp"
-                            android:paddingBottom="4dp">
-
-                            <ImageView
-                                android:layout_width="15dp"
-                                android:layout_height="15dp"
-                                android:layout_marginEnd="5dp"
-                                android:src="@drawable/ic_eye"
-                                app:tint="@color/vg_green_dark" />
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="View Groups"
-                                android:textSize="12sp"
-                                android:textStyle="bold"
-                                android:textColor="@color/vg_green_dark"
-                                android:fontFamily="sans-serif-medium" />
-
-                        </LinearLayout>
-
-                    </LinearLayout>
 
                 </LinearLayout>
 
@@ -516,16 +374,21 @@
             android:paddingTop="8dp"
             android:paddingBottom="26dp">
 
+            <!-- Single entry point for everything groups-related (list of
+                 joined groups + join-more action) - opens GroupsActivity.
+                 Replaces the former summary card + eye icon + separate
+                 "Join More Groups" button that used to live on this
+                 dashboard. -->
             <Button
-                android:id="@+id/upgradePlanButton"
+                android:id="@+id/kontactGroupsButton"
                 android:layout_width="match_parent"
                 android:layout_height="56dp"
-                android:text="JOIN MORE GROUPS"
+                android:text="@string/menu_kontact_groups"
                 android:letterSpacing="0.02"
                 android:backgroundTint="@color/vg_green"
                 android:textColor="@color/white"
                 android:textStyle="bold"
-                app:icon="@drawable/ic_add"
+                app:icon="@drawable/ic_contacts"
                 app:iconTint="@color/white"
                 app:iconGravity="textStart"
                 app:cornerRadius="16dp" />
