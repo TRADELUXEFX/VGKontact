@@ -1,23 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Restyled to match vgkontact_groups_ui_preview.html (the "Groups UI"
-    reference mockup). Structure/section order/spacing/radii follow the
-    reference as closely as native Android views allow.
+    Cleaned-up pass: fewer competing visual weights than the previous
+    revision (one filled primary button instead of three, no duplicate
+    "Join More Groups" entry point, no separate helper-banner text block).
 
-    IMPORTANT - what this file does and does NOT do:
-    The reference mockup shows a horizontal row of individually-named,
+    IMPORTANT - what the "Your Groups" section does and does NOT do:
+    A fully-detailed groups UI would show individually-named,
     individually-countable group chips ("Group 1 - 5 members", "Group 2 -
-    Locked", "Group 3 - Locked", "Join More"). That level of detail needs
-    a backend endpoint that lists each group's id, name, member count, and
-    lock status for the current user - SheetSync.kt currently only exposes
-    fetchMyGroups() (a list of group IDs the user already belongs to, no
-    names/counts/lock-state for OTHER groups). Rather than fabricate that
-    data client-side, the "Your Groups" section below shows an honest
-    summary card (how many groups you've joined) sourced from real data,
-    plus a "Join More Groups" chip wired to the existing key-redeem flow
-    (UpgradePlanActivity). Swap in a real per-group chip loop the moment a
-    "list groups with member counts" endpoint exists - see the comment
-    above the groupsScrollContainer below for exactly where.
+    Locked", etc). That level of detail needs a backend endpoint that
+    lists each group's id, name, member count, and lock status for the
+    current user - SheetSync.kt currently only exposes fetchMyGroups() (a
+    list of group IDs the user already belongs to, no names/counts/
+    lock-state for OTHER groups). Rather than fabricate that data
+    client-side, the section below shows a single honest summary card
+    (how many groups you've joined, how many members) sourced from real
+    data. "Join More Groups" lives only as the standalone button further
+    down (wired to the existing key-redeem flow, UpgradePlanActivity) -
+    it used to also appear as a second chip here, which was a duplicate
+    of that same action and has been removed. Swap this card for a real
+    per-group list the moment a "list groups with member counts" endpoint
+    exists.
 -->
 <androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -350,42 +352,6 @@
 
                     </LinearLayout>
 
-                    <!-- Helper banner (reference: .helper-banner). Text is
-                         built dynamically in MainMenuActivity from the same
-                         numbers already on screen, so it never contradicts
-                         the stat tiles above it. -->
-                    <LinearLayout
-                        android:id="@+id/helperBanner"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="12dp"
-                        android:orientation="horizontal"
-                        android:background="@drawable/helper_banner_background"
-                        android:paddingStart="13dp"
-                        android:paddingEnd="13dp"
-                        android:paddingTop="11dp"
-                        android:paddingBottom="11dp">
-
-                        <ImageView
-                            android:layout_width="16dp"
-                            android:layout_height="16dp"
-                            android:layout_marginTop="1dp"
-                            android:layout_marginEnd="8dp"
-                            android:src="@drawable/ic_info"
-                            app:tint="@color/vg_green_dark" />
-
-                        <TextView
-                            android:id="@+id/helperBannerText"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:textSize="12.5sp"
-                            android:lineSpacingMultiplier="1.15"
-                            android:textColor="@color/helper_banner_text"
-                            tools:text="You're fully synced with Group 1 - all 6 members are already saved to your phone. Join another group to unlock more people to sync." />
-
-                    </LinearLayout>
-
                     <!-- ============ YOUR GROUPS (reference: .section-label
                          + .groups-scroll) ============
                          See the file-level comment at the top for why this
@@ -417,132 +383,64 @@
 
                     </LinearLayout>
 
-                    <!-- Horizontally-scrolling chip row, same shape as the
-                         reference's .groups-scroll. Currently holds exactly
-                         two chips: a joined-groups summary (real data) and
-                         a "Join More Groups" action chip (wired to the
-                         existing key-redeem screen). To add real per-group
-                         chips once a backend list-groups endpoint exists:
-                         inflate one group_chip_active/locked view per group
-                         inside groupsScrollContainer, before joinMoreChip. -->
-                    <HorizontalScrollView
+                    <!-- Single full-width groups summary card (replaces the
+                         former two-chip scroll row). "Join More Groups"
+                         already exists as its own button further down the
+                         screen, so this card no longer needs its own
+                         duplicate entry point for that action - it just
+                         states what you've joined. When joinedGroupCount is
+                         0, MainMenuActivity swaps the title/meta text here
+                         to explain that instead (see updateGroupsSummary). -->
+                    <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="10dp"
-                        android:scrollbars="none"
-                        android:clipToPadding="false"
-                        android:paddingStart="0dp"
-                        android:paddingEnd="4dp">
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:background="@drawable/stats_tile_accent_background"
+                        android:paddingStart="14dp"
+                        android:paddingEnd="14dp"
+                        android:paddingTop="13dp"
+                        android:paddingBottom="13dp">
 
-                        <LinearLayout
-                            android:id="@+id/groupsScrollContainer"
+                        <ImageView
+                            android:layout_width="16dp"
+                            android:layout_height="16dp"
+                            android:background="@drawable/check_circle_background"
+                            android:padding="3.5dp"
+                            android:src="@drawable/ic_check"
+                            app:tint="@color/vg_green_dark" />
+
+                        <TextView
+                            android:id="@+id/joinedGroupsTitleText"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:orientation="horizontal">
+                            android:layout_marginStart="10dp"
+                            android:textSize="13sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/vg_green_dark"
+                            android:fontFamily="sans-serif-medium"
+                            tools:text="1 Group" />
 
-                            <!-- Joined-groups summary chip (reference:
-                                 .group-chip.active) -->
-                            <LinearLayout
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_marginEnd="10dp"
-                                android:orientation="vertical"
-                                android:background="@drawable/group_chip_active_background"
-                                android:minWidth="130dp"
-                                android:paddingStart="14dp"
-                                android:paddingEnd="14dp"
-                                android:paddingTop="13dp"
-                                android:paddingBottom="13dp">
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="4dp"
+                            android:text="\u00B7"
+                            android:textSize="13sp"
+                            android:textColor="@color/vg_green_dark" />
 
-                                <ImageView
-                                    android:layout_width="16dp"
-                                    android:layout_height="16dp"
-                                    android:background="@drawable/check_circle_background"
-                                    android:padding="3.5dp"
-                                    android:src="@drawable/ic_check"
-                                    app:tint="@color/vg_green_dark" />
+                        <TextView
+                            android:id="@+id/joinedGroupsMetaText"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginStart="4dp"
+                            android:textSize="13sp"
+                            android:textColor="@color/vg_green_dark"
+                            tools:text="2 members" />
 
-                                <TextView
-                                    android:id="@+id/joinedGroupsTitleText"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:layout_marginTop="6dp"
-                                    android:textSize="14sp"
-                                    android:textStyle="bold"
-                                    android:textColor="@color/white"
-                                    android:fontFamily="sans-serif-medium"
-                                    tools:text="Your Groups" />
-
-                                <LinearLayout
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:layout_marginTop="3dp"
-                                    android:orientation="horizontal"
-                                    android:gravity="center_vertical">
-
-                                    <ImageView
-                                        android:layout_width="11dp"
-                                        android:layout_height="11dp"
-                                        android:layout_marginEnd="4dp"
-                                        android:src="@drawable/ic_contacts"
-                                        app:tint="@color/white" />
-
-                                    <TextView
-                                        android:id="@+id/joinedGroupsMetaText"
-                                        android:layout_width="wrap_content"
-                                        android:layout_height="wrap_content"
-                                        android:textSize="11sp"
-                                        android:alpha="0.9"
-                                        android:textColor="@color/white"
-                                        tools:text="6 members" />
-
-                                </LinearLayout>
-
-                            </LinearLayout>
-
-                            <!-- "Join More Groups" chip (reference:
-                                 .group-chip.add). Tapping it does exactly
-                                 what the reference's button does: opens the
-                                 key-redeem screen (existing
-                                 upgradePlanButton target, UpgradePlanActivity),
-                                 just presented as a chip here too so both the
-                                 chip and the bottom button work. -->
-                            <LinearLayout
-                                android:id="@+id/joinMoreChip"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:orientation="vertical"
-                                android:gravity="center"
-                                android:background="@drawable/group_chip_add_background"
-                                android:minWidth="110dp"
-                                android:paddingStart="14dp"
-                                android:paddingEnd="14dp"
-                                android:paddingTop="13dp"
-                                android:paddingBottom="13dp"
-                                android:clickable="true"
-                                android:focusable="true">
-
-                                <ImageView
-                                    android:layout_width="18dp"
-                                    android:layout_height="18dp"
-                                    android:layout_marginBottom="3dp"
-                                    android:src="@drawable/ic_add"
-                                    app:tint="@color/vg_green" />
-
-                                <TextView
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="Join More"
-                                    android:textSize="12.5sp"
-                                    android:textStyle="bold"
-                                    android:textColor="@color/vg_green_dark"
-                                    android:fontFamily="sans-serif-medium" />
-
-                            </LinearLayout>
-
-                        </LinearLayout>
-
-                    </HorizontalScrollView>
+                    </LinearLayout>
 
                 </LinearLayout>
 
