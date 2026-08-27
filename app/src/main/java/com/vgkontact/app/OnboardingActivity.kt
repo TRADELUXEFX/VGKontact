@@ -119,7 +119,7 @@ class OnboardingActivity : AppCompatActivity() {
         }
 
         prevButton.visibility = if (currentSlide == 0) View.INVISIBLE else View.VISIBLE
-        nextButton.text = if (currentSlide == totalSlides - 1) "Get started" else "Next"
+        nextButton.text = if (currentSlide == totalSlides - 1) "GET STARTED" else "Next"
     }
 
     private fun showForm() {
