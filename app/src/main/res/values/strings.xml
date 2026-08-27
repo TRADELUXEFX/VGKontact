@@ -24,6 +24,8 @@
     <string name="menu_contact_us">Contact Us</string>
     <string name="title_groups">Kontact Groups</string>
     <string name="btn_join_groups">Join Kontact Groups</string>
+    <string name="btn_no_code_contact_us">Don\'t have a code? Contact Us</string>
+    <string name="groups_more_available_note">There may be more Kontact groups available. Tap below to join with a key code, or contact us if you don\'t have one yet.</string>
     <string name="title_history">Referral History</string>
     <string name="history_column_number">Number</string>
     <string name="history_column_referrals">Referrals</string>
