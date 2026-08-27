@@ -1,9 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
     One row in the "all groups" list on the Groups screen. Shows the
-    group number plus home-group and extra-key contact counts kept
-    separate (not summed), per product decision. Inflated once per
-    group returned by SheetSync.fetchAllGroupsSummary().
+    group number plus the kontact count for that group (extra-key counts
+    are an internal concept and intentionally not shown to the user).
+    Inflated once per group returned by SheetSync.fetchAllGroupsSummary().
+    Tapping a row jumps to the unlock screen pre-targeted at this group
+    (see GroupsActivity.openUnlockScreenFor()).
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
@@ -12,6 +14,9 @@
     android:orientation="horizontal"
     android:gravity="center_vertical"
     android:background="@drawable/card_background"
+    android:foreground="?attr/selectableItemBackground"
+    android:clickable="true"
+    android:focusable="true"
     android:paddingStart="14dp"
     android:paddingEnd="14dp"
     android:paddingTop="12dp"
@@ -29,7 +34,6 @@
         android:fontFamily="sans-serif-medium"
         tools:text="Group 1" />
 
-    <!-- Right-aligned counts, split home vs extra-key as requested -->
     <TextView
         android:id="@+id/groupRowCounts"
         android:layout_width="wrap_content"
@@ -37,6 +41,6 @@
         android:gravity="end"
         android:textSize="12sp"
         android:textColor="@color/text_muted"
-        tools:text="5 home \u00B7 1 extra" />
+        tools:text="5 kontacts" />
 
 </LinearLayout>
