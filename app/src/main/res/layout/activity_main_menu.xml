@@ -352,6 +352,37 @@
 
                     </LinearLayout>
 
+                    <!-- Sync Kontact - moved here (above Your Groups) per
+                         user request. Same button/caption, same id, just
+                         relocated from the former ACTIONS block below. -->
+                    <Button
+                        android:id="@+id/syncKontactButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="56dp"
+                        android:layout_marginTop="18dp"
+                        android:text="@string/btn_sync_kontact"
+                        android:textAllCaps="true"
+                        android:letterSpacing="0.02"
+                        android:backgroundTint="@color/vg_green"
+                        android:textColor="@color/white"
+                        android:textStyle="bold"
+                        app:icon="@drawable/ic_sync"
+                        app:iconTint="@color/white"
+                        app:iconGravity="textStart"
+                        app:cornerRadius="16dp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="Pulls new numbers from your joined groups into your phone contacts."
+                        android:textSize="11sp"
+                        android:textColor="@color/text_muted"
+                        android:gravity="center"
+                        android:lineSpacingMultiplier="1.2"
+                        android:paddingStart="10dp"
+                        android:paddingEnd="10dp" />
+
                     <!-- ============ YOUR GROUPS (reference: .section-label
                          + .groups-scroll) ============
                          See the file-level comment at the top for why this
@@ -438,7 +469,46 @@
                             android:layout_marginStart="4dp"
                             android:textSize="13sp"
                             android:textColor="@color/vg_green_dark"
-                            tools:text="2 members" />
+                            tools:text="2 kontacts" />
+
+                        <!-- "View Groups" action (eye icon). Wired to
+                             UpgradePlanActivity for now, same as Join More
+                             Groups below - this is a placeholder target
+                             until the real per-group preview screen
+                             (individual groups + their live member counts,
+                             pulled from the groups table) is built as its
+                             own separate step. See viewGroupsAction in
+                             MainMenuActivity. -->
+                        <LinearLayout
+                            android:id="@+id/viewGroupsAction"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:paddingStart="8dp"
+                            android:paddingEnd="2dp"
+                            android:paddingTop="4dp"
+                            android:paddingBottom="4dp">
+
+                            <ImageView
+                                android:layout_width="15dp"
+                                android:layout_height="15dp"
+                                android:layout_marginEnd="5dp"
+                                android:src="@drawable/ic_eye"
+                                app:tint="@color/vg_green_dark" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="View Groups"
+                                android:textSize="12sp"
+                                android:textStyle="bold"
+                                android:textColor="@color/vg_green_dark"
+                                android:fontFamily="sans-serif-medium" />
+
+                        </LinearLayout>
 
                     </LinearLayout>
 
@@ -459,38 +529,9 @@
             android:paddingBottom="26dp">
 
             <Button
-                android:id="@+id/syncKontactButton"
-                android:layout_width="match_parent"
-                android:layout_height="56dp"
-                android:text="@string/btn_sync_kontact"
-                android:textAllCaps="true"
-                android:letterSpacing="0.02"
-                android:backgroundTint="@color/vg_green"
-                android:textColor="@color/white"
-                android:textStyle="bold"
-                app:icon="@drawable/ic_sync"
-                app:iconTint="@color/white"
-                app:iconGravity="textStart"
-                app:cornerRadius="16dp" />
-
-            <!-- Caption under the primary button (reference: .btn-caption) -->
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:text="Pulls new numbers from your joined groups into your phone contacts."
-                android:textSize="11sp"
-                android:textColor="@color/text_muted"
-                android:gravity="center"
-                android:lineSpacingMultiplier="1.2"
-                android:paddingStart="10dp"
-                android:paddingEnd="10dp" />
-
-            <Button
                 android:id="@+id/upgradePlanButton"
                 android:layout_width="match_parent"
                 android:layout_height="56dp"
-                android:layout_marginTop="14dp"
                 android:text="JOIN MORE GROUPS"
                 android:letterSpacing="0.02"
                 android:backgroundTint="@color/vg_green"
