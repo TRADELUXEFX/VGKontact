@@ -3,18 +3,20 @@ package com.vgkontact.app
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.view.LayoutInflater
 import android.widget.Button
+import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 
 /**
  * Kontact Groups screen. Shows the groups the user has already joined
- * (same summary data the dashboard used to show inline), an honest note
- * that more groups may exist (no backend endpoint lists them yet - see
- * activity_groups.xml for details), a button to join more groups via the
- * existing key-redeem flow, and a WhatsApp contact-us option for users who
- * don't have a code yet.
+ * (same summary data the dashboard used to show inline), a real list of
+ * every group that exists with per-group counts (via SheetSync
+ * .fetchAllGroupsSummary(), the get_all_groups_summary RPC), a button to
+ * join more groups via the existing key-redeem flow, and a WhatsApp
+ * contact-us option for users who don't have a code yet.
  */
 class GroupsActivity : AppCompatActivity() {
 
@@ -23,6 +25,8 @@ class GroupsActivity : AppCompatActivity() {
     private lateinit var joinedGroupsMetaText: TextView
     private lateinit var joinGroupsButton: Button
     private lateinit var noCodeContactUsButton: Button
+    private lateinit var allGroupsContainer: LinearLayout
+    private lateinit var allGroupsErrorText: TextView
 
     private val CONTACT_US_WHATSAPP_NUMBER = "09110321143"
 
@@ -35,6 +39,8 @@ class GroupsActivity : AppCompatActivity() {
         joinedGroupsMetaText = findViewById(R.id.joinedGroupsMetaText)
         joinGroupsButton = findViewById(R.id.joinGroupsButton)
         noCodeContactUsButton = findViewById(R.id.noCodeContactUsButton)
+        allGroupsContainer = findViewById(R.id.allGroupsContainer)
+        allGroupsErrorText = findViewById(R.id.allGroupsErrorText)
 
         joinGroupsButton.setOnClickListener {
             startActivity(Intent(this, UpgradePlanActivity::class.java))
@@ -45,6 +51,7 @@ class GroupsActivity : AppCompatActivity() {
         }
 
         loadGroupsSummary()
+        loadAllGroups()
     }
 
     override fun onResume() {
@@ -53,6 +60,7 @@ class GroupsActivity : AppCompatActivity() {
         // key on UpgradePlanActivity and coming back shows the new count
         // right away.
         loadGroupsSummary()
+        loadAllGroups()
     }
 
     private fun loadGroupsSummary() {
@@ -62,6 +70,41 @@ class GroupsActivity : AppCompatActivity() {
                     updateGroupsSummary(stats)
                 }
             }
+        }
+    }
+
+    private fun loadAllGroups() {
+        SheetSync.fetchAllGroupsSummary { groups ->
+            runOnUiThread {
+                if (groups == null) {
+                    // Failed (offline, etc) - show the error text instead of
+                    // silently leaving an empty list with no explanation.
+                    allGroupsContainer.removeAllViews()
+                    allGroupsErrorText.visibility = android.view.View.VISIBLE
+                } else {
+                    allGroupsErrorText.visibility = android.view.View.GONE
+                    populateAllGroups(groups)
+                }
+            }
+        }
+    }
+
+    private fun populateAllGroups(groups: List<GroupSummary>) {
+        allGroupsContainer.removeAllViews()
+        val inflater = LayoutInflater.from(this)
+        for (group in groups) {
+            val row = inflater.inflate(R.layout.item_group_summary, allGroupsContainer, false)
+            val title = row.findViewById<TextView>(R.id.groupRowTitle)
+            val counts = row.findViewById<TextView>(R.id.groupRowCounts)
+
+            title.text = "Group ${group.groupId}"
+            // Split home vs extra-key counts, not summed - per product
+            // decision (a contact can be counted in both if they belong
+            // to this group as both their home group and via a key,
+            // though that shouldn't normally happen).
+            counts.text = "${group.homeCount} home \u00B7 ${group.extraCount} extra"
+
+            allGroupsContainer.addView(row)
         }
     }
 
@@ -75,7 +118,15 @@ class GroupsActivity : AppCompatActivity() {
             joinedGroupsTitleText.text = "No groups yet"
             joinedGroupsMetaText.text = "Tap \u201cJoin Kontact Groups\u201d to get started"
         } else {
-            joinedGroupsTitleText.text = if (count == 1) "1 Group" else "$count Groups"
+            // Show the actual group ID(s) the user joined (e.g. "Group 3"),
+            // not just a count, so the user knows which group they're in.
+            // stats.joinedGroupIds is sorted ascending by fetchImportStats.
+            val ids = stats.joinedGroupIds
+            joinedGroupsTitleText.text = when {
+                ids.isEmpty() -> if (count == 1) "1 Group" else "$count Groups"
+                ids.size == 1 -> "Group ${ids[0]}"
+                else -> "Groups " + ids.joinToString(", ")
+            }
             joinedGroupsMetaText.text = if (stats.totalInDatabase == 1) "1 kontact" else "${stats.totalInDatabase} kontacts"
         }
     }
