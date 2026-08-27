@@ -31,7 +31,7 @@ import androidx.core.content.ContextCompat
 class MainMenuActivity : AppCompatActivity() {
 
     private lateinit var syncKontactButton: Button
-    private lateinit var kontactHistoryButton: Button
+    private lateinit var referralHistoryButton: Button
     private lateinit var contactUsButton: Button
     private lateinit var phoneNumberText: TextView
     private lateinit var statsCard: LinearLayout
@@ -70,7 +70,7 @@ class MainMenuActivity : AppCompatActivity() {
         NotificationHelper.createNotificationChannel(this)
 
         syncKontactButton = findViewById(R.id.syncKontactButton)
-        kontactHistoryButton = findViewById(R.id.kontactHistoryButton)
+        referralHistoryButton = findViewById(R.id.referralHistoryButton)
         contactUsButton = findViewById(R.id.contactUsButton)
         phoneNumberText = findViewById(R.id.phoneNumberText)
         statsCard = findViewById(R.id.statsCard)
@@ -138,7 +138,7 @@ class MainMenuActivity : AppCompatActivity() {
             }
         }
 
-        kontactHistoryButton.setOnClickListener {
+        referralHistoryButton.setOnClickListener {
             startActivity(Intent(this, HistoryActivity::class.java))
         }
 
@@ -308,11 +308,11 @@ class MainMenuActivity : AppCompatActivity() {
     }
 
     /**
-     * Populates the "Your Groups" summary card and header count from real
-     * membership data (SheetSync.ImportStats.joinedGroupCount, sourced from
-     * the user's actual group_id + extra_groups). See the comment at the
-     * top of activity_main_menu.xml for why this is a summary rather than
-     * individually-named/countable group chips.
+     * Populates the "Your Contact Groups" summary card and header count from
+     * real membership data (SheetSync.ImportStats.joinedGroupCount, sourced
+     * from the user's actual group_id + extra_groups). See the comment at
+     * the top of activity_main_menu.xml for why this is a summary rather
+     * than individually-named/countable group chips.
      *
      * When the user hasn't joined any group yet (count == 0), this card is
      * also the only place on screen that explains why - it replaces the
