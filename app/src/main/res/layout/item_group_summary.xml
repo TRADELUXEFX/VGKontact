@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    One row in the "all groups" list on the Groups screen. Shows the
+    group number plus home-group and extra-key contact counts kept
+    separate (not summed), per product decision. Inflated once per
+    group returned by SheetSync.fetchAllGroupsSummary().
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:background="@drawable/card_background"
+    android:paddingStart="14dp"
+    android:paddingEnd="14dp"
+    android:paddingTop="12dp"
+    android:paddingBottom="12dp"
+    android:layout_marginBottom="8dp">
+
+    <TextView
+        android:id="@+id/groupRowTitle"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:textSize="13sp"
+        android:textStyle="bold"
+        android:textColor="@color/vg_dark"
+        android:fontFamily="sans-serif-medium"
+        tools:text="Group 1" />
+
+    <!-- Right-aligned counts, split home vs extra-key as requested -->
+    <TextView
+        android:id="@+id/groupRowCounts"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:gravity="end"
+        android:textSize="12sp"
+        android:textColor="@color/text_muted"
+        tools:text="5 home \u00B7 1 extra" />
+
+</LinearLayout>
