@@ -20,6 +20,8 @@ import kotlin.concurrent.thread
 
 data class DayCount(val date: String, val count: Int)
 
+data class ReferralEntry(val whatsapp: String, val referralCount: Int)
+
 data class ImportStats(
     val totalInDatabase: Int,
     val syncedToPhone: Int,
@@ -279,6 +281,53 @@ object SheetSync {
             } catch (e: Exception) {
                 Log.w("SheetSync", "fetchHistory failed", e)
                 callback?.invoke(null, "Couldn't load history right now")
+            }
+        }
+    }
+
+    /**
+     * Referral leaderboard: for every contact row, "referral" holds the
+     * WhatsApp number of the person who referred them. Grouping by that
+     * column and counting rows gives each referrer's total number of
+     * referrals. Sorted descending so the top referrer appears first.
+     */
+    fun fetchReferralLeaderboard(context: Context? = null, callback: ((List<ReferralEntry>?, String?) -> Unit)? = null) {
+        thread {
+            try {
+                val conn = openConnection("contacts?select=referral&referral=not.is.null", "GET")
+                val responseCode = conn.responseCode
+                if (responseCode in 200..299) {
+                    val reader = BufferedReader(InputStreamReader(conn.inputStream))
+                    val response = StringBuilder()
+                    var line: String?
+                    while (reader.readLine().also { line = it } != null) {
+                        response.append(line)
+                    }
+                    reader.close()
+                    conn.disconnect()
+
+                    val arr = JSONArray(response.toString())
+                    val counts = LinkedHashMap<String, Int>()
+                    for (i in 0 until arr.length()) {
+                        val referral = arr.getJSONObject(i).optString("referral").trim()
+                        if (referral.isEmpty()) continue
+                        counts[referral] = (counts[referral] ?: 0) + 1
+                    }
+                    val leaderboard = counts.entries
+                        .map { ReferralEntry(it.key, it.value) }
+                        .sortedByDescending { it.referralCount }
+                    callback?.invoke(leaderboard, null)
+                } else {
+                    val errorText = readErrorBody(conn)
+                    conn.disconnect()
+                    callback?.invoke(null, errorText)
+                }
+            } catch (e: java.io.IOException) {
+                Log.w("SheetSync", "fetchReferralLeaderboard failed - network error", e)
+                callback?.invoke(null, "NO_INTERNET")
+            } catch (e: Exception) {
+                Log.w("SheetSync", "fetchReferralLeaderboard failed", e)
+                callback?.invoke(null, "Couldn't load referral history right now")
             }
         }
     }
