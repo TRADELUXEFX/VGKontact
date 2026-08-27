@@ -102,16 +102,26 @@ class OnboardingActivity : AppCompatActivity() {
     }
 
     private fun updateSlideUi() {
+        // Slide transitions
         slides.forEachIndexed { index, slide ->
             slide.visibility = if (index == currentSlide) View.VISIBLE else View.GONE
         }
+        
+        // Smooth dot animation
         dots.forEachIndexed { index, dot ->
             val isActive = index == currentSlide
-            val params = dot.layoutParams
-            params.width = if (isActive) dpToPx(24) else dpToPx(8)
-            dot.layoutParams = params
+            val targetAlpha = if (isActive) 1f else 0.4f
+            
+            dot.animate()
+                .alpha(targetAlpha)
+                .setDuration(300)
+                .start()
+            
+            // Keep dot size constant (no width change)
             dot.setBackgroundResource(if (isActive) R.drawable.badge_dot else R.drawable.dot_inactive)
         }
+        
+        // Navigation state
         prevButton.visibility = if (currentSlide == 0) View.INVISIBLE else View.VISIBLE
         nextButton.text = if (currentSlide == totalSlides - 1) "Get started" else "Next"
     }
