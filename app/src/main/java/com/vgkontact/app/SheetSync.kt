@@ -30,7 +30,21 @@ data class ImportStats(
     // belongs to. Surfaced for the dashboard's stats tile - this reflects
     // real data, not a placeholder. -1 means "couldn't be determined" (e.g.
     // offline), which the UI treats the same as "unknown".
-    val joinedGroupCount: Int = -1
+    val joinedGroupCount: Int = -1,
+    // The actual group IDs from joinedGroupCount above, sorted ascending,
+    // so screens can show "Group 3" instead of just "1 Group". Empty when
+    // joinedGroupCount is 0 or -1 (unknown).
+    val joinedGroupIds: List<Long> = emptyList()
+)
+
+// One row of the "browse all groups" list. homeCount and extraCount are
+// kept separate (not summed) per product decision: homeCount = contacts
+// whose group_id is this group; extraCount = contacts who unlocked this
+// group via a redeemed key (present in their extra_groups array).
+data class GroupSummary(
+    val groupId: Long,
+    val homeCount: Long,
+    val extraCount: Long
 )
 
 object SheetSync {
@@ -409,8 +423,64 @@ object SheetSync {
             // a second small network call rather than threading that internal
             // value through fetchAllContacts's signature (which has other
             // callers). Keeps this change local to this function.
-            val joinedGroupCount = fetchMyGroups(context)?.size ?: -1
-            callback(ImportStats(totalInDatabase, syncedToPhone, availableToImport, joinedGroupCount))
+            val myGroups = fetchMyGroups(context)
+            val joinedGroupCount = myGroups?.size ?: -1
+            val joinedGroupIds = myGroups?.sorted() ?: emptyList()
+            callback(ImportStats(totalInDatabase, syncedToPhone, availableToImport, joinedGroupCount, joinedGroupIds))
+        }
+    }
+
+    /**
+     * Fetches every group that exists (not just the current user's own),
+     * with home-group and extra-key contact counts kept separate, via the
+     * get_all_groups_summary() Postgres function. Read-only aggregate data;
+     * safe under the anon key (see grant in the function's own definition).
+     * Returns null on any network/parse failure - callers should treat
+     * that the same as "couldn't be determined" (same convention as the
+     * rest of this file, e.g. fetchMyGroups()).
+     */
+    fun fetchAllGroupsSummary(callback: (List<GroupSummary>?) -> Unit) {
+        thread {
+            try {
+                val conn = openConnection("rpc/get_all_groups_summary", "POST")
+                conn.doOutput = true
+                val writer = OutputStreamWriter(conn.outputStream)
+                writer.write("{}")
+                writer.flush()
+                writer.close()
+
+                if (conn.responseCode !in 200..299) {
+                    conn.disconnect()
+                    callback(null)
+                    return@thread
+                }
+
+                val reader = BufferedReader(InputStreamReader(conn.inputStream))
+                val response = StringBuilder()
+                var line: String?
+                while (reader.readLine().also { line = it } != null) {
+                    response.append(line)
+                }
+                reader.close()
+                conn.disconnect()
+
+                val arr = JSONArray(response.toString())
+                val result = ArrayList<GroupSummary>()
+                for (i in 0 until arr.length()) {
+                    val obj = arr.getJSONObject(i)
+                    result.add(
+                        GroupSummary(
+                            groupId = obj.getLong("group_id"),
+                            homeCount = obj.optLong("home_count", 0L),
+                            extraCount = obj.optLong("extra_count", 0L)
+                        )
+                    )
+                }
+                callback(result.sortedBy { it.groupId })
+            } catch (e: Exception) {
+                Log.e("SheetSync", "fetchAllGroupsSummary failed", e)
+                callback(null)
+            }
         }
     }
 
