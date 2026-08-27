@@ -39,6 +39,8 @@
     <!-- Upgrade Plan -->
     <string name="title_upgrade_plan">Unlock More Kontacts</string>
     <string name="upgrade_plan_coming_soon">Enter a key code to unlock more Kontact groups.</string>
+    <string name="title_upgrade_plan_for_group">Unlock Group %1$d Kontacts</string>
+    <string name="upgrade_plan_coming_soon_for_group">Enter a key code to unlock Group %1$d kontacts group.</string>
     <string name="hint_key_code">Enter key code</string>
     <string name="btn_redeem_key">Unlock</string>
     <string name="key_redeem_empty">Please enter a key code</string>
