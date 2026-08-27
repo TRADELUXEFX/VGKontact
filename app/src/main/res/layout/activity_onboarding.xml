@@ -56,7 +56,7 @@
             android:layout_height="0dp"
             android:layout_weight="1">
 
-            <!-- SLIDE 1: Join a Kontact group -->
+            <!-- SLIDE 1: Join the Kontact List -->
             <LinearLayout
                 android:id="@+id/slide1"
                 android:layout_width="match_parent"
@@ -90,7 +90,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Join a Kontact group"
+                    android:text="Join the Kontact List"
                     android:textSize="21sp"
                     android:textStyle="bold"
                     android:textColor="@color/vg_dark"
@@ -100,7 +100,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Put in your WhatsApp number. We add you to a group with other Viewgrow users."
+                    android:text="Enter your WhatsApp number to join a list of other Viewgrow kontacts."
                     android:textSize="14sp"
                     android:textColor="@color/text_muted"
                     android:gravity="center"
@@ -113,7 +113,7 @@
 
             </LinearLayout>
 
-            <!-- SLIDE 2: We add your group to your contacts -->
+            <!-- SLIDE 2: Save Your Kontacts -->
             <LinearLayout
                 android:id="@+id/slide2"
                 android:layout_width="match_parent"
@@ -147,7 +147,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="We add your group to your contacts"
+                    android:text="Save Your Kontacts"
                     android:textSize="21sp"
                     android:textStyle="bold"
                     android:textColor="@color/vg_dark"
@@ -157,7 +157,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="We save everyone in your group to your phone as a contact. WhatsApp only shows status updates from people saved in your phone."
+                    android:text="We add the numbers on your Viewgrow list to your phone, so you can connect with them on WhatsApp."
                     android:textSize="14sp"
                     android:textColor="@color/text_muted"
                     android:gravity="center"
@@ -170,7 +170,7 @@
 
             </LinearLayout>
 
-            <!-- SLIDE 3: More people see your status -->
+            <!-- SLIDE 3: See More Status Updates -->
             <LinearLayout
                 android:id="@+id/slide3"
                 android:layout_width="match_parent"
@@ -204,7 +204,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="More people see your status"
+                    android:text="See More Status Updates"
                     android:textSize="21sp"
                     android:textStyle="bold"
                     android:textColor="@color/vg_dark"
@@ -214,7 +214,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="You're saved in their phone too. So when you post a status, they see it. When they post, you see it."
+                    android:text="Once you're saved in each other's contacts, you can see each other's WhatsApp Status updates."
                     android:textSize="14sp"
                     android:textColor="@color/text_muted"
                     android:gravity="center"
@@ -490,3 +490,4 @@
     </LinearLayout>
 
 </FrameLayout>
+
