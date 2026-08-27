@@ -17,6 +17,11 @@ import androidx.appcompat.app.AppCompatActivity
  * .fetchAllGroupsSummary(), the get_all_groups_summary RPC), a button to
  * join more groups via the existing key-redeem flow, and a WhatsApp
  * contact-us option for users who don't have a code yet.
+ *
+ * Tapping any row in "All Kontact Groups" jumps straight to the unlock
+ * screen (UpgradePlanActivity), pre-targeted at that group via
+ * EXTRA_TARGET_GROUP_ID, instead of the generic "Join Kontact Groups"
+ * button below.
  */
 class GroupsActivity : AppCompatActivity() {
 
@@ -98,14 +103,23 @@ class GroupsActivity : AppCompatActivity() {
             val counts = row.findViewById<TextView>(R.id.groupRowCounts)
 
             title.text = "Group ${group.groupId}"
-            // Split home vs extra-key counts, not summed - per product
-            // decision (a contact can be counted in both if they belong
-            // to this group as both their home group and via a key,
-            // though that shouldn't normally happen).
-            counts.text = "${group.homeCount} home \u00B7 ${group.extraCount} extra"
+            // "Extra" (key-unlocked) counts are an internal admin concept
+            // and shouldn't be shown to the user - just the kontacts they'd
+            // get access to (the home count).
+            counts.text = if (group.homeCount == 1L) "1 kontact" else "${group.homeCount} kontacts"
+
+            row.setOnClickListener {
+                openUnlockScreenFor(group.groupId)
+            }
 
             allGroupsContainer.addView(row)
         }
+    }
+
+    private fun openUnlockScreenFor(groupId: Long) {
+        val intent = Intent(this, UpgradePlanActivity::class.java)
+        intent.putExtra(UpgradePlanActivity.EXTRA_TARGET_GROUP_ID, groupId)
+        startActivity(intent)
     }
 
     private fun updateGroupsSummary(stats: ImportStats) {
