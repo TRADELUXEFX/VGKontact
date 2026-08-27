@@ -48,6 +48,15 @@ class MainMenuActivity : AppCompatActivity() {
     private lateinit var permissionWarningBanner: LinearLayout
     private lateinit var permissionWarningText: TextView
 
+    // Groups UI reference additions
+    private lateinit var statsAvailableTile: LinearLayout
+    private lateinit var statsAvailableLabel: TextView
+    private lateinit var helperBannerText: TextView
+    private lateinit var groupsCountText: TextView
+    private lateinit var joinedGroupsTitleText: TextView
+    private lateinit var joinedGroupsMetaText: TextView
+    private lateinit var joinMoreChip: LinearLayout
+
     private var latestPermissionStatus: PermissionHealth.Status? = null
 
     private val PERMISSION_REQUEST_CODE = 100
@@ -79,10 +88,26 @@ class MainMenuActivity : AppCompatActivity() {
         permissionWarningBanner = findViewById(R.id.permissionWarningBanner)
         permissionWarningText = findViewById(R.id.permissionWarningText)
 
+        statsAvailableTile = findViewById(R.id.statsAvailableTile)
+        statsAvailableLabel = findViewById(R.id.statsAvailableLabel)
+        helperBannerText = findViewById(R.id.helperBannerText)
+        groupsCountText = findViewById(R.id.groupsCountText)
+        joinedGroupsTitleText = findViewById(R.id.joinedGroupsTitleText)
+        joinedGroupsMetaText = findViewById(R.id.joinedGroupsMetaText)
+        joinMoreChip = findViewById(R.id.joinMoreChip)
+
         permissionWarningBanner.setOnClickListener {
             latestPermissionStatus?.let { status ->
                 fixWorstPermissionIssue(status)
             }
+        }
+
+        // "Join More Groups" chip in the horizontal groups row does the same
+        // thing as the upgradePlanButton at the bottom of the screen - both
+        // open the key-redeem flow. Kept as a separate listener (rather than
+        // performClick() on the button) so each has its own ripple/feedback.
+        joinMoreChip.setOnClickListener {
+            startActivity(Intent(this, UpgradePlanActivity::class.java))
         }
 
         phoneNumberText.text = UserPrefs.getWhatsapp(this) ?: "N/A"
@@ -253,9 +278,73 @@ class MainMenuActivity : AppCompatActivity() {
                     // Still show the breakdown (already have it)
                     statsDatabaseTotalText.text = stats.totalInDatabase.toString()
                     statsAvailableText.text = stats.availableToImport.toString()
+
+                    updateAvailableTileStyle(stats.availableToImport)
+                    updateHelperBanner(stats)
+                    updateGroupsSummary(stats)
                 }
+                // else: network/stats failure - leave the groups summary and
+                // helper banner in their last-known state rather than
+                // overwriting them with zeros/placeholder text.
             }
         }
+    }
+
+    /**
+     * Matches the reference's .stat-card.zero treatment: when there's
+     * nothing new to import, the right-hand tile becomes a plain dashed
+     * card instead of the green-tinted "there's something here" style, and
+     * its number/label switch to a muted color to match.
+     */
+    private fun updateAvailableTileStyle(availableToImport: Int) {
+        if (availableToImport <= 0) {
+            statsAvailableTile.setBackgroundResource(R.drawable.stats_tile_accent_background_zero)
+            statsAvailableText.setTextColor(ContextCompat.getColor(this, R.color.locked_chip_text))
+            statsAvailableLabel.setTextColor(ContextCompat.getColor(this, R.color.text_muted))
+        } else {
+            statsAvailableTile.setBackgroundResource(R.drawable.stats_tile_accent_background)
+            statsAvailableText.setTextColor(ContextCompat.getColor(this, R.color.vg_green))
+            statsAvailableLabel.setTextColor(ContextCompat.getColor(this, R.color.vg_green))
+        }
+    }
+
+    /**
+     * Builds the reference's helper-banner sentence from real numbers
+     * already fetched for this screen, rather than a static string, so it
+     * can never say something the stat tiles above it contradict.
+     */
+    private fun updateHelperBanner(stats: ImportStats) {
+        val groupWord = if (stats.joinedGroupCount == 1) "group" else "groups"
+        helperBannerText.text = when {
+            stats.joinedGroupCount <= 0 -> {
+                "You haven't joined a group yet, so there's nothing to sync. Tap \u201cJoin More Groups\u201d to get started."
+            }
+            stats.availableToImport == 0 -> {
+                "You're fully synced across your ${stats.joinedGroupCount} joined $groupWord \u2014 all ${stats.totalInDatabase} members are already saved to your phone. Join another group to unlock more people to sync."
+            }
+            else -> {
+                "${stats.availableToImport} new ${if (stats.availableToImport == 1) "kontact is" else "kontacts are"} available from your ${stats.joinedGroupCount} joined $groupWord. Tap Sync Kontact to pull them in."
+            }
+        }
+    }
+
+    /**
+     * Populates the "Your Groups" summary chip and header count from real
+     * membership data (SheetSync.ImportStats.joinedGroupCount, sourced from
+     * the user's actual group_id + extra_groups). See the comment at the
+     * top of activity_main_menu.xml for why this is a summary rather than
+     * individually-named/countable group chips.
+     */
+    private fun updateGroupsSummary(stats: ImportStats) {
+        if (stats.joinedGroupCount < 0) {
+            // Couldn't be determined (e.g. offline) - leave whatever was
+            // last shown rather than displaying a misleading "0".
+            return
+        }
+        val count = stats.joinedGroupCount
+        groupsCountText.text = if (count == 1) "1 joined" else "$count joined"
+        joinedGroupsTitleText.text = if (count == 1) "1 Group" else "$count Groups"
+        joinedGroupsMetaText.text = if (stats.totalInDatabase == 1) "1 member" else "${stats.totalInDatabase} members"
     }
 
     private fun startSync() {
