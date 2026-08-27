@@ -1,57 +1,357 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
     android:background="@color/stats_card_fill">
 
-    <!-- Green gradient header -->
+    <!-- ===================== SLIDES CONTAINER ===================== -->
     <LinearLayout
+        android:id="@+id/slidesContainer"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="match_parent"
         android:orientation="vertical"
-        android:background="@drawable/header_gradient"
-        android:paddingTop="48dp"
-        android:paddingBottom="36dp"
-        android:paddingStart="24dp"
-        android:paddingEnd="24dp"
-        android:gravity="center">
+        android:visibility="visible">
 
-        <TextView
-            android:id="@+id/titleText"
+        <!-- Skip button, top right -->
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingTop="16dp"
+            android:paddingEnd="20dp">
+
+            <TextView
+                android:id="@+id/skipButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="end"
+                android:text="Skip"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:textColor="@color/text_muted"
+                android:padding="8dp" />
+
+        </FrameLayout>
+
+        <!-- Slide content area: only one of these 3 is visible at a time -->
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1">
+
+            <!-- SLIDE 1: Join a Kontact group -->
+            <LinearLayout
+                android:id="@+id/slide1"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical"
+                android:gravity="center_horizontal"
+                android:paddingStart="32dp"
+                android:paddingEnd="32dp"
+                android:visibility="visible">
+
+                <View
+                    android:layout_width="0dp"
+                    android:layout_height="0dp"
+                    android:layout_weight="1" />
+
+                <FrameLayout
+                    android:layout_width="140dp"
+                    android:layout_height="140dp"
+                    android:background="@drawable/header_gradient"
+                    android:layout_marginBottom="28dp">
+
+                    <ImageView
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:layout_gravity="center"
+                        android:src="@drawable/ic_contacts"
+                        app:tint="@color/white" />
+
+                </FrameLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Join a Kontact group"
+                    android:textSize="21sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/vg_dark"
+                    android:gravity="center"
+                    android:layout_marginBottom="12dp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Put in your WhatsApp number. We add you to a group with other Viewgrow users."
+                    android:textSize="14sp"
+                    android:textColor="@color/text_muted"
+                    android:gravity="center"
+                    android:lineSpacingMultiplier="1.4" />
+
+                <View
+                    android:layout_width="0dp"
+                    android:layout_height="0dp"
+                    android:layout_weight="1" />
+
+            </LinearLayout>
+
+            <!-- SLIDE 2: We add your group to your contacts -->
+            <LinearLayout
+                android:id="@+id/slide2"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical"
+                android:gravity="center_horizontal"
+                android:paddingStart="32dp"
+                android:paddingEnd="32dp"
+                android:visibility="gone">
+
+                <View
+                    android:layout_width="0dp"
+                    android:layout_height="0dp"
+                    android:layout_weight="1" />
+
+                <FrameLayout
+                    android:layout_width="140dp"
+                    android:layout_height="140dp"
+                    android:background="@drawable/header_gradient"
+                    android:layout_marginBottom="28dp">
+
+                    <ImageView
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:layout_gravity="center"
+                        android:src="@drawable/ic_sync"
+                        app:tint="@color/white" />
+
+                </FrameLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="We add your group to your contacts"
+                    android:textSize="21sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/vg_dark"
+                    android:gravity="center"
+                    android:layout_marginBottom="12dp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="We save everyone in your group to your phone as a contact. WhatsApp only shows status updates from people saved in your phone."
+                    android:textSize="14sp"
+                    android:textColor="@color/text_muted"
+                    android:gravity="center"
+                    android:lineSpacingMultiplier="1.4" />
+
+                <View
+                    android:layout_width="0dp"
+                    android:layout_height="0dp"
+                    android:layout_weight="1" />
+
+            </LinearLayout>
+
+            <!-- SLIDE 3: More people see your status -->
+            <LinearLayout
+                android:id="@+id/slide3"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical"
+                android:gravity="center_horizontal"
+                android:paddingStart="32dp"
+                android:paddingEnd="32dp"
+                android:visibility="gone">
+
+                <View
+                    android:layout_width="0dp"
+                    android:layout_height="0dp"
+                    android:layout_weight="1" />
+
+                <FrameLayout
+                    android:layout_width="140dp"
+                    android:layout_height="140dp"
+                    android:background="@drawable/header_gradient"
+                    android:layout_marginBottom="28dp">
+
+                    <ImageView
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:layout_gravity="center"
+                        android:src="@drawable/ic_eye"
+                        app:tint="@color/white" />
+
+                </FrameLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="More people see your status"
+                    android:textSize="21sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/vg_dark"
+                    android:gravity="center"
+                    android:layout_marginBottom="12dp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="You're saved in their phone too. So when you post a status, they see it. When they post, you see it."
+                    android:textSize="14sp"
+                    android:textColor="@color/text_muted"
+                    android:gravity="center"
+                    android:lineSpacingMultiplier="1.4" />
+
+                <View
+                    android:layout_width="0dp"
+                    android:layout_height="0dp"
+                    android:layout_weight="1" />
+
+            </LinearLayout>
+
+        </FrameLayout>
+
+        <!-- Dot indicators -->
+        <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/title_onboarding"
-            android:textSize="28sp"
-            android:textStyle="bold"
-            android:textColor="@color/white" />
+            android:layout_gravity="center_horizontal"
+            android:orientation="horizontal"
+            android:paddingTop="20dp"
+            android:paddingBottom="8dp">
+
+            <View
+                android:id="@+id/dot1"
+                android:layout_width="24dp"
+                android:layout_height="8dp"
+                android:layout_marginEnd="8dp"
+                android:background="@drawable/badge_dot" />
+
+            <View
+                android:id="@+id/dot2"
+                android:layout_width="8dp"
+                android:layout_height="8dp"
+                android:layout_marginEnd="8dp"
+                android:background="@drawable/dot_inactive" />
+
+            <View
+                android:id="@+id/dot3"
+                android:layout_width="8dp"
+                android:layout_height="8dp"
+                android:background="@drawable/dot_inactive" />
+
+        </LinearLayout>
+
+        <!-- Prev / Next row -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingStart="24dp"
+            android:paddingEnd="24dp"
+            android:paddingTop="12dp"
+            android:paddingBottom="28dp">
+
+            <FrameLayout
+                android:id="@+id/prevButton"
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                android:layout_marginEnd="12dp"
+                android:background="@drawable/card_background"
+                android:visibility="invisible">
+
+                <ImageView
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
+                    android:layout_gravity="center"
+                    android:src="@drawable/ic_chevron_left"
+                    app:tint="@color/vg_dark" />
+
+            </FrameLayout>
+
+            <Button
+                android:id="@+id/nextButton"
+                android:layout_width="0dp"
+                android:layout_height="56dp"
+                android:layout_weight="1"
+                android:text="Next"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:backgroundTint="@color/vg_green"
+                android:textColor="@color/white"
+                app:cornerRadius="28dp" />
+
+        </LinearLayout>
 
     </LinearLayout>
 
-    <!-- ScrollView for form content -->
-    <ScrollView
+    <!-- ===================== FORM SCREEN ===================== -->
+    <LinearLayout
+        android:id="@+id/formContainer"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:background="@color/stats_card_fill">
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:background="@color/stats_card_fill"
+        android:visibility="gone">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
+            android:paddingTop="56dp"
             android:paddingStart="24dp"
             android:paddingEnd="24dp"
-            android:paddingTop="32dp"
-            android:paddingBottom="24dp">
+            android:paddingBottom="8dp">
 
-            <!-- Card container -->
+            <FrameLayout
+                android:id="@+id/formBackButton"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:background="@drawable/card_background"
+                android:layout_marginBottom="20dp">
+
+                <ImageView
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:layout_gravity="center"
+                    android:src="@drawable/ic_chevron_left"
+                    app:tint="@color/vg_dark" />
+
+            </FrameLayout>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Enter your number"
+                android:textSize="22sp"
+                android:textStyle="bold"
+                android:textColor="@color/vg_dark"
+                android:layout_marginBottom="6dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="This is the number we'll place in a Kontact group and sync to your phone"
+                android:textSize="13.5sp"
+                android:textColor="@color/text_muted"
+                android:lineSpacingMultiplier="1.4" />
+
+        </LinearLayout>
+
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1">
+
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:background="@drawable/card_background"
-                android:padding="24dp">
+                android:paddingStart="24dp"
+                android:paddingEnd="24dp"
+                android:paddingTop="20dp">
 
                 <!-- WhatsApp Number Input -->
                 <com.google.android.material.textfield.TextInputLayout
@@ -89,7 +389,7 @@
                 <com.google.android.material.textfield.TextInputLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="20dp"
+                    android:layout_marginTop="18dp"
                     android:hint="@string/hint_referral"
                     android:textColorHint="@color/text_muted"
                     app:hintTextColor="@color/vg_green"
@@ -120,42 +420,40 @@
 
             </LinearLayout>
 
-        </LinearLayout>
+        </ScrollView>
 
-    </ScrollView>
-
-    <!-- Continue Button at bottom -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:padding="24dp"
-        android:background="@color/stats_card_fill">
-
-        <FrameLayout
+        <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="56dp">
+            android:layout_height="wrap_content"
+            android:padding="24dp">
 
-            <Button
-                android:id="@+id/continueButton"
+            <FrameLayout
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:text="@string/btn_continue"
-                android:textSize="16sp"
-                android:textStyle="bold"
-                android:backgroundTint="@color/vg_green"
-                android:textColor="@color/white"
-                app:cornerRadius="28dp" />
+                android:layout_height="56dp">
 
-            <ProgressBar
-                android:id="@+id/progressBar"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:layout_gravity="center"
-                android:indeterminateTint="@color/white"
-                android:visibility="gone" />
+                <Button
+                    android:id="@+id/continueButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:text="@string/btn_continue"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:backgroundTint="@color/vg_green"
+                    android:textColor="@color/white"
+                    app:cornerRadius="28dp" />
 
-        </FrameLayout>
+                <ProgressBar
+                    android:id="@+id/progressBar"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:layout_gravity="center"
+                    android:indeterminateTint="@color/white"
+                    android:visibility="gone" />
+
+            </FrameLayout>
+
+        </LinearLayout>
 
     </LinearLayout>
 
-</LinearLayout>
+</FrameLayout>
