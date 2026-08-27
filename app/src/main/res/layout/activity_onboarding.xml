@@ -13,25 +13,42 @@
         android:orientation="vertical"
         android:visibility="visible">
 
-        <!-- Skip button, top right -->
-        <FrameLayout
+        <!-- Header row: app icon + name (left), Skip (right) -->
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
             android:paddingTop="16dp"
+            android:paddingStart="20dp"
             android:paddingEnd="20dp">
+
+            <ImageView
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:src="@drawable/ic_launcher"
+                android:layout_marginEnd="8dp" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Viewgrow"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:textColor="@color/vg_green" />
 
             <TextView
                 android:id="@+id/skipButton"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_gravity="end"
                 android:text="Skip"
                 android:textSize="13sp"
                 android:textStyle="bold"
                 android:textColor="@color/text_muted"
                 android:padding="8dp" />
 
-        </FrameLayout>
+        </LinearLayout>
 
         <!-- Slide content area: only one of these 3 is visible at a time -->
         <FrameLayout
@@ -58,7 +75,7 @@
                 <FrameLayout
                     android:layout_width="140dp"
                     android:layout_height="140dp"
-                    android:background="@drawable/header_gradient"
+                    android:background="@drawable/icon_box_rounded"
                     android:layout_marginBottom="28dp">
 
                     <ImageView
@@ -115,7 +132,7 @@
                 <FrameLayout
                     android:layout_width="140dp"
                     android:layout_height="140dp"
-                    android:background="@drawable/header_gradient"
+                    android:background="@drawable/icon_box_rounded"
                     android:layout_marginBottom="28dp">
 
                     <ImageView
@@ -172,7 +189,7 @@
                 <FrameLayout
                     android:layout_width="140dp"
                     android:layout_height="140dp"
-                    android:background="@drawable/header_gradient"
+                    android:background="@drawable/icon_box_rounded"
                     android:layout_marginBottom="28dp">
 
                     <ImageView
@@ -212,7 +229,7 @@
 
         </FrameLayout>
 
-        <!-- Dot indicators - smooth, modern design -->
+        <!-- Dot indicators - numbered circles -->
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -221,25 +238,40 @@
             android:paddingTop="24dp"
             android:paddingBottom="16dp">
 
-            <View
+            <TextView
                 android:id="@+id/dot1"
-                android:layout_width="8dp"
-                android:layout_height="8dp"
-                android:layout_marginEnd="5dp"
-                android:background="@drawable/badge_dot" />
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:layout_marginEnd="10dp"
+                android:background="@drawable/dot_number_active"
+                android:gravity="center"
+                android:text="1"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:textColor="@color/white" />
 
-            <View
+            <TextView
                 android:id="@+id/dot2"
-                android:layout_width="8dp"
-                android:layout_height="8dp"
-                android:layout_marginEnd="5dp"
-                android:background="@drawable/dot_inactive" />
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:layout_marginEnd="10dp"
+                android:background="@drawable/dot_number_inactive"
+                android:gravity="center"
+                android:text="2"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:textColor="@color/text_muted" />
 
-            <View
+            <TextView
                 android:id="@+id/dot3"
-                android:layout_width="8dp"
-                android:layout_height="8dp"
-                android:background="@drawable/dot_inactive" />
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:background="@drawable/dot_number_inactive"
+                android:gravity="center"
+                android:text="3"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:textColor="@color/text_muted" />
 
         </LinearLayout>
 
