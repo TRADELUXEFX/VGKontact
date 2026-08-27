@@ -19,8 +19,11 @@
     <string name="sync_failed">Could not save right now. Check your connection and try again.</string>
     <string name="main_menu_title">Settings</string>
     <string name="menu_profile">My Profile</string>
+    <string name="menu_kontact_groups">Kontact Groups</string>
     <string name="menu_referral_history">Referral History</string>
     <string name="menu_contact_us">Contact Us</string>
+    <string name="title_groups">Kontact Groups</string>
+    <string name="btn_join_groups">Join Kontact Groups</string>
     <string name="title_history">Referral History</string>
     <string name="history_column_number">Number</string>
     <string name="history_column_referrals">Referrals</string>
