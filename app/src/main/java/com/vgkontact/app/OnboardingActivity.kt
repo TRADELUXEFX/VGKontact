@@ -22,9 +22,9 @@ class OnboardingActivity : AppCompatActivity() {
     private lateinit var slide3: LinearLayout
     private val slides by lazy { listOf(slide1, slide2, slide3) }
 
-    private lateinit var dot1: View
-    private lateinit var dot2: View
-    private lateinit var dot3: View
+    private lateinit var dot1: TextView
+    private lateinit var dot2: TextView
+    private lateinit var dot3: TextView
     private val dots by lazy { listOf(dot1, dot2, dot3) }
 
     private lateinit var skipButton: TextView
@@ -102,33 +102,24 @@ class OnboardingActivity : AppCompatActivity() {
     }
 
     private fun updateSlideUi() {
-        // Slide transitions
+        // Slide visibility
         slides.forEachIndexed { index, slide ->
             slide.visibility = if (index == currentSlide) View.VISIBLE else View.GONE
         }
-        
-        // Smooth dot animation
+
+        // Numbered dot state: filled green + white number when active,
+        // grey circle + muted number otherwise.
         dots.forEachIndexed { index, dot ->
             val isActive = index == currentSlide
-            val targetAlpha = if (isActive) 1f else 0.4f
-            
-            dot.animate()
-                .alpha(targetAlpha)
-                .setDuration(300)
-                .start()
-            
-            // Keep dot size constant (no width change)
-            dot.setBackgroundResource(if (isActive) R.drawable.badge_dot else R.drawable.dot_inactive)
+            dot.setBackgroundResource(if (isActive) R.drawable.dot_number_active else R.drawable.dot_number_inactive)
+            dot.setTextColor(
+                if (isActive) resources.getColor(R.color.white, theme)
+                else resources.getColor(R.color.text_muted, theme)
+            )
         }
-        
-        // Navigation state
+
         prevButton.visibility = if (currentSlide == 0) View.INVISIBLE else View.VISIBLE
         nextButton.text = if (currentSlide == totalSlides - 1) "Get started" else "Next"
-    }
-
-    private fun dpToPx(dp: Int): Int {
-        val density = resources.displayMetrics.density
-        return (dp * density).toInt()
     }
 
     private fun showForm() {
