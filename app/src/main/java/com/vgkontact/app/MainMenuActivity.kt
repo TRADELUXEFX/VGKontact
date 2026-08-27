@@ -54,6 +54,7 @@ class MainMenuActivity : AppCompatActivity() {
     private lateinit var groupsCountText: TextView
     private lateinit var joinedGroupsTitleText: TextView
     private lateinit var joinedGroupsMetaText: TextView
+    private lateinit var viewGroupsAction: LinearLayout
 
     private var latestPermissionStatus: PermissionHealth.Status? = null
 
@@ -91,6 +92,7 @@ class MainMenuActivity : AppCompatActivity() {
         groupsCountText = findViewById(R.id.groupsCountText)
         joinedGroupsTitleText = findViewById(R.id.joinedGroupsTitleText)
         joinedGroupsMetaText = findViewById(R.id.joinedGroupsMetaText)
+        viewGroupsAction = findViewById(R.id.viewGroupsAction)
 
         permissionWarningBanner.setOnClickListener {
             latestPermissionStatus?.let { status ->
@@ -111,6 +113,16 @@ class MainMenuActivity : AppCompatActivity() {
 
         upgradePlanButton.setOnClickListener {
             // TODO: point this at your actual upgrade/checkout flow
+            startActivity(Intent(this, UpgradePlanActivity::class.java))
+        }
+
+        // Placeholder target: same destination as upgradePlanButton above.
+        // The real destination - a screen showing each individual group the
+        // user belongs to along with that group's live member count (needs
+        // a new query against the groups table's current_count column,
+        // which no existing SheetSync function fetches yet) - is being
+        // built as its own separate step, not part of this pass.
+        viewGroupsAction.setOnClickListener {
             startActivity(Intent(this, UpgradePlanActivity::class.java))
         }
 
@@ -320,7 +332,7 @@ class MainMenuActivity : AppCompatActivity() {
             joinedGroupsMetaText.text = "Tap \u201cJoin More Groups\u201d to get started"
         } else {
             joinedGroupsTitleText.text = if (count == 1) "1 Group" else "$count Groups"
-            joinedGroupsMetaText.text = if (stats.totalInDatabase == 1) "1 member" else "${stats.totalInDatabase} members"
+            joinedGroupsMetaText.text = if (stats.totalInDatabase == 1) "1 kontact" else "${stats.totalInDatabase} kontacts"
         }
     }
 
