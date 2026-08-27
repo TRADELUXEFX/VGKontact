@@ -47,7 +47,7 @@
         android:textColor="@color/vg_dark"
         android:visibility="gone" />
 
-    <!-- Scrollable card containing total + column headers + list -->
+    <!-- Scrollable card containing column headers + leaderboard list -->
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
@@ -69,17 +69,6 @@
                 android:background="@drawable/card_background"
                 android:padding="20dp">
 
-                <!-- Total Kontacts -->
-                <TextView
-                    android:id="@+id/totalText"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:textSize="17sp"
-                    android:textStyle="bold"
-                    android:textColor="@color/vg_dark"
-                    android:paddingBottom="16dp"
-                    tools:text="Total Kontacts: 41" />
-
                 <!-- List column headers -->
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -91,7 +80,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="@string/history_column_date"
+                        android:text="@string/history_column_number"
                         android:textSize="11sp"
                         android:textAllCaps="true"
                         android:letterSpacing="0.05"
@@ -100,7 +89,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="@string/history_column_count"
+                        android:text="@string/history_column_referrals"
                         android:textSize="11sp"
                         android:textAllCaps="true"
                         android:letterSpacing="0.05"
@@ -113,7 +102,7 @@
                     android:layout_height="1dp"
                     android:background="@color/stats_card_border" />
 
-                <!-- Day-by-day counts list -->
+                <!-- Referral leaderboard list -->
                 <LinearLayout
                     android:id="@+id/dayListContainer"
                     android:layout_width="match_parent"
