@@ -1,5 +1,6 @@
 <resources>
 <color name="vg_green">#1FAA59</color>
+<color name="vg_green_dark">#158245</color>
     <color name="vg_green_tint">#E1F5EB</color>
 <color name="vg_dark">#111B21</color>
 <color name="white">#FFFFFF</color>
@@ -9,6 +10,13 @@
 <color name="stats_card_border">#DCEEE1</color>
 <color name="warning_amber">#E8A93B</color>
 <color name="warning_red">#D9534F</color>
+<!-- Groups UI reference additions -->
+<color name="badge_dot_green">#B6F0C9</color>
+<color name="badge_bg">#2EFFFFFF</color>
+<color name="badge_border">#59FFFFFF</color>
+<color name="locked_chip_border">#CFD6D3</color>
+<color name="locked_chip_text">#A8B0AC</color>
+<color name="helper_banner_text">#146138</color>
 <!--  Light mode colors  -->
 <color name="background_light">@color/white</color>
 <color name="on_background_light">@color/vg_dark</color>
