@@ -25,4 +25,7 @@
 <color name="background_dark">#121212</color>
 <color name="on_background_dark">@color/white</color>
 <color name="primary_dark">@color/vg_green</color>
+<!-- Onboarding field colors added for boxed input style -->
+<color name="vg_field_bg">#F6FBF1</color>
+<color name="vg_field_stroke_muted">#B4B2A9</color>
 </resources>
