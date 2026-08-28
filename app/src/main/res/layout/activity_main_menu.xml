@@ -61,7 +61,7 @@
                     android:textStyle="bold"
                     android:letterSpacing="0.01"
                     android:textColor="@color/white"
-                    android:fontFamily="sans-serif-medium"
+                    android:fontFamily="@font/manrope"
                     tools:text="08108709625" />
 
                 <!-- Group badge (reference: .group-badge). Shows the user's
@@ -95,7 +95,7 @@
                         android:textAllCaps="true"
                         android:letterSpacing="0.04"
                         android:textColor="@color/white"
-                        android:fontFamily="sans-serif-medium"
+                        android:fontFamily="@font/manrope"
                         tools:text="FREE PLAN" />
 
                 </LinearLayout>
@@ -279,7 +279,7 @@
                                 android:textSize="26sp"
                                 android:textStyle="bold"
                                 android:textColor="@color/vg_dark"
-                                android:fontFamily="sans-serif-medium"
+                                android:fontFamily="@font/manrope"
                                 tools:text="6" />
 
                             <TextView
@@ -321,7 +321,7 @@
                                 android:textSize="26sp"
                                 android:textStyle="bold"
                                 android:textColor="@color/vg_green"
-                                android:fontFamily="sans-serif-medium"
+                                android:fontFamily="@font/manrope"
                                 tools:text="0" />
 
                             <TextView
