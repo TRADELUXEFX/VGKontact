@@ -39,11 +39,15 @@ class GroupsActivity : AppCompatActivity() {
 
     private val CONTACT_US_WHATSAPP_NUMBER = "09110321143"
 
+    // TEMPORARY TEST VALUE - lowered to 3 so pagination is visible right now
+    // with only 8 real groups in the database. Change back to 10 before
+    // shipping (see note below).
+    //
     // Fixed at 10 per page per product decision - with large group counts
     // (50+), a single long list made the Join/Contact Us buttons hard to
     // reach, so the list is now paginated with numbered page buttons
     // instead of one continuous scroll.
-    private val GROUPS_PER_PAGE = 10
+    private val GROUPS_PER_PAGE = 5
 
     private var allGroups: List<GroupSummary> = emptyList()
     private var currentPage = 0
@@ -151,9 +155,8 @@ class GroupsActivity : AppCompatActivity() {
 
     /**
      * Builds the numbered page row (1, 2, 3...) below the group list.
-     * Hidden entirely when everything fits on one page (10 or fewer
-     * groups), since a single "1" button with nothing else to switch to
-     * would just be clutter.
+     * Hidden entirely when everything fits on one page, since a single "1"
+     * button with nothing else to switch to would just be clutter.
      */
     private fun renderPager() {
         val pageCount = (allGroups.size + GROUPS_PER_PAGE - 1) / GROUPS_PER_PAGE
