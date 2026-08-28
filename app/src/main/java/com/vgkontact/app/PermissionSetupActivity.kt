@@ -48,6 +48,13 @@ class PermissionSetupActivity : AppCompatActivity() {
     private var currentStep: Step = Step.CONTACTS
     private var batterySettingsLaunched: Boolean = false
 
+    // Holds the outcome of the contacts sync kicked off in Step 1, so we can
+    // surface it as a system notification once notification permission is
+    // actually granted in Step 2 - posting it any earlier could be silently
+    // dropped since permission isn't confirmed yet.
+    private data class SyncResult(val submitted: Int, val failed: Int, val errorDetail: String?)
+    private var pendingSyncResult: SyncResult? = null
+
     private val CONTACTS_REQUEST_CODE = 200
     private val NOTIFICATIONS_REQUEST_CODE = 201
 
@@ -63,6 +70,11 @@ class PermissionSetupActivity : AppCompatActivity() {
         setContentView(R.layout.activity_permission_setup)
 
         window.statusBarColor = ContextCompat.getColor(this, R.color.vg_green)
+
+        // Created up front so a notification can be posted as soon as Step 2
+        // grants permission, without depending on MainMenuActivity ever
+        // having run first.
+        NotificationHelper.createNotificationChannel(this)
 
         permissionStepContainer = findViewById(R.id.permissionStepContainer)
         loadingContainer = findViewById(R.id.loadingContainer)
@@ -140,20 +152,55 @@ class PermissionSetupActivity : AppCompatActivity() {
     // wait on the network here, since fetchImportStats() on the loading
     // screen (Step.DONE) will reflect the up-to-date sync state anyway.
     private fun syncContactsThenAdvance() {
-        SheetSync.importAllContactsFromSheet(this)
+        runContactsSyncWithRetry()
         advanceTo(Step.NOTIFICATIONS)
+    }
+
+    private val CONTACTS_SYNC_MAX_ATTEMPTS = 3
+
+    // Runs the sync, and on failure retries silently up to
+    // CONTACTS_SYNC_MAX_ATTEMPTS times before surfacing a toast so the user
+    // knows contacts didn't sync and isn't left guessing later. Whatever the
+    // final outcome, it's stashed in pendingSyncResult so Step 2 can notify
+    // the user with the actual count once notifications are allowed.
+    private fun runContactsSyncWithRetry(attempt: Int = 1) {
+        SheetSync.importAllContactsFromSheet(this) { submitted, failed, errorDetail ->
+            val succeeded = errorDetail == null && (submitted > 0 || failed == 0)
+            if (succeeded) {
+                pendingSyncResult = SyncResult(submitted, failed, errorDetail)
+                notifyIfPastNotificationsStep()
+                return@importAllContactsFromSheet
+            }
+
+            if (attempt < CONTACTS_SYNC_MAX_ATTEMPTS) {
+                runContactsSyncWithRetry(attempt + 1)
+            } else {
+                pendingSyncResult = SyncResult(submitted, failed, errorDetail)
+                notifyIfPastNotificationsStep()
+                runOnUiThread {
+                    Toast.makeText(
+                        this,
+                        "Couldn't sync your contacts. You can retry from Sync Kontact on the dashboard.",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            }
+        }
     }
 
     // ---------------- Step 2: Notifications ----------------
 
     private fun requestNotificationPermission() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
-            // Not needed on this OS version - skip straight through.
+            // Not needed on this OS version - permission is implicitly granted,
+            // so we can notify right away.
+            notifySyncResultIfReady()
             advanceTo(Step.BATTERY)
             return
         }
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
             == PackageManager.PERMISSION_GRANTED) {
+            notifySyncResultIfReady()
             advanceTo(Step.BATTERY)
             return
         }
@@ -162,6 +209,31 @@ class PermissionSetupActivity : AppCompatActivity() {
             arrayOf(Manifest.permission.POST_NOTIFICATIONS),
             NOTIFICATIONS_REQUEST_CODE
         )
+    }
+
+    // Posts the "Sync Complete" notification (with however many contacts
+    // were added) using the result stashed by the Step 1 sync - only once
+    // notification permission is confirmed granted. If the sync hasn't
+    // finished yet (slow network), pendingSyncResult is null and nothing is
+    // posted here - that's fine, since a denied/not-yet permission means we
+    // can't post to the user anyway.
+    private fun notifySyncResultIfReady() {
+        val result = pendingSyncResult ?: return
+        NotificationHelper.showSyncCompleteNotification(
+            this, result.submitted, result.failed, result.errorDetail
+        )
+    }
+
+    // Covers the case where sync finishes late (slow network) after the user
+    // has already moved past Step 2. If they've already granted notification
+    // permission by then, fire it now instead of losing it silently.
+    private fun notifyIfPastNotificationsStep() {
+        if (currentStep == Step.NOTIFICATIONS) return // handled by requestNotificationPermission/onRequestPermissionsResult instead
+        val hasPermission = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+        if (hasPermission) {
+            runOnUiThread { notifySyncResultIfReady() }
+        }
     }
 
     // ---------------- Step 3: Battery optimization ----------------
@@ -211,11 +283,17 @@ class PermissionSetupActivity : AppCompatActivity() {
         when (requestCode) {
             CONTACTS_REQUEST_CODE -> {
                 if (checkContactsPermission()) {
-                    SheetSync.importAllContactsFromSheet(this)
+                    runContactsSyncWithRetry()
                 }
                 advanceTo(Step.NOTIFICATIONS)
             }
-            NOTIFICATIONS_REQUEST_CODE -> advanceTo(Step.BATTERY)
+            NOTIFICATIONS_REQUEST_CODE -> {
+                if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+                    == PackageManager.PERMISSION_GRANTED) {
+                    notifySyncResultIfReady()
+                }
+                advanceTo(Step.BATTERY)
+            }
         }
     }
 
