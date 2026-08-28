@@ -137,6 +137,7 @@ class PermissionSetupActivity : AppCompatActivity() {
 
     private fun requestContactsPermission() {
         if (checkContactsPermission()) {
+            SheetSync.updateVerificationStatus(this, verified = true)
             syncContactsThenAdvance()
             return
         }
@@ -282,7 +283,9 @@ class PermissionSetupActivity : AppCompatActivity() {
         // won't work yet, it never blocks the user from reaching the dashboard.
         when (requestCode) {
             CONTACTS_REQUEST_CODE -> {
-                if (checkContactsPermission()) {
+                val granted = checkContactsPermission()
+                SheetSync.updateVerificationStatus(this, verified = granted)
+                if (granted) {
                     runContactsSyncWithRetry()
                 }
                 advanceTo(Step.NOTIFICATIONS)
