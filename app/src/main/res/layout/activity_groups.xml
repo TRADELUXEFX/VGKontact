@@ -39,6 +39,17 @@
             android:orientation="vertical"
             android:padding="20dp">
 
+            <!-- Everything below now sits inside one white card, matching
+                 the Profile screen's card_background container, instead of
+                 loose text/tiles floating directly on the green page
+                 background. -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@drawable/card_background"
+                android:padding="20dp">
+
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -134,14 +145,13 @@
                 android:id="@+id/allGroupsContainer"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:layout_marginBottom="12dp" />
+                android:orientation="vertical" />
 
             <HorizontalScrollView
                 android:id="@+id/groupsPagerScroll"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="20dp"
+                android:layout_marginTop="12dp"
                 android:scrollbars="none"
                 android:visibility="gone">
 
@@ -162,12 +172,17 @@
                 android:textSize="12.5sp"
                 android:textColor="@color/text_muted"
                 android:visibility="gone"
-                android:layout_marginBottom="20dp" />
+                android:layout_marginTop="12dp" />
 
+            </LinearLayout>
+
+            <!-- Action buttons sit below the card, same pattern Profile
+                 uses for its Contact Us button - not crammed inside it. -->
             <Button
                 android:id="@+id/joinGroupsButton"
                 android:layout_width="match_parent"
                 android:layout_height="56dp"
+                android:layout_marginTop="16dp"
                 android:text="@string/btn_join_groups"
                 android:textAllCaps="true"
                 android:letterSpacing="0.02"
