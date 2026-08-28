@@ -68,7 +68,7 @@
                     android:textSize="13sp"
                     android:textStyle="bold"
                     android:textColor="@color/vg_dark"
-                    android:fontFamily="sans-serif-medium" />
+                    android:fontFamily="@font/manrope" />
 
                 <TextView
                     android:id="@+id/groupsCountText"
@@ -108,7 +108,7 @@
                     android:textSize="13sp"
                     android:textStyle="bold"
                     android:textColor="@color/vg_green_dark"
-                    android:fontFamily="sans-serif-medium"
+                    android:fontFamily="@font/manrope"
                     tools:text="1 Group" />
 
                 <TextView
@@ -145,7 +145,7 @@
                 android:textSize="13sp"
                 android:textStyle="bold"
                 android:textColor="@color/vg_dark"
-                android:fontFamily="sans-serif-medium"
+                android:fontFamily="@font/manrope"
                 android:layout_marginBottom="10dp" />
 
             <LinearLayout
