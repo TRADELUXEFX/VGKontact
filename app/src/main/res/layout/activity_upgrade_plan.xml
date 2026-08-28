@@ -53,7 +53,7 @@
                 android:text="@string/title_upgrade_plan"
                 android:textSize="21sp"
                 android:textStyle="bold"
-                android:fontFamily="@font/manrope"
+                android:fontFamily="@font/baloo2"
                 android:textColor="@color/white" />
 
         </LinearLayout>
