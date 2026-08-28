@@ -3,6 +3,8 @@ package com.vgkontact.app
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.widget.Button
 import android.widget.ImageView
@@ -31,6 +33,12 @@ class ProfileActivity : AppCompatActivity() {
 
     private lateinit var myReferralCodeText: TextView
     private lateinit var copyReferralCodeButton: Button
+    private lateinit var profileContactUsButton: Button
+
+    // Same WhatsApp support number the dashboard's Contact Us button uses
+    // (see MainMenuActivity.CONTACT_US_WHATSAPP_NUMBER) - kept identical so
+    // both entry points reach the same place.
+    private val CONTACT_US_WHATSAPP_NUMBER = "09110321143"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -55,6 +63,7 @@ class ProfileActivity : AppCompatActivity() {
 
         myReferralCodeText = findViewById(R.id.myReferralCodeText)
         copyReferralCodeButton = findViewById(R.id.copyReferralCodeButton)
+        profileContactUsButton = findViewById(R.id.profileContactUsButton)
 
         val whatsapp = UserPrefs.getWhatsapp(this)
 
@@ -92,6 +101,10 @@ class ProfileActivity : AppCompatActivity() {
         copyReferralCodeButton.setOnClickListener {
             copyToClipboard(myCode)
         }
+
+        profileContactUsButton.setOnClickListener {
+            openWhatsAppContactUs()
+        }
     }
 
     override fun onResume() {
@@ -105,12 +118,13 @@ class ProfileActivity : AppCompatActivity() {
     private fun bindSyncStatus() {
         val contactsGranted = PermissionHealth.check(this).contactsGranted
         val todaySyncedCount = UserPrefs.getTodaySyncedCount(this)
+        val lastSyncText = UserPrefs.getLastSyncDisplayText(this)
 
         if (contactsGranted && todaySyncedCount > 0) {
             syncStatusIcon.setColorFilter(ContextCompat.getColor(this, R.color.vg_green))
             syncStatusText.text = "Synced"
             syncStatusText.setTextColor(ContextCompat.getColor(this, R.color.vg_green))
-            lastSyncedText.text = "Last synced: Today"
+            lastSyncedText.text = if (lastSyncText != null) "Last synced: $lastSyncText" else "Last synced: Today"
         } else if (!contactsGranted) {
             syncStatusIcon.setColorFilter(ContextCompat.getColor(this, R.color.warning_red))
             syncStatusText.text = "Off"
@@ -120,7 +134,7 @@ class ProfileActivity : AppCompatActivity() {
             syncStatusIcon.setColorFilter(ContextCompat.getColor(this, R.color.text_muted))
             syncStatusText.text = "Idle"
             syncStatusText.setTextColor(ContextCompat.getColor(this, R.color.text_muted))
-            lastSyncedText.text = "No contacts synced yet today"
+            lastSyncedText.text = if (lastSyncText != null) "Last synced: $lastSyncText" else "No contacts synced yet"
         }
     }
 
@@ -144,5 +158,15 @@ class ProfileActivity : AppCompatActivity() {
         val clip = ClipData.newPlainText("VGKontact Referral Code", text)
         clipboard.setPrimaryClip(clip)
         Toast.makeText(this, "Referral code copied", Toast.LENGTH_SHORT).show()
+    }
+
+    private fun openWhatsAppContactUs() {
+        val message = Uri.encode("Hi VG Kontact, I need help with...")
+        val uri = Uri.parse("https://wa.me/$CONTACT_US_WHATSAPP_NUMBER?text=$message")
+        try {
+            startActivity(Intent(Intent.ACTION_VIEW, uri))
+        } catch (e: Exception) {
+            Toast.makeText(this, "WhatsApp is not installed", Toast.LENGTH_SHORT).show()
+        }
     }
 }
