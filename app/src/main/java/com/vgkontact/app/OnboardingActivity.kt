@@ -34,12 +34,15 @@ class OnboardingActivity : AppCompatActivity() {
         continueButton = findViewById(R.id.continueButton)
         progressBar = findViewById(R.id.progressBar)
 
+        PhoneNumberFormatter.attachTo(whatsappInput)
+        PhoneNumberFormatter.attachTo(referralInput)
+
         continueButton.setOnClickListener { onContinueClicked() }
     }
 
     private fun onContinueClicked() {
-        val whatsapp = whatsappInput.text.toString().trim()
-        val referral = referralInput.text.toString().trim()
+        val whatsapp = PhoneNumberFormatter.rawDigits(whatsappInput.text.toString())
+        val referral = PhoneNumberFormatter.rawDigits(referralInput.text.toString())
 
         if (!isValidNigerianPhone(whatsapp)) {
             whatsappInput.error = "Enter valid 11-digit Nigerian number"
