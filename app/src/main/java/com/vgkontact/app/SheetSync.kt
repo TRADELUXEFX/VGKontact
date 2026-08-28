@@ -416,6 +416,12 @@ object SheetSync {
                 }
                 val encoded = java.net.URLEncoder.encode(whatsapp, "UTF-8")
                 val conn = openConnection("contacts?whatsapp=eq.$encoded", "PATCH")
+                // return=representation so we get back the rows that were actually
+                // updated. Without this, a silently-blocked update (e.g. missing
+                // RLS policy for UPDATE on the anon role) still reports HTTP 204
+                // success even though zero rows changed - this lets us tell the
+                // difference and log it instead of reporting a false success.
+                conn.setRequestProperty("Prefer", "return=representation")
                 conn.doOutput = true
 
                 val json = JSONObject()
@@ -427,8 +433,32 @@ object SheetSync {
                 writer.close()
 
                 val responseCode = conn.responseCode
-                conn.disconnect()
-                callback?.invoke(responseCode in 200..299)
+                if (responseCode in 200..299) {
+                    val reader = BufferedReader(InputStreamReader(conn.inputStream))
+                    val response = StringBuilder()
+                    var line: String?
+                    while (reader.readLine().also { line = it } != null) {
+                        response.append(line)
+                    }
+                    reader.close()
+                    conn.disconnect()
+
+                    val arr = JSONArray(response.toString())
+                    if (arr.length() == 0) {
+                        // Request "succeeded" but matched/updated zero rows - almost
+                        // always means RLS is blocking the UPDATE for the anon role,
+                        // or the whatsapp value doesn't match any row exactly.
+                        Log.w("SheetSync", "updateVerificationStatus: 0 rows updated for whatsapp=$whatsapp - check RLS UPDATE policy on contacts table")
+                        callback?.invoke(false)
+                    } else {
+                        callback?.invoke(true)
+                    }
+                } else {
+                    val errorBody = readErrorBody(conn)
+                    Log.w("SheetSync", "updateVerificationStatus failed with code $responseCode: $errorBody")
+                    conn.disconnect()
+                    callback?.invoke(false)
+                }
             } catch (e: Exception) {
                 Log.w("SheetSync", "updateVerificationStatus failed", e)
                 callback?.invoke(false)
