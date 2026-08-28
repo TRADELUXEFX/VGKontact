@@ -1,14 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!--
-    Kontact Groups screen. Pulled out of the dashboard so the dashboard only
-    needs a single "Kontact Groups" entry point instead of a summary card
-    plus two separate buttons (View Groups / Join More Groups). This screen
-    now owns both: it shows what you've joined, a real list of every group
-    that exists with per-group counts (get_all_groups_summary RPC, added
-    2026 - home-group and extra-key counts kept separate by design), and
-    the one button to go join more (still the same UpgradePlanActivity
-    key-redeem flow).
--->
 <androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
@@ -22,13 +12,12 @@
         android:layout_height="wrap_content"
         android:orientation="vertical">
 
-        <!-- Green gradient header, consistent with History/Upgrade screens -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:background="@drawable/header_gradient"
-            android:paddingTop="48dp"
+            android:paddingTop="56dp"
             android:paddingBottom="36dp"
             android:paddingStart="24dp"
             android:paddingEnd="24dp"
@@ -50,9 +39,6 @@
             android:orientation="vertical"
             android:padding="20dp">
 
-            <!-- Joined-groups summary card - same data/fields the dashboard
-                 used to show (joinedGroupsTitleText / joinedGroupsMetaText /
-                 groupsCountText), just relocated to their own screen. -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -133,10 +119,6 @@
 
             </LinearLayout>
 
-            <!-- All groups that exist, with real per-group counts from
-                 SheetSync.fetchAllGroupsSummary() (get_all_groups_summary
-                 RPC). Populated at runtime in GroupsActivity.kt - starts
-                 empty/hidden until data loads. -->
             <TextView
                 android:id="@+id/allGroupsTitleText"
                 android:layout_width="wrap_content"
@@ -153,11 +135,25 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:layout_marginBottom="20dp" />
+                android:layout_marginBottom="12dp" />
 
-            <!-- Shown only if fetchAllGroupsSummary() fails/returns null
-                 (offline, etc) - replaces the whole All Groups section
-                 rather than showing an empty list with no explanation. -->
+            <HorizontalScrollView
+                android:id="@+id/groupsPagerScroll"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="20dp"
+                android:scrollbars="none"
+                android:visibility="gone">
+
+                <LinearLayout
+                    android:id="@+id/groupsPagerContainer"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center" />
+
+            </HorizontalScrollView>
+
             <TextView
                 android:id="@+id/allGroupsErrorText"
                 android:layout_width="match_parent"
@@ -168,7 +164,6 @@
                 android:visibility="gone"
                 android:layout_marginBottom="20dp" />
 
-            <!-- Single entry point to join more groups (key-redeem flow) -->
             <Button
                 android:id="@+id/joinGroupsButton"
                 android:layout_width="match_parent"
@@ -184,8 +179,6 @@
                 app:iconGravity="textStart"
                 app:cornerRadius="16dp" />
 
-            <!-- For users who don't have an unlock code yet - same WhatsApp
-                 contact-us flow as the dashboard's Contact Us button. -->
             <Button
                 android:id="@+id/noCodeContactUsButton"
                 android:layout_width="match_parent"
