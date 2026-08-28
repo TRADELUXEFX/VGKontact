@@ -6,6 +6,7 @@ import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 
 class NotificationSettingsActivity : AppCompatActivity() {
 
@@ -15,6 +16,8 @@ class NotificationSettingsActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_notification_settings)
+
+        window.statusBarColor = ContextCompat.getColor(this, R.color.vg_green)
 
         hoursInputField = findViewById(R.id.hoursInputField)
         saveFrequencyButton = findViewById(R.id.saveFrequencyButton)
