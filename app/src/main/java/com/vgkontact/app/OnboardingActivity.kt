@@ -1,9 +1,16 @@
 package com.vgkontact.app
 
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
+import android.text.SpannableString
+import android.text.Spanned
+import android.text.method.LinkMovementMethod
+import android.text.style.ClickableSpan
+import android.text.style.ForegroundColorSpan
 import android.view.View
 import android.widget.ProgressBar
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
@@ -15,6 +22,7 @@ class OnboardingActivity : AppCompatActivity() {
     private lateinit var referralInput: TextInputEditText
     private lateinit var continueButton: android.widget.Button
     private lateinit var progressBar: ProgressBar
+    private lateinit var creditText: TextView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -33,11 +41,46 @@ class OnboardingActivity : AppCompatActivity() {
         referralInput = findViewById(R.id.referralInput)
         continueButton = findViewById(R.id.continueButton)
         progressBar = findViewById(R.id.progressBar)
+        creditText = findViewById(R.id.creditText)
 
         PhoneNumberFormatter.attachTo(whatsappInput)
         PhoneNumberFormatter.attachTo(referralInput)
 
         continueButton.setOnClickListener { onContinueClicked() }
+
+        setupCreditLink()
+    }
+
+    private fun setupCreditLink() {
+        val fullText = creditText.text.toString()
+        val linkWord = "VGKontact"
+        val startIndex = fullText.indexOf(linkWord)
+        if (startIndex == -1) return
+
+        val endIndex = startIndex + linkWord.length
+        val spannable = SpannableString(fullText)
+
+        spannable.setSpan(
+            ForegroundColorSpan(ContextCompat.getColor(this, R.color.vg_green)),
+            startIndex,
+            endIndex,
+            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+        )
+
+        spannable.setSpan(
+            object : ClickableSpan() {
+                override fun onClick(widget: View) {
+                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://vgkontact.netlify.app"))
+                    startActivity(intent)
+                }
+            },
+            startIndex,
+            endIndex,
+            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+        )
+
+        creditText.text = spannable
+        creditText.movementMethod = LinkMovementMethod.getInstance()
     }
 
     private fun onContinueClicked() {
