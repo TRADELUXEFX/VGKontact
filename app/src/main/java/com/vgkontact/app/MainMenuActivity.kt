@@ -42,7 +42,6 @@ class MainMenuActivity : AppCompatActivity() {
     private lateinit var statsCard: LinearLayout
     private lateinit var statsProgressBar: ProgressBar
     private lateinit var statsContent: LinearLayout
-    private lateinit var statsTotalText: TextView
     private lateinit var statsTodayText: TextView
     private lateinit var statsDatabaseTotalText: TextView
     private lateinit var statsAvailableText: TextView
@@ -78,7 +77,6 @@ class MainMenuActivity : AppCompatActivity() {
         statsCard = findViewById(R.id.statsCard)
         statsProgressBar = findViewById(R.id.statsProgressBar)
         statsContent = findViewById(R.id.statsContent)
-        statsTotalText = findViewById(R.id.statsTotalText)
         statsTodayText = findViewById(R.id.statsTodayText)
         statsDatabaseTotalText = findViewById(R.id.statsDatabaseTotalText)
         statsAvailableText = findViewById(R.id.statsAvailableText)
@@ -259,9 +257,6 @@ class MainMenuActivity : AppCompatActivity() {
                 statsProgressBar.visibility = View.GONE
                 statsContent.visibility = View.VISIBLE
                 if (stats != null) {
-                    // Show total database count ONCE in the main display
-                    statsTotalText.text = stats.totalInDatabase.toString()
-                    // Still show the breakdown (already have it)
                     statsDatabaseTotalText.text = stats.totalInDatabase.toString()
                     statsAvailableText.text = stats.availableToImport.toString()
 
