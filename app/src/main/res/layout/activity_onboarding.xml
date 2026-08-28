@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/stats_card_fill">
+    android:background="@color/white">
 
     <!-- ===================== SLIDES CONTAINER ===================== -->
     <LinearLayout
@@ -13,30 +13,43 @@
         android:orientation="vertical"
         android:visibility="visible">
 
-        <!-- Header row: app icon + name (left), Skip (right) -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:paddingTop="16dp"
-            android:paddingStart="20dp"
-            android:paddingEnd="20dp">
+            android:paddingTop="20dp"
+            android:paddingStart="24dp"
+            android:paddingEnd="24dp">
 
-            <ImageView
-                android:layout_width="28dp"
-                android:layout_height="28dp"
-                android:src="@drawable/ic_launcher"
-                android:layout_marginEnd="8dp" />
-
-            <TextView
+            <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="Viewgrow"
-                android:textSize="13sp"
-                android:textStyle="bold"
-                android:textColor="@color/vg_green" />
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <View
+                    android:id="@+id/progressSeg1"
+                    android:layout_width="20dp"
+                    android:layout_height="3dp"
+                    android:layout_marginEnd="6dp"
+                    android:background="@drawable/progress_segment_active" />
+
+                <View
+                    android:id="@+id/progressSeg2"
+                    android:layout_width="20dp"
+                    android:layout_height="3dp"
+                    android:layout_marginEnd="6dp"
+                    android:background="@drawable/progress_segment_inactive" />
+
+                <View
+                    android:id="@+id/progressSeg3"
+                    android:layout_width="20dp"
+                    android:layout_height="3dp"
+                    android:background="@drawable/progress_segment_inactive" />
+
+            </LinearLayout>
 
             <TextView
                 android:id="@+id/skipButton"
@@ -50,48 +63,35 @@
 
         </LinearLayout>
 
-        <!-- Slide content area: only one of these 3 is visible at a time -->
         <FrameLayout
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1">
 
-            <!-- SLIDE 1: Join the Kontact List -->
+            <!-- SLIDE 1 -->
             <LinearLayout
                 android:id="@+id/slide1"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:orientation="vertical"
                 android:gravity="center_horizontal"
-                android:paddingStart="32dp"
-                android:paddingEnd="32dp"
+                android:paddingStart="36dp"
+                android:paddingEnd="36dp"
                 android:visibility="visible">
 
-                <View
-                    android:layout_width="0dp"
-                    android:layout_height="0dp"
-                    android:layout_weight="1" />
+                <View android:layout_width="0dp" android:layout_height="0dp" android:layout_weight="1" />
 
-                <FrameLayout
-                    android:layout_width="140dp"
-                    android:layout_height="140dp"
-                    android:background="@drawable/icon_box_rounded"
-                    android:layout_marginBottom="28dp">
-
-                    <ImageView
-                        android:layout_width="48dp"
-                        android:layout_height="48dp"
-                        android:layout_gravity="center"
-                        android:src="@drawable/ic_contacts"
-                        app:tint="@color/white" />
-
-                </FrameLayout>
+                <ImageView
+                    android:layout_width="56dp"
+                    android:layout_height="56dp"
+                    android:src="@drawable/ic_launcher"
+                    android:layout_marginBottom="32dp" />
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Join the Kontact List"
-                    android:textSize="21sp"
+                    android:textSize="22sp"
                     android:textStyle="bold"
                     android:textColor="@color/vg_dark"
                     android:gravity="center"
@@ -106,49 +106,34 @@
                     android:gravity="center"
                     android:lineSpacingMultiplier="1.4" />
 
-                <View
-                    android:layout_width="0dp"
-                    android:layout_height="0dp"
-                    android:layout_weight="1" />
+                <View android:layout_width="0dp" android:layout_height="0dp" android:layout_weight="1" />
 
             </LinearLayout>
 
-            <!-- SLIDE 2: Save Your Kontacts -->
+            <!-- SLIDE 2 -->
             <LinearLayout
                 android:id="@+id/slide2"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:orientation="vertical"
                 android:gravity="center_horizontal"
-                android:paddingStart="32dp"
-                android:paddingEnd="32dp"
+                android:paddingStart="36dp"
+                android:paddingEnd="36dp"
                 android:visibility="gone">
 
-                <View
-                    android:layout_width="0dp"
-                    android:layout_height="0dp"
-                    android:layout_weight="1" />
+                <View android:layout_width="0dp" android:layout_height="0dp" android:layout_weight="1" />
 
-                <FrameLayout
-                    android:layout_width="140dp"
-                    android:layout_height="140dp"
-                    android:background="@drawable/icon_box_rounded"
-                    android:layout_marginBottom="28dp">
-
-                    <ImageView
-                        android:layout_width="48dp"
-                        android:layout_height="48dp"
-                        android:layout_gravity="center"
-                        android:src="@drawable/ic_sync"
-                        app:tint="@color/white" />
-
-                </FrameLayout>
+                <ImageView
+                    android:layout_width="56dp"
+                    android:layout_height="56dp"
+                    android:src="@drawable/ic_launcher"
+                    android:layout_marginBottom="32dp" />
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Save Your Kontacts"
-                    android:textSize="21sp"
+                    android:textSize="22sp"
                     android:textStyle="bold"
                     android:textColor="@color/vg_dark"
                     android:gravity="center"
@@ -163,49 +148,34 @@
                     android:gravity="center"
                     android:lineSpacingMultiplier="1.4" />
 
-                <View
-                    android:layout_width="0dp"
-                    android:layout_height="0dp"
-                    android:layout_weight="1" />
+                <View android:layout_width="0dp" android:layout_height="0dp" android:layout_weight="1" />
 
             </LinearLayout>
 
-            <!-- SLIDE 3: See More Status Updates -->
+            <!-- SLIDE 3 -->
             <LinearLayout
                 android:id="@+id/slide3"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:orientation="vertical"
                 android:gravity="center_horizontal"
-                android:paddingStart="32dp"
-                android:paddingEnd="32dp"
+                android:paddingStart="36dp"
+                android:paddingEnd="36dp"
                 android:visibility="gone">
 
-                <View
-                    android:layout_width="0dp"
-                    android:layout_height="0dp"
-                    android:layout_weight="1" />
+                <View android:layout_width="0dp" android:layout_height="0dp" android:layout_weight="1" />
 
-                <FrameLayout
-                    android:layout_width="140dp"
-                    android:layout_height="140dp"
-                    android:background="@drawable/icon_box_rounded"
-                    android:layout_marginBottom="28dp">
-
-                    <ImageView
-                        android:layout_width="48dp"
-                        android:layout_height="48dp"
-                        android:layout_gravity="center"
-                        android:src="@drawable/ic_eye"
-                        app:tint="@color/white" />
-
-                </FrameLayout>
+                <ImageView
+                    android:layout_width="56dp"
+                    android:layout_height="56dp"
+                    android:src="@drawable/ic_launcher"
+                    android:layout_marginBottom="32dp" />
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="See More Status Updates"
-                    android:textSize="21sp"
+                    android:textSize="22sp"
                     android:textStyle="bold"
                     android:textColor="@color/vg_dark"
                     android:gravity="center"
@@ -220,62 +190,12 @@
                     android:gravity="center"
                     android:lineSpacingMultiplier="1.4" />
 
-                <View
-                    android:layout_width="0dp"
-                    android:layout_height="0dp"
-                    android:layout_weight="1" />
+                <View android:layout_width="0dp" android:layout_height="0dp" android:layout_weight="1" />
 
             </LinearLayout>
 
         </FrameLayout>
 
-        <!-- Dot indicators - numbered circles -->
-        <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center_horizontal"
-            android:orientation="horizontal"
-            android:paddingTop="24dp"
-            android:paddingBottom="16dp">
-
-            <TextView
-                android:id="@+id/dot1"
-                android:layout_width="22dp"
-                android:layout_height="22dp"
-                android:layout_marginEnd="10dp"
-                android:background="@drawable/dot_number_active"
-                android:gravity="center"
-                android:text="1"
-                android:textSize="11sp"
-                android:textStyle="bold"
-                android:textColor="@color/white" />
-
-            <TextView
-                android:id="@+id/dot2"
-                android:layout_width="22dp"
-                android:layout_height="22dp"
-                android:layout_marginEnd="10dp"
-                android:background="@drawable/dot_number_inactive"
-                android:gravity="center"
-                android:text="2"
-                android:textSize="11sp"
-                android:textStyle="bold"
-                android:textColor="@color/text_muted" />
-
-            <TextView
-                android:id="@+id/dot3"
-                android:layout_width="22dp"
-                android:layout_height="22dp"
-                android:background="@drawable/dot_number_inactive"
-                android:gravity="center"
-                android:text="3"
-                android:textSize="11sp"
-                android:textStyle="bold"
-                android:textColor="@color/text_muted" />
-
-        </LinearLayout>
-
-        <!-- Prev / Next row - professional spacing -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -286,18 +206,27 @@
             android:paddingTop="8dp"
             android:paddingBottom="32dp">
 
+            <TextView
+                android:id="@+id/slideCounter"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="1 / 3"
+                android:textSize="13sp"
+                android:textColor="@color/text_muted" />
+
             <FrameLayout
                 android:id="@+id/prevButton"
-                android:layout_width="52dp"
-                android:layout_height="52dp"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
                 android:layout_marginEnd="12dp"
                 android:background="@drawable/card_background"
                 android:visibility="invisible"
                 android:contentDescription="Previous">
 
                 <ImageView
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
                     android:layout_gravity="center"
                     android:src="@drawable/ic_chevron_left"
                     app:tint="@color/vg_dark" />
@@ -306,15 +235,18 @@
 
             <Button
                 android:id="@+id/nextButton"
-                android:layout_width="0dp"
-                android:layout_height="52dp"
-                android:layout_weight="1"
+                android:layout_width="wrap_content"
+                android:layout_height="48dp"
+                android:minWidth="0dp"
+                android:paddingStart="28dp"
+                android:paddingEnd="28dp"
                 android:text="Next"
-                android:textSize="16sp"
+                android:textSize="15sp"
                 android:textStyle="bold"
+                android:textAllCaps="false"
                 android:backgroundTint="@color/vg_green"
                 android:textColor="@color/white"
-                app:cornerRadius="26dp" />
+                app:cornerRadius="24dp" />
 
         </LinearLayout>
 
@@ -326,7 +258,7 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical"
-        android:background="@color/stats_card_fill"
+        android:background="@color/white"
         android:visibility="gone">
 
         <LinearLayout
@@ -334,25 +266,18 @@
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:paddingTop="56dp"
-            android:paddingStart="24dp"
-            android:paddingEnd="24dp"
+            android:paddingStart="28dp"
+            android:paddingEnd="28dp"
             android:paddingBottom="8dp">
 
-            <FrameLayout
+            <ImageView
                 android:id="@+id/formBackButton"
-                android:layout_width="36dp"
-                android:layout_height="36dp"
-                android:background="@drawable/card_background"
-                android:layout_marginBottom="20dp">
-
-                <ImageView
-                    android:layout_width="16dp"
-                    android:layout_height="16dp"
-                    android:layout_gravity="center"
-                    android:src="@drawable/ic_chevron_left"
-                    app:tint="@color/vg_dark" />
-
-            </FrameLayout>
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/ic_chevron_left"
+                app:tint="@color/vg_dark"
+                android:layout_marginBottom="28dp"
+                android:padding="2dp" />
 
             <TextView
                 android:layout_width="wrap_content"
@@ -382,22 +307,18 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:paddingStart="24dp"
-                android:paddingEnd="24dp"
-                android:paddingTop="20dp">
+                android:paddingStart="28dp"
+                android:paddingEnd="28dp"
+                android:paddingTop="24dp">
 
-                <!-- WhatsApp Number Input -->
                 <com.google.android.material.textfield.TextInputLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:hint="@string/hint_whatsapp"
-                    android:textColorHint="@color/text_muted"
+                    android:textColorHint="@color/vg_green"
                     app:hintTextColor="@color/vg_green"
-                    app:boxStrokeColor="@color/stats_card_border"
-                    app:boxCornerRadiusTopStart="14dp"
-                    app:boxCornerRadiusTopEnd="14dp"
-                    app:boxCornerRadiusBottomStart="14dp"
-                    app:boxCornerRadiusBottomEnd="14dp"
+                    app:boxStrokeColor="@color/vg_green"
+                    app:boxBackgroundMode="none"
                     style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
 
                     <com.google.android.material.textfield.TextInputEditText
@@ -407,30 +328,25 @@
                         android:inputType="phone"
                         android:maxLength="11"
                         android:textSize="16sp"
-                        android:gravity="center"
                         android:textColor="@color/vg_dark"
                         android:textColorHint="@color/text_muted"
                         android:includeFontPadding="false"
-                        android:paddingStart="16dp"
-                        android:paddingEnd="16dp"
-                        android:paddingTop="16dp"
-                        android:paddingBottom="16dp" />
+                        android:paddingStart="0dp"
+                        android:paddingEnd="0dp"
+                        android:paddingTop="12dp"
+                        android:paddingBottom="12dp" />
 
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <!-- Referral Number Input -->
                 <com.google.android.material.textfield.TextInputLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="18dp"
+                    android:layout_marginTop="24dp"
                     android:hint="@string/hint_referral"
                     android:textColorHint="@color/text_muted"
                     app:hintTextColor="@color/vg_green"
                     app:boxStrokeColor="@color/stats_card_border"
-                    app:boxCornerRadiusTopStart="14dp"
-                    app:boxCornerRadiusTopEnd="14dp"
-                    app:boxCornerRadiusBottomStart="14dp"
-                    app:boxCornerRadiusBottomEnd="14dp"
+                    app:boxBackgroundMode="none"
                     style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
 
                     <com.google.android.material.textfield.TextInputEditText
@@ -440,14 +356,13 @@
                         android:inputType="phone"
                         android:maxLength="11"
                         android:textSize="16sp"
-                        android:gravity="center"
                         android:textColor="@color/vg_dark"
                         android:textColorHint="@color/text_muted"
                         android:includeFontPadding="false"
-                        android:paddingStart="16dp"
-                        android:paddingEnd="16dp"
-                        android:paddingTop="16dp"
-                        android:paddingBottom="16dp" />
+                        android:paddingStart="0dp"
+                        android:paddingEnd="0dp"
+                        android:paddingTop="12dp"
+                        android:paddingBottom="12dp" />
 
                 </com.google.android.material.textfield.TextInputLayout>
 
@@ -458,7 +373,7 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:padding="24dp">
+            android:padding="28dp">
 
             <FrameLayout
                 android:layout_width="match_parent"
@@ -471,6 +386,7 @@
                     android:text="@string/btn_continue"
                     android:textSize="16sp"
                     android:textStyle="bold"
+                    android:textAllCaps="false"
                     android:backgroundTint="@color/vg_green"
                     android:textColor="@color/white"
                     app:cornerRadius="28dp" />
@@ -490,4 +406,3 @@
     </LinearLayout>
 
 </FrameLayout>
-
