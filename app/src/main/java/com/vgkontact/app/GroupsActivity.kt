@@ -9,6 +9,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 
 /**
  * Kontact Groups screen. Shows the groups the user has already joined
@@ -38,6 +39,8 @@ class GroupsActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_groups)
+
+        window.statusBarColor = ContextCompat.getColor(this, R.color.vg_green)
 
         groupsCountText = findViewById(R.id.groupsCountText)
         joinedGroupsTitleText = findViewById(R.id.joinedGroupsTitleText)
