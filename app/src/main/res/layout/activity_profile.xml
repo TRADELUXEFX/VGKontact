@@ -27,6 +27,13 @@
             android:textColor="@color/white" />
     </LinearLayout>
 
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true"
+        android:clipToPadding="false">
+
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -40,7 +47,7 @@
             android:background="@drawable/card_background"
             android:padding="20dp">
 
-            <!-- Number -->
+            <!-- 1. Number -->
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -66,25 +73,37 @@
                 android:background="@color/stats_card_border"
                 android:layout_marginBottom="16dp" />
 
-            <!-- Referred By -->
-            <TextView
+            <!-- 2. Verification Status -->
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/profile_label_referral"
-                android:textSize="11sp"
-                android:textAllCaps="true"
-                android:letterSpacing="0.05"
-                android:textColor="@color/text_muted" />
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingBottom="16dp">
 
-            <TextView
-                android:id="@+id/profileReferralText"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:textSize="17sp"
-                android:textStyle="bold"
-                android:textColor="@color/vg_dark"
-                android:paddingBottom="16dp"
-                tools:text="08123456789" />
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/profile_label_verification_status"
+                    android:textSize="11sp"
+                    android:textAllCaps="true"
+                    android:letterSpacing="0.05"
+                    android:textColor="@color/text_muted" />
+
+                <TextView
+                    android:id="@+id/verificationStatusBadge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:paddingStart="10dp"
+                    android:paddingEnd="10dp"
+                    android:paddingTop="4dp"
+                    android:paddingBottom="4dp"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    tools:text="Unverified" />
+
+            </LinearLayout>
 
             <View
                 android:layout_width="match_parent"
@@ -92,33 +111,7 @@
                 android:background="@color/stats_card_border"
                 android:layout_marginBottom="16dp" />
 
-            <!-- Date Registered -->
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/profile_label_date_registered"
-                android:textSize="11sp"
-                android:textAllCaps="true"
-                android:letterSpacing="0.05"
-                android:textColor="@color/text_muted" />
-
-            <TextView
-                android:id="@+id/profileDateRegisteredText"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:textSize="17sp"
-                android:textStyle="bold"
-                android:textColor="@color/vg_dark"
-                android:paddingBottom="16dp"
-                tools:text="2026-08-25" />
-
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:background="@color/stats_card_border"
-                android:layout_marginBottom="16dp" />
-
-            <!-- Sync Status -->
+            <!-- 3. Sync Status -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -184,7 +177,7 @@
                 android:background="@color/stats_card_border"
                 android:layout_marginBottom="16dp" />
 
-            <!-- Total Kontacts Registered -->
+            <!-- 4. Total Kontacts Registered -->
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -210,71 +203,7 @@
                 android:background="@color/stats_card_border"
                 android:layout_marginBottom="16dp" />
 
-            <!-- Verification Status -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:paddingBottom="16dp">
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="@string/profile_label_verification_status"
-                    android:textSize="11sp"
-                    android:textAllCaps="true"
-                    android:letterSpacing="0.05"
-                    android:textColor="@color/text_muted" />
-
-                <TextView
-                    android:id="@+id/verificationStatusBadge"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:paddingStart="10dp"
-                    android:paddingEnd="10dp"
-                    android:paddingTop="4dp"
-                    android:paddingBottom="4dp"
-                    android:textSize="12sp"
-                    android:textStyle="bold"
-                    tools:text="Unverified" />
-
-            </LinearLayout>
-
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:background="@color/stats_card_border"
-                android:layout_marginBottom="16dp" />
-
-            <!-- App Version -->
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/profile_label_app_version"
-                android:textSize="11sp"
-                android:textAllCaps="true"
-                android:letterSpacing="0.05"
-                android:textColor="@color/text_muted" />
-
-            <TextView
-                android:id="@+id/appVersionText"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:textSize="17sp"
-                android:textStyle="bold"
-                android:textColor="@color/vg_dark"
-                android:paddingBottom="16dp"
-                tools:text="VGKontact v1.4.2" />
-
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:background="@color/stats_card_border"
-                android:layout_marginBottom="16dp" />
-
-            <!-- My Referral Code -->
+            <!-- 5. My Referral Code -->
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -298,6 +227,7 @@
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
                 android:layout_marginTop="8dp"
+                android:layout_marginBottom="16dp"
                 android:background="@drawable/referral_code_background"
                 android:padding="12dp">
 
@@ -331,8 +261,87 @@
 
             </LinearLayout>
 
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="@color/stats_card_border"
+                android:layout_marginBottom="16dp" />
+
+            <!-- 6. Referred By -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/profile_label_referral"
+                android:textSize="11sp"
+                android:textAllCaps="true"
+                android:letterSpacing="0.05"
+                android:textColor="@color/text_muted" />
+
+            <TextView
+                android:id="@+id/profileReferralText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="17sp"
+                android:textStyle="bold"
+                android:textColor="@color/vg_dark"
+                android:paddingBottom="16dp"
+                tools:text="08123456789" />
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="@color/stats_card_border"
+                android:layout_marginBottom="16dp" />
+
+            <!-- 7. Date Registered -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/profile_label_date_registered"
+                android:textSize="11sp"
+                android:textAllCaps="true"
+                android:letterSpacing="0.05"
+                android:textColor="@color/text_muted" />
+
+            <TextView
+                android:id="@+id/profileDateRegisteredText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="17sp"
+                android:textStyle="bold"
+                android:textColor="@color/vg_dark"
+                android:paddingBottom="16dp"
+                tools:text="2026-08-25" />
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="@color/stats_card_border"
+                android:layout_marginBottom="16dp" />
+
+            <!-- 8. App Version -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/profile_label_app_version"
+                android:textSize="11sp"
+                android:textAllCaps="true"
+                android:letterSpacing="0.05"
+                android:textColor="@color/text_muted" />
+
+            <TextView
+                android:id="@+id/appVersionText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="17sp"
+                android:textStyle="bold"
+                android:textColor="@color/vg_dark"
+                tools:text="VGKontact v1.4.2" />
+
         </LinearLayout>
 
     </LinearLayout>
+
+    </ScrollView>
 
 </LinearLayout>
