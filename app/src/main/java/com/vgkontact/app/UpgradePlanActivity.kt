@@ -9,6 +9,7 @@ import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import com.google.android.material.textfield.TextInputEditText
 
 /**
@@ -46,6 +47,8 @@ class UpgradePlanActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_upgrade_plan)
+
+        window.statusBarColor = ContextCompat.getColor(this, R.color.vg_green)
 
         upgradeTitleText = findViewById(R.id.upgradeTitleText)
         upgradeSubtitleText = findViewById(R.id.upgradeSubtitleText)
