@@ -47,7 +47,7 @@
             android:background="@drawable/card_background"
             android:padding="20dp">
 
-            <!-- 1. Number -->
+            <!-- 1. Number + Verification Status (inline) -->
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -57,23 +57,6 @@
                 android:letterSpacing="0.05"
                 android:textColor="@color/text_muted" />
 
-            <TextView
-                android:id="@+id/profileNumberText"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:textSize="17sp"
-                android:textStyle="bold"
-                android:textColor="@color/vg_dark"
-                android:paddingBottom="16dp"
-                tools:text="08108709626" />
-
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:background="@color/stats_card_border"
-                android:layout_marginBottom="16dp" />
-
-            <!-- 2. Verification Status -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -82,19 +65,20 @@
                 android:paddingBottom="16dp">
 
                 <TextView
+                    android:id="@+id/profileNumberText"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="@string/profile_label_verification_status"
-                    android:textSize="11sp"
-                    android:textAllCaps="true"
-                    android:letterSpacing="0.05"
-                    android:textColor="@color/text_muted" />
+                    android:textSize="17sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/vg_dark"
+                    tools:text="08108709626" />
 
                 <TextView
                     android:id="@+id/verificationStatusBadge"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
                     android:paddingStart="10dp"
                     android:paddingEnd="10dp"
                     android:paddingTop="4dp"
@@ -111,7 +95,7 @@
                 android:background="@color/stats_card_border"
                 android:layout_marginBottom="16dp" />
 
-            <!-- 3. Sync Status -->
+            <!-- 2. Sync Status -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
