@@ -31,7 +31,7 @@
         android:textSize="13sp"
         android:textStyle="bold"
         android:textColor="@color/vg_dark"
-        android:fontFamily="sans-serif-medium"
+        android:fontFamily="@font/manrope"
         tools:text="Group 1" />
 
     <TextView
