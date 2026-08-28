@@ -66,7 +66,7 @@
                 android:background="@color/stats_card_border"
                 android:layout_marginBottom="16dp" />
 
-            <!-- Referral Number -->
+            <!-- Referred By -->
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -118,16 +118,7 @@
                 android:background="@color/stats_card_border"
                 android:layout_marginBottom="16dp" />
 
-            <!-- Plan -->
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/profile_label_plan"
-                android:textSize="11sp"
-                android:textAllCaps="true"
-                android:letterSpacing="0.05"
-                android:textColor="@color/text_muted" />
-
+            <!-- Sync Status -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -135,31 +126,208 @@
                 android:gravity="center_vertical">
 
                 <TextView
-                    android:id="@+id/profilePlanText"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:textSize="17sp"
+                    android:text="@string/profile_label_sync_status"
+                    android:textSize="11sp"
+                    android:textAllCaps="true"
+                    android:letterSpacing="0.05"
+                    android:textColor="@color/text_muted" />
+
+                <LinearLayout
+                    android:id="@+id/syncStatusBadge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:paddingStart="10dp"
+                    android:paddingEnd="10dp"
+                    android:paddingTop="4dp"
+                    android:paddingBottom="4dp"
+                    android:background="@drawable/badge_verified_background">
+
+                    <ImageView
+                        android:id="@+id/syncStatusIcon"
+                        android:layout_width="14dp"
+                        android:layout_height="14dp"
+                        android:src="@drawable/ic_sync"
+                        app:tint="@color/vg_green" />
+
+                    <TextView
+                        android:id="@+id/syncStatusText"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="4dp"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/vg_green"
+                        tools:text="Synced" />
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/lastSyncedText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:textSize="13sp"
+                android:textColor="@color/text_muted"
+                android:paddingBottom="16dp"
+                tools:text="Last synced: Today, 22:55" />
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="@color/stats_card_border"
+                android:layout_marginBottom="16dp" />
+
+            <!-- Total Kontacts Registered -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/profile_label_total_kontacts"
+                android:textSize="11sp"
+                android:textAllCaps="true"
+                android:letterSpacing="0.05"
+                android:textColor="@color/text_muted" />
+
+            <TextView
+                android:id="@+id/totalKontactsText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="17sp"
+                android:textStyle="bold"
+                android:textColor="@color/vg_dark"
+                android:paddingBottom="16dp"
+                tools:text="5" />
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="@color/stats_card_border"
+                android:layout_marginBottom="16dp" />
+
+            <!-- Verification Status -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingBottom="16dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/profile_label_verification_status"
+                    android:textSize="11sp"
+                    android:textAllCaps="true"
+                    android:letterSpacing="0.05"
+                    android:textColor="@color/text_muted" />
+
+                <TextView
+                    android:id="@+id/verificationStatusBadge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:paddingStart="10dp"
+                    android:paddingEnd="10dp"
+                    android:paddingTop="4dp"
+                    android:paddingBottom="4dp"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    tools:text="Unverified" />
+
+            </LinearLayout>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="@color/stats_card_border"
+                android:layout_marginBottom="16dp" />
+
+            <!-- App Version -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/profile_label_app_version"
+                android:textSize="11sp"
+                android:textAllCaps="true"
+                android:letterSpacing="0.05"
+                android:textColor="@color/text_muted" />
+
+            <TextView
+                android:id="@+id/appVersionText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="17sp"
+                android:textStyle="bold"
+                android:textColor="@color/vg_dark"
+                android:paddingBottom="16dp"
+                tools:text="VGKontact v1.4.2" />
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="@color/stats_card_border"
+                android:layout_marginBottom="16dp" />
+
+            <!-- My Referral Code -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/profile_label_my_referral_code"
+                android:textSize="11sp"
+                android:textAllCaps="true"
+                android:letterSpacing="0.05"
+                android:textColor="@color/text_muted" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="@string/profile_referral_code_hint"
+                android:textSize="12sp"
+                android:textColor="@color/text_muted" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/referral_code_background"
+                android:padding="12dp">
+
+                <TextView
+                    android:id="@+id/myReferralCodeText"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:textSize="15sp"
                     android:textStyle="bold"
                     android:textColor="@color/vg_green"
-                    tools:text="FREE" />
+                    android:letterSpacing="0.03"
+                    tools:text="08018485545" />
 
                 <Button
-                    android:id="@+id/upgradePlanButton"
+                    android:id="@+id/copyReferralCodeButton"
                     android:layout_width="wrap_content"
-                    android:layout_height="36dp"
+                    android:layout_height="32dp"
                     android:minWidth="0dp"
                     android:minHeight="0dp"
-                    android:paddingStart="16dp"
-                    android:paddingEnd="16dp"
-                    android:text="@string/btn_upgrade_plan"
+                    android:paddingStart="14dp"
+                    android:paddingEnd="14dp"
+                    android:text="@string/btn_copy"
                     android:textSize="11sp"
                     android:textStyle="bold"
                     android:textColor="@color/white"
                     android:backgroundTint="@color/vg_green"
                     android:insetTop="0dp"
                     android:insetBottom="0dp"
-                    app:cornerRadius="18dp" />
+                    app:cornerRadius="16dp" />
 
             </LinearLayout>
 
