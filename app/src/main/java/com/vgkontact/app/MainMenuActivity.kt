@@ -158,7 +158,13 @@ class MainMenuActivity : AppCompatActivity() {
         val status = PermissionHealth.check(this)
         latestPermissionStatus = status
 
-        syncKontactButton.isEnabled = status.contactsGranted
+        // The button must stay enabled even when contacts permission is off -
+        // a disabled Button swallows taps entirely, which was the bug: users
+        // could tap SYNC KONTACT all day and nothing would happen. Instead we
+        // keep it clickable and just gray it out visually; the click
+        // listener (set in onCreate) is what pops the permission prompt.
+        syncKontactButton.isEnabled = true
+        syncKontactButton.alpha = if (status.contactsGranted) 1.0f else 0.5f
 
         // Badge reflects the live permission state, not a stored DB flag - so
         // it can never drift out of sync with reality in either direction:
@@ -209,7 +215,7 @@ class MainMenuActivity : AppCompatActivity() {
         val isVerified = status.contactsGranted && status.notificationsGranted && status.batteryExempted
         planPreviewText.text = if (isVerified) "VERIFIED" else "UNVERIFIED"
         planPreviewText.setTextColor(
-            if (isVerified) Color.parseColor("#2E7D32") else Color.parseColor("#C62828")
+            if (isVerified) Color.parseColor("#FFFFFF") else Color.parseColor("#FFD1D1")
         )
     }
 
