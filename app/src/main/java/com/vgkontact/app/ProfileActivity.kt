@@ -33,13 +33,9 @@ class ProfileActivity : AppCompatActivity() {
         profileReferralText.text = if (referral.isNullOrEmpty()) "None" else referral
         profileDateRegisteredText.text = UserPrefs.getDateRegistered(this) ?: "N/A"
 
-        // Fetch plan from Supabase (falls back to FREE if not set / offline)
+        // Plan label is static for now (subscription tiers aren't wired up
+        // yet) - no network fetch needed here.
         profilePlanText.text = "FREE"
-        SheetSync.fetchPlan(this) { plan ->
-            runOnUiThread {
-                profilePlanText.text = plan ?: "FREE"
-            }
-        }
 
         upgradePlanButton.setOnClickListener {
             // TODO: point this at your actual upgrade/checkout flow
