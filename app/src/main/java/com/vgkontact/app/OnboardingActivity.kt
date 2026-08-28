@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.view.View
 import android.widget.Button
 import android.widget.FrameLayout
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
@@ -22,15 +23,16 @@ class OnboardingActivity : AppCompatActivity() {
     private lateinit var slide3: LinearLayout
     private val slides by lazy { listOf(slide1, slide2, slide3) }
 
-    private lateinit var dot1: TextView
-    private lateinit var dot2: TextView
-    private lateinit var dot3: TextView
-    private val dots by lazy { listOf(dot1, dot2, dot3) }
+    private lateinit var progressSeg1: View
+    private lateinit var progressSeg2: View
+    private lateinit var progressSeg3: View
+    private val progressSegs by lazy { listOf(progressSeg1, progressSeg2, progressSeg3) }
+    private lateinit var slideCounter: TextView
 
     private lateinit var skipButton: TextView
     private lateinit var prevButton: FrameLayout
     private lateinit var nextButton: Button
-    private lateinit var formBackButton: FrameLayout
+    private lateinit var formBackButton: ImageView
 
     private lateinit var whatsappInput: TextInputEditText
     private lateinit var referralInput: TextInputEditText
@@ -61,9 +63,10 @@ class OnboardingActivity : AppCompatActivity() {
         slide2 = findViewById(R.id.slide2)
         slide3 = findViewById(R.id.slide3)
 
-        dot1 = findViewById(R.id.dot1)
-        dot2 = findViewById(R.id.dot2)
-        dot3 = findViewById(R.id.dot3)
+        progressSeg1 = findViewById(R.id.progressSeg1)
+        progressSeg2 = findViewById(R.id.progressSeg2)
+        progressSeg3 = findViewById(R.id.progressSeg3)
+        slideCounter = findViewById(R.id.slideCounter)
 
         skipButton = findViewById(R.id.skipButton)
         prevButton = findViewById(R.id.prevButton)
@@ -107,16 +110,12 @@ class OnboardingActivity : AppCompatActivity() {
             slide.visibility = if (index == currentSlide) View.VISIBLE else View.GONE
         }
 
-        // Numbered dot state: filled green + white number when active,
-        // grey circle + muted number otherwise.
-        dots.forEachIndexed { index, dot ->
-            val isActive = index == currentSlide
-            dot.setBackgroundResource(if (isActive) R.drawable.dot_number_active else R.drawable.dot_number_inactive)
-            dot.setTextColor(
-                if (isActive) resources.getColor(R.color.white, theme)
-                else resources.getColor(R.color.text_muted, theme)
-            )
+        // Progress segment state: green when reached, grey otherwise.
+        progressSegs.forEachIndexed { index, seg ->
+            val isActive = index <= currentSlide
+            seg.setBackgroundResource(if (isActive) R.drawable.progress_segment_active else R.drawable.progress_segment_inactive)
         }
+        slideCounter.text = "${currentSlide + 1} / $totalSlides"
 
         prevButton.visibility = if (currentSlide == 0) View.INVISIBLE else View.VISIBLE
         nextButton.text = if (currentSlide == totalSlides - 1) "GET STARTED" else "Next"
