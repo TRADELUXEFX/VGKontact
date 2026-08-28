@@ -324,6 +324,27 @@
 
         </LinearLayout>
 
+        <!-- Support / Help - same WhatsApp contact as the dashboard's
+             Contact Us button (openWhatsAppContactUs), sitting below the
+             profile card as its own action so it's reachable without going
+             back to the dashboard. -->
+        <Button
+            android:id="@+id/profileContactUsButton"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:layout_marginTop="16dp"
+            android:text="@string/menu_contact_us"
+            android:textAllCaps="true"
+            android:letterSpacing="0.02"
+            android:textStyle="bold"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            app:icon="@drawable/ic_chat"
+            app:iconTint="@color/primary_light"
+            app:iconGravity="textStart"
+            app:strokeColor="@color/primary_light"
+            android:textColor="@color/primary_light"
+            app:cornerRadius="16dp" />
+
     </LinearLayout>
 
     </ScrollView>
