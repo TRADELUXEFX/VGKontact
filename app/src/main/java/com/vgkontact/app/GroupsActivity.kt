@@ -5,6 +5,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.widget.Button
+import android.widget.HorizontalScrollView
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
@@ -33,8 +34,19 @@ class GroupsActivity : AppCompatActivity() {
     private lateinit var noCodeContactUsButton: Button
     private lateinit var allGroupsContainer: LinearLayout
     private lateinit var allGroupsErrorText: TextView
+    private lateinit var groupsPagerScroll: HorizontalScrollView
+    private lateinit var groupsPagerContainer: LinearLayout
 
     private val CONTACT_US_WHATSAPP_NUMBER = "09110321143"
+
+    // Fixed at 10 per page per product decision - with large group counts
+    // (50+), a single long list made the Join/Contact Us buttons hard to
+    // reach, so the list is now paginated with numbered page buttons
+    // instead of one continuous scroll.
+    private val GROUPS_PER_PAGE = 10
+
+    private var allGroups: List<GroupSummary> = emptyList()
+    private var currentPage = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -49,6 +61,8 @@ class GroupsActivity : AppCompatActivity() {
         noCodeContactUsButton = findViewById(R.id.noCodeContactUsButton)
         allGroupsContainer = findViewById(R.id.allGroupsContainer)
         allGroupsErrorText = findViewById(R.id.allGroupsErrorText)
+        groupsPagerScroll = findViewById(R.id.groupsPagerScroll)
+        groupsPagerContainer = findViewById(R.id.groupsPagerContainer)
 
         joinGroupsButton.setOnClickListener {
             startActivity(Intent(this, UpgradePlanActivity::class.java))
@@ -98,9 +112,25 @@ class GroupsActivity : AppCompatActivity() {
     }
 
     private fun populateAllGroups(groups: List<GroupSummary>) {
+        allGroups = groups
+        // Reset to page 1 on every fresh load (e.g. coming back from
+        // UpgradePlanActivity after redeeming a key) rather than trying to
+        // preserve whatever page the user was on, since the group list/
+        // counts may have changed.
+        currentPage = 0
+        renderCurrentPage()
+        renderPager()
+    }
+
+    private fun renderCurrentPage() {
         allGroupsContainer.removeAllViews()
         val inflater = LayoutInflater.from(this)
-        for (group in groups) {
+
+        val start = currentPage * GROUPS_PER_PAGE
+        val end = minOf(start + GROUPS_PER_PAGE, allGroups.size)
+        if (start >= allGroups.size) return
+
+        for (group in allGroups.subList(start, end)) {
             val row = inflater.inflate(R.layout.item_group_summary, allGroupsContainer, false)
             val title = row.findViewById<TextView>(R.id.groupRowTitle)
             val counts = row.findViewById<TextView>(R.id.groupRowCounts)
@@ -116,6 +146,54 @@ class GroupsActivity : AppCompatActivity() {
             }
 
             allGroupsContainer.addView(row)
+        }
+    }
+
+    /**
+     * Builds the numbered page row (1, 2, 3...) below the group list.
+     * Hidden entirely when everything fits on one page (10 or fewer
+     * groups), since a single "1" button with nothing else to switch to
+     * would just be clutter.
+     */
+    private fun renderPager() {
+        val pageCount = (allGroups.size + GROUPS_PER_PAGE - 1) / GROUPS_PER_PAGE
+
+        if (pageCount <= 1) {
+            groupsPagerScroll.visibility = android.view.View.GONE
+            return
+        }
+
+        groupsPagerScroll.visibility = android.view.View.VISIBLE
+        groupsPagerContainer.removeAllViews()
+        val inflater = LayoutInflater.from(this)
+
+        for (pageIndex in 0 until pageCount) {
+            val pageButton = inflater.inflate(R.layout.item_group_page_button, groupsPagerContainer, false) as TextView
+            pageButton.text = (pageIndex + 1).toString()
+            pageButton.setOnClickListener {
+                if (currentPage != pageIndex) {
+                    currentPage = pageIndex
+                    renderCurrentPage()
+                    updatePagerSelection()
+                }
+            }
+            groupsPagerContainer.addView(pageButton)
+        }
+
+        updatePagerSelection()
+    }
+
+    /** Re-styles every page button so only currentPage shows as selected. */
+    private fun updatePagerSelection() {
+        for (i in 0 until groupsPagerContainer.childCount) {
+            val pageButton = groupsPagerContainer.getChildAt(i) as TextView
+            val isSelected = i == currentPage
+            pageButton.setBackgroundResource(
+                if (isSelected) R.drawable.page_button_selected_background else R.drawable.page_button_default_background
+            )
+            pageButton.setTextColor(
+                ContextCompat.getColor(this, if (isSelected) R.color.white else R.color.vg_dark)
+            )
         }
     }
 
