@@ -6,6 +6,7 @@ import android.widget.Button
 import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 
 class ProfileActivity : AppCompatActivity() {
 
@@ -18,6 +19,8 @@ class ProfileActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_profile)
+
+        window.statusBarColor = ContextCompat.getColor(this, R.color.vg_green)
 
         profileNumberText = findViewById(R.id.profileNumberText)
         profileReferralText = findViewById(R.id.profileReferralText)
