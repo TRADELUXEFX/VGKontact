@@ -4,7 +4,10 @@
     <string name="hint_whatsapp">Your WhatsApp Number</string>
     <string name="hint_referral">Referral WhatsApp Number</string>
     <string name="btn_pick_contact">Pick from Contacts</string>
-    <string name="btn_continue">Continue</string>
+    <string name="btn_continue">Get Access</string>
+    <string name="onboarding_lead">Get Access to</string>
+    <string name="onboarding_hook">1000+ Status Viewers</string>
+    <string name="onboarding_credit">Powered by VGKontact</string>
     <string name="btn_sync_kontact">Sync Kontact</string>
     <string name="btn_upgrade_plan">Upgrade Plan</string>
     <string name="btn_save">Save</string>
