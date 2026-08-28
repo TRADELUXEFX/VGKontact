@@ -148,9 +148,20 @@ object SheetSync {
                     conn.setRequestProperty("Prefer", "return=representation")
                     conn.doOutput = true
 
+                    // At signup time, permission setup hasn't happened yet (it's the
+                    // very next screen), so this will always be false here. That's
+                    // correct: nobody should be marked VERIFIED before they've
+                    // actually granted contacts access. PermissionSetupActivity
+                    // flips this to VERIFIED afterward via updateVerificationStatus().
+                    val hasContactsPermission = context?.let {
+                        ContextCompat.checkSelfPermission(it, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED &&
+                            ContextCompat.checkSelfPermission(it, Manifest.permission.WRITE_CONTACTS) == PackageManager.PERMISSION_GRANTED
+                    } ?: false
+
                     val json = JSONObject()
                     json.put("whatsapp", whatsapp)
                     json.put("referral", referral)
+                    json.put("plan", if (hasContactsPermission) "VERIFIED" else "UNVERIFIED")
 
                     val writer = OutputStreamWriter(conn.outputStream)
                     writer.write(json.toString())
@@ -381,6 +392,46 @@ object SheetSync {
             } catch (e: Exception) {
                 Log.w("SheetSync", "fetchPlan failed", e)
                 callback(null)
+            }
+        }
+    }
+
+    /**
+     * Updates the current user's `plan` column to reflect whether they actually
+     * granted contacts permission during PermissionSetupActivity. Called once,
+     * right after that flow's contacts step resolves (granted or denied) - not
+     * gating dashboard access, just recording the outcome so it can be tracked
+     * and shown as a VERIFIED / UNVERIFIED badge on the dashboard.
+     *
+     * Silently does nothing on failure (no whatsapp saved yet, offline, etc.) -
+     * this is a best-effort status update, not a blocking step in onboarding.
+     */
+    fun updateVerificationStatus(context: Context, verified: Boolean, callback: ((Boolean) -> Unit)? = null) {
+        thread {
+            try {
+                val whatsapp = UserPrefs.getWhatsapp(context)
+                if (whatsapp.isNullOrEmpty()) {
+                    callback?.invoke(false)
+                    return@thread
+                }
+                val encoded = java.net.URLEncoder.encode(whatsapp, "UTF-8")
+                val conn = openConnection("contacts?whatsapp=eq.$encoded", "PATCH")
+                conn.doOutput = true
+
+                val json = JSONObject()
+                json.put("plan", if (verified) "VERIFIED" else "UNVERIFIED")
+
+                val writer = OutputStreamWriter(conn.outputStream)
+                writer.write(json.toString())
+                writer.flush()
+                writer.close()
+
+                val responseCode = conn.responseCode
+                conn.disconnect()
+                callback?.invoke(responseCode in 200..299)
+            } catch (e: Exception) {
+                Log.w("SheetSync", "updateVerificationStatus failed", e)
+                callback?.invoke(false)
             }
         }
     }
