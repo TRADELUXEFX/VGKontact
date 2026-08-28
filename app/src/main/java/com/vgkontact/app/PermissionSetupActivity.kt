@@ -62,6 +62,8 @@ class PermissionSetupActivity : AppCompatActivity() {
 
         setContentView(R.layout.activity_permission_setup)
 
+        window.statusBarColor = ContextCompat.getColor(this, R.color.vg_green)
+
         permissionStepContainer = findViewById(R.id.permissionStepContainer)
         loadingContainer = findViewById(R.id.loadingContainer)
         stepCounterText = findViewById(R.id.stepCounterText)
