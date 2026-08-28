@@ -47,4 +47,13 @@
     <string name="btn_redeem_key">Unlock</string>
     <string name="key_redeem_empty">Please enter a key code</string>
     <string name="key_redeem_success">Success! You unlocked %1$d more group(s).</string>
-    <string name="key_redeem_invalid">Invalid, expired,
+    <string name="key_redeem_invalid">Invalid, expired, or already-used key</string>
+    <string name="key_redeem_error">Could not check that key. Check your connection and try again.</string>
+
+    <!-- Profile -->
+    <string name="title_profile">My Profile</string>
+    <string name="profile_label_number">Number</string>
+    <string name="profile_label_referral">Referral Number</string>
+    <string name="profile_label_date_registered">Date Registered</string>
+    <string name="profile_label_plan">VG Kontact Plan</string>
+</resources>
