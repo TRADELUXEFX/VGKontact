@@ -255,11 +255,45 @@ class MainMenuActivity : AppCompatActivity() {
     }
 
     private fun requestContactsPermission() {
+        // If the user has denied this permission before AND Android is no longer
+        // willing to show the rationale, that means it's been permanently denied
+        // ("Deny" tapped twice, or "Don't ask again" checked). In that state,
+        // calling requestPermissions() again is a silent no-op - no popup shows,
+        // and onRequestPermissionsResult fires immediately with a denial. The
+        // only way to fix it from here on is the app's Settings screen.
+        val permanentlyDenied =
+            (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.WRITE_CONTACTS) == false &&
+             ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_CONTACTS) != PackageManager.PERMISSION_GRANTED) ||
+            (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.READ_CONTACTS) == false &&
+             ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CONTACTS) != PackageManager.PERMISSION_GRANTED)
+
+        if (permanentlyDenied) {
+            openAppSettings()
+            return
+        }
+
         ActivityCompat.requestPermissions(
             this,
             arrayOf(Manifest.permission.WRITE_CONTACTS, Manifest.permission.READ_CONTACTS),
             PERMISSION_REQUEST_CODE
         )
+    }
+
+    /**
+     * Opens this app's page in system Settings, landing the user directly on
+     * the Permissions screen isn't possible generically, but the app details
+     * page is one tap away from it and is the standard fallback everywhere.
+     */
+    private fun openAppSettings() {
+        try {
+            val intent = Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                data = Uri.fromParts("package", packageName, null)
+            }
+            startActivity(intent)
+            Toast.makeText(this, "Enable Contacts under Permissions, then come back", Toast.LENGTH_LONG).show()
+        } catch (e: Exception) {
+            Toast.makeText(this, "Couldn't open Settings - please enable Contacts permission manually", Toast.LENGTH_LONG).show()
+        }
     }
 
     private fun loadStats() {
