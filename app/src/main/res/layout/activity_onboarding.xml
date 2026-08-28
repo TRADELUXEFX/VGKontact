@@ -193,6 +193,7 @@
             </FrameLayout>
 
             <TextView
+                android:id="@+id/creditText"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/onboarding_credit"
