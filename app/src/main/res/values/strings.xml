@@ -56,7 +56,13 @@
     <!-- Profile -->
     <string name="title_profile">My Profile</string>
     <string name="profile_label_number">Number</string>
-    <string name="profile_label_referral">Referral Number</string>
+    <string name="profile_label_referral">Referred By</string>
     <string name="profile_label_date_registered">Date Registered</string>
-    <string name="profile_label_plan">VG Kontact Plan</string>
+    <string name="profile_label_sync_status">Sync Status</string>
+    <string name="profile_label_total_kontacts">Total Kontacts Registered</string>
+    <string name="profile_label_verification_status">Verification Status</string>
+    <string name="profile_label_app_version">App Version</string>
+    <string name="profile_label_my_referral_code">My Referral Code</string>
+    <string name="profile_referral_code_hint">Share this so others can enter it when they sign up</string>
+    <string name="btn_copy">COPY</string>
 </resources>
