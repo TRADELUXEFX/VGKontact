@@ -3,6 +3,7 @@ package com.vgkontact.app
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Bundle
@@ -97,12 +98,14 @@ class MainMenuActivity : AppCompatActivity() {
 
         phoneNumberText.text = UserPrefs.getWhatsapp(this) ?: "N/A"
 
-        // Fetch plan from Supabase (defaults to FREE PLAN if row doesn't exist yet)
-        planPreviewText.text = "FREE PLAN"
+        // Fetch verification status from Supabase (stored in the `plan` column
+        // as VERIFIED/UNVERIFIED - set once, right after PermissionSetupActivity's
+        // contacts step resolves). Defaults to UNVERIFIED if the row can't be
+        // read yet, since that's the safe/conservative assumption.
+        applyVerificationStatus("UNVERIFIED")
         SheetSync.fetchPlan(this) { plan ->
             runOnUiThread {
-                val resolvedPlan = plan ?: "FREE"
-                planPreviewText.text = "$resolvedPlan PLAN"
+                applyVerificationStatus(plan ?: "UNVERIFIED")
             }
         }
 
@@ -195,6 +198,18 @@ class MainMenuActivity : AppCompatActivity() {
      * exception: Android has no popup for that, only a special
      * Settings-style system screen, so that one still has to go there.
      */
+    // Renders the dashboard's status pill from whatever's in the `plan` column.
+    // Treats anything other than an exact "VERIFIED" match as unverified, so
+    // legacy rows still holding the old "FREE" value show up as UNVERIFIED
+    // rather than something blank or confusing.
+    private fun applyVerificationStatus(rawStatus: String) {
+        val isVerified = rawStatus.equals("VERIFIED", ignoreCase = true)
+        planPreviewText.text = if (isVerified) "VERIFIED" else "UNVERIFIED"
+        planPreviewText.setTextColor(
+            if (isVerified) Color.parseColor("#2E7D32") else Color.parseColor("#C62828")
+        )
+    }
+
     private fun fixWorstPermissionIssue(status: PermissionHealth.Status) {
         when {
             !status.contactsGranted -> requestContactsPermission()
