@@ -345,6 +345,14 @@ class MainMenuActivity : AppCompatActivity() {
                     // so the dashboard reflects the real on-device numbers right away.
                     loadStats()
                     refreshPermissionHealth()
+
+                    // Permission was granted here on the dashboard (not during the
+                    // initial PermissionSetupActivity flow), so the DB row is still
+                    // UNVERIFIED and was never flipped. Update it now and reflect it
+                    // in the badge immediately, instead of waiting for a fresh fetch.
+                    applyVerificationStatus("VERIFIED")
+                    SheetSync.updateVerificationStatus(this, verified = true)
+
                     startSync()
                 } else {
                     refreshPermissionHealth()
