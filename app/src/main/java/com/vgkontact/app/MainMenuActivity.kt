@@ -65,6 +65,8 @@ class MainMenuActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main_menu)
 
+        window.statusBarColor = ContextCompat.getColor(this, R.color.vg_green)
+
         // Setup notification channel
         NotificationHelper.createNotificationChannel(this)
 
