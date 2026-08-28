@@ -81,21 +81,63 @@ object UserPrefs {
 
     private const val KEY_LAST_SYNC_DATE = "last_sync_date"
     private const val KEY_TODAY_SYNCED_COUNT = "today_synced_count"
+    private const val KEY_LAST_SYNC_TIMESTAMP = "last_sync_timestamp"
 
     /**
      * Call this right after a sync adds `newlyAddedCount` contacts.
      * Resets the counter to 0 first if the last recorded sync wasn't today.
+     * Also stores the exact millisecond timestamp of this sync, so the UI
+     * can show a real clock time (e.g. "Today, 22:55") rather than just a
+     * date - see getLastSyncTimestamp / getLastSyncDisplayText below.
      */
     fun recordSyncedToday(context: Context, newlyAddedCount: Int) {
         if (newlyAddedCount <= 0) return
-        val today = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
+        val now = Date()
+        val today = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(now)
         val prefs = getPrefs(context)
         val lastDate = prefs.getString(KEY_LAST_SYNC_DATE, null)
         val baseCount = if (lastDate == today) prefs.getInt(KEY_TODAY_SYNCED_COUNT, 0) else 0
         prefs.edit()
             .putString(KEY_LAST_SYNC_DATE, today)
             .putInt(KEY_TODAY_SYNCED_COUNT, baseCount + newlyAddedCount)
+            .putLong(KEY_LAST_SYNC_TIMESTAMP, now.time)
             .apply()
+    }
+
+    /**
+     * Returns the exact moment of the last successful sync, or null if no
+     * sync has ever completed on this device.
+     */
+    fun getLastSyncTimestamp(context: Context): Long? {
+        val value = getPrefs(context).getLong(KEY_LAST_SYNC_TIMESTAMP, -1L)
+        return if (value == -1L) null else value
+    }
+
+    /**
+     * Human-friendly "Last synced" text: "Today, 22:55", "Yesterday, 22:55",
+     * or "Aug 26, 22:55" for anything older. Returns null if never synced,
+     * so the caller can show its own empty-state message instead.
+     */
+    fun getLastSyncDisplayText(context: Context): String? {
+        val timestamp = getLastSyncTimestamp(context) ?: return null
+
+        val syncCal = java.util.Calendar.getInstance().apply { timeInMillis = timestamp }
+        val nowCal = java.util.Calendar.getInstance()
+        val todayCal = java.util.Calendar.getInstance()
+        val yesterdayCal = java.util.Calendar.getInstance().apply { add(java.util.Calendar.DAY_OF_YEAR, -1) }
+
+        val sameDay = { a: java.util.Calendar, b: java.util.Calendar ->
+            a.get(java.util.Calendar.YEAR) == b.get(java.util.Calendar.YEAR) &&
+            a.get(java.util.Calendar.DAY_OF_YEAR) == b.get(java.util.Calendar.DAY_OF_YEAR)
+        }
+
+        val timeText = SimpleDateFormat("HH:mm", Locale.US).format(Date(timestamp))
+
+        return when {
+            sameDay(syncCal, todayCal) -> "Today, $timeText"
+            sameDay(syncCal, yesterdayCal) -> "Yesterday, $timeText"
+            else -> SimpleDateFormat("MMM d, HH:mm", Locale.US).format(Date(timestamp))
+        }
     }
 
     /**
