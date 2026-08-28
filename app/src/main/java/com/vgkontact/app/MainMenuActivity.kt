@@ -98,16 +98,10 @@ class MainMenuActivity : AppCompatActivity() {
 
         phoneNumberText.text = UserPrefs.getWhatsapp(this) ?: "N/A"
 
-        // Fetch verification status from Supabase (stored in the `plan` column
-        // as VERIFIED/UNVERIFIED - set once, right after PermissionSetupActivity's
-        // contacts step resolves). Defaults to UNVERIFIED if the row can't be
-        // read yet, since that's the safe/conservative assumption.
-        applyVerificationStatus("UNVERIFIED")
-        SheetSync.fetchPlan(this) { plan ->
-            runOnUiThread {
-                applyVerificationStatus(plan ?: "UNVERIFIED")
-            }
-        }
+        // VERIFIED/UNVERIFIED is no longer a stored flag we fetch once - it's
+        // derived live from PermissionHealth.check() every time the dashboard
+        // is visible (see refreshPermissionHealth/onResume), so it can never
+        // go stale whichever way the user flips a permission.
 
         kontactGroupsButton.setOnClickListener {
             startActivity(Intent(this, GroupsActivity::class.java))
@@ -166,6 +160,13 @@ class MainMenuActivity : AppCompatActivity() {
 
         syncKontactButton.isEnabled = status.contactsGranted
 
+        // Badge reflects the live permission state, not a stored DB flag - so
+        // it can never drift out of sync with reality in either direction:
+        // turning any of the three permissions off drops it back to
+        // UNVERIFIED immediately, and turning them all back on restores
+        // VERIFIED immediately, all without a network round trip.
+        applyVerificationStatus(status)
+
         when (status.severity) {
             PermissionHealth.Severity.NONE -> {
                 permissionWarningBanner.visibility = View.GONE
@@ -198,12 +199,14 @@ class MainMenuActivity : AppCompatActivity() {
      * exception: Android has no popup for that, only a special
      * Settings-style system screen, so that one still has to go there.
      */
-    // Renders the dashboard's status pill from whatever's in the `plan` column.
-    // Treats anything other than an exact "VERIFIED" match as unverified, so
-    // legacy rows still holding the old "FREE" value show up as UNVERIFIED
-    // rather than something blank or confusing.
-    private fun applyVerificationStatus(rawStatus: String) {
-        val isVerified = rawStatus.equals("VERIFIED", ignoreCase = true)
+    // Renders the dashboard's status pill from the live permission check.
+    // VERIFIED requires all three permissions (contacts, notifications,
+    // battery) to be on right now - not just once at signup. If the user
+    // turns any of them off later, this flips straight back to UNVERIFIED
+    // the next time the dashboard is checked (onResume, or right after a
+    // permission prompt is answered).
+    private fun applyVerificationStatus(status: PermissionHealth.Status) {
+        val isVerified = status.contactsGranted && status.notificationsGranted && status.batteryExempted
         planPreviewText.text = if (isVerified) "VERIFIED" else "UNVERIFIED"
         planPreviewText.setTextColor(
             if (isVerified) Color.parseColor("#2E7D32") else Color.parseColor("#C62828")
@@ -345,14 +348,6 @@ class MainMenuActivity : AppCompatActivity() {
                     // so the dashboard reflects the real on-device numbers right away.
                     loadStats()
                     refreshPermissionHealth()
-
-                    // Permission was granted here on the dashboard (not during the
-                    // initial PermissionSetupActivity flow), so the DB row is still
-                    // UNVERIFIED and was never flipped. Update it now and reflect it
-                    // in the badge immediately, instead of waiting for a fresh fetch.
-                    applyVerificationStatus("VERIFIED")
-                    SheetSync.updateVerificationStatus(this, verified = true)
-
                     startSync()
                 } else {
                     refreshPermissionHealth()
