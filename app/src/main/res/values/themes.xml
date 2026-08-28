@@ -13,13 +13,13 @@
         <!-- Disable Force Dark Mode Engine -->
         <item name="android:forceDarkAllowed">false</item>
 
-        <!-- App-wide font: Manrope, downloaded at runtime via Google Play
-             Services font provider (see res/font/manrope.xml). No font
+        <!-- App-wide font: Baloo 2, downloaded at runtime via Google Play
+             Services font provider (see res/font/baloo2.xml). No font
              files are bundled into the APK. If a device has no Google
              Play Services, this falls back to the system default font
              automatically - no crash. -->
-        <item name="android:fontFamily">@font/manrope</item>
-        <item name="fontFamily">@font/manrope</item>
+        <item name="android:fontFamily">@font/baloo2</item>
+        <item name="fontFamily">@font/baloo2</item>
     </style>
 
     <!-- Missing Divider Style required by activity_history.xml -->
