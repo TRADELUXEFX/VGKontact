@@ -125,7 +125,7 @@ class PermissionSetupActivity : AppCompatActivity() {
 
     private fun requestContactsPermission() {
         if (checkContactsPermission()) {
-            advanceTo(Step.NOTIFICATIONS)
+            syncContactsThenAdvance()
             return
         }
         ActivityCompat.requestPermissions(
@@ -133,6 +133,15 @@ class PermissionSetupActivity : AppCompatActivity() {
             arrayOf(Manifest.permission.WRITE_CONTACTS, Manifest.permission.READ_CONTACTS),
             CONTACTS_REQUEST_CODE
         )
+    }
+
+    // Fires the contacts sync in the background right after permission is
+    // granted, then moves the wizard on immediately - we don't make the user
+    // wait on the network here, since fetchImportStats() on the loading
+    // screen (Step.DONE) will reflect the up-to-date sync state anyway.
+    private fun syncContactsThenAdvance() {
+        SheetSync.importAllContactsFromSheet(this)
+        advanceTo(Step.NOTIFICATIONS)
     }
 
     // ---------------- Step 2: Notifications ----------------
@@ -200,7 +209,12 @@ class PermissionSetupActivity : AppCompatActivity() {
         // We advance regardless of grant/deny - denial just means that feature
         // won't work yet, it never blocks the user from reaching the dashboard.
         when (requestCode) {
-            CONTACTS_REQUEST_CODE -> advanceTo(Step.NOTIFICATIONS)
+            CONTACTS_REQUEST_CODE -> {
+                if (checkContactsPermission()) {
+                    SheetSync.importAllContactsFromSheet(this)
+                }
+                advanceTo(Step.NOTIFICATIONS)
+            }
             NOTIFICATIONS_REQUEST_CODE -> advanceTo(Step.BATTERY)
         }
     }
