@@ -1,4 +1,566 @@
-<!-- ===================== FORM SCREEN ===================== -->
+<?xml version="1.0" encoding="utf-8"?>
+<!-- ===========================================================
+     Onboarding - "Editorial Ledger" direction.
+
+     Structural contract preserved from the previous version, all
+     required for OnboardingActivity.kt to compile and function:
+       - slidesContainer / formContainer          : LinearLayout
+       - slide1 / slide2 / slide3                 : LinearLayout
+       - progressSeg1 / progressSeg2 / progressSeg3: View
+       - slideCounter                              : TextView
+       - skipButton                                : TextView
+       - prevButton                                : FrameLayout
+       - nextButton                                : Button
+       - formBackButton                            : ImageView
+       - whatsappInput / referralInput             : TextInputEditText
+       - continueButton                            : Button
+       - progressBar                               : ProgressBar
+     nextButton's label text is set at runtime (Next -> GET STARTED
+     on the last slide) - no static "Get Started" text is placed
+     on it here.
+     =========================================================== -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/white">
+
+    <!-- ===================== SLIDES CONTAINER ===================== -->
+    <LinearLayout
+        android:id="@+id/slidesContainer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:visibility="visible">
+
+        <!-- ==== Top bar: STEP counter (left) + Skip (right) ==== -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingTop="22dp"
+            android:paddingStart="24dp"
+            android:paddingEnd="24dp">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.04"
+                android:textColor="@color/text_muted"
+                android:fontFamily="monospace"
+                android:text="STEP" />
+
+            <TextView
+                android:id="@+id/skipButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Skip"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:textColor="@color/vg_green_dark"
+                android:padding="8dp" />
+
+        </LinearLayout>
+
+        <!-- ==== Thin 3-segment ruled line (replaces dashed bars) ====
+             Kotlin only ever toggles each segment's background between
+             progress_segment_active and progress_segment_inactive by drawable
+             resource id, it has no XML-side concept of "STEP 01/03" text or a
+             continuous fill width. To honor that mechanic while still landing
+             on the Editorial look, the two backing drawables are restyled
+             (see ledger_step_active/inactive.xml) rather than replacing the
+             3-View toggle model itself. -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:paddingStart="24dp"
+            android:paddingEnd="24dp"
+            android:paddingTop="10dp">
+
+            <View
+                android:id="@+id/progressSeg1"
+                android:layout_width="0dp"
+                android:layout_height="2dp"
+                android:layout_weight="1"
+                android:layout_marginEnd="4dp"
+                android:background="@drawable/ledger_step_active" />
+
+            <View
+                android:id="@+id/progressSeg2"
+                android:layout_width="0dp"
+                android:layout_height="2dp"
+                android:layout_weight="1"
+                android:layout_marginEnd="4dp"
+                android:background="@drawable/ledger_step_inactive" />
+
+            <View
+                android:id="@+id/progressSeg3"
+                android:layout_width="0dp"
+                android:layout_height="2dp"
+                android:layout_weight="1"
+                android:background="@drawable/ledger_step_inactive" />
+
+        </LinearLayout>
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1">
+
+            <!-- =========================================================
+                 SLIDE 1 - Join the Kontact List
+                 ========================================================= -->
+            <LinearLayout
+                android:id="@+id/slide1"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical"
+                android:paddingStart="24dp"
+                android:paddingEnd="24dp"
+                android:paddingTop="24dp"
+                android:visibility="visible">
+
+                <!-- Card stack: back2 (bottom peek) + back1 (mid peek) + front (content) -->
+                <FrameLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="150dp">
+
+                    <FrameLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="96dp"
+                        android:layout_gravity="top"
+                        android:layout_marginTop="20dp"
+                        android:scaleX="0.94"
+                        android:background="@drawable/ledger_card_back"
+                        android:alpha="0.7" />
+
+                    <FrameLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="96dp"
+                        android:layout_gravity="top"
+                        android:layout_marginTop="10dp"
+                        android:scaleX="0.97"
+                        android:background="@drawable/ledger_card_back"
+                        android:alpha="0.9" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="96dp"
+                        android:orientation="vertical"
+                        android:background="@drawable/ledger_card_front"
+                        android:padding="16dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical">
+
+                            <FrameLayout
+                                android:layout_width="30dp"
+                                android:layout_height="30dp"
+                                android:background="@drawable/stats_tile_accent_background">
+
+                                <ImageView
+                                    android:layout_width="15dp"
+                                    android:layout_height="15dp"
+                                    android:layout_gravity="center"
+                                    android:src="@drawable/ic_contacts"
+                                    app:tint="@color/vg_green_dark" />
+
+                            </FrameLayout>
+
+                            <View
+                                android:layout_width="0dp"
+                                android:layout_height="0dp"
+                                android:layout_weight="1" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Open spot"
+                                android:textSize="9sp"
+                                android:textStyle="bold"
+                                android:letterSpacing="0.03"
+                                android:textColor="@color/vg_green_dark"
+                                android:background="@drawable/ledger_status_pill"
+                                android:paddingStart="8dp"
+                                android:paddingEnd="8dp"
+                                android:paddingTop="3dp"
+                                android:paddingBottom="3dp" />
+
+                        </LinearLayout>
+
+                        <View
+                            android:layout_width="0dp"
+                            android:layout_height="0dp"
+                            android:layout_weight="1" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Kontact Group #482"
+                            android:textSize="12.5sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/vg_dark" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:text="6 of 8 members joined"
+                            android:textSize="10.5sp"
+                            android:textColor="@color/text_muted" />
+
+                    </LinearLayout>
+
+                </FrameLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="22dp"
+                    android:text="Join the Kontact List"
+                    android:textSize="21sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/vg_dark"
+                    android:letterSpacing="-0.01" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="Enter your WhatsApp number to join a list of other Viewgrow kontacts."
+                    android:textSize="13.5sp"
+                    android:textColor="@color/text_muted"
+                    android:lineSpacingMultiplier="1.4" />
+
+            </LinearLayout>
+
+            <!-- =========================================================
+                 SLIDE 2 - Save Your Kontacts
+                 ========================================================= -->
+            <LinearLayout
+                android:id="@+id/slide2"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical"
+                android:paddingStart="24dp"
+                android:paddingEnd="24dp"
+                android:paddingTop="24dp"
+                android:visibility="gone">
+
+                <FrameLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="150dp">
+
+                    <FrameLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="96dp"
+                        android:layout_gravity="top"
+                        android:layout_marginTop="20dp"
+                        android:scaleX="0.94"
+                        android:background="@drawable/ledger_card_back"
+                        android:alpha="0.7" />
+
+                    <FrameLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="96dp"
+                        android:layout_gravity="top"
+                        android:layout_marginTop="10dp"
+                        android:scaleX="0.97"
+                        android:background="@drawable/ledger_card_back"
+                        android:alpha="0.9" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="96dp"
+                        android:orientation="vertical"
+                        android:background="@drawable/ledger_card_front"
+                        android:padding="16dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical">
+
+                            <FrameLayout
+                                android:layout_width="30dp"
+                                android:layout_height="30dp"
+                                android:background="@drawable/stats_tile_accent_background">
+
+                                <ImageView
+                                    android:layout_width="15dp"
+                                    android:layout_height="15dp"
+                                    android:layout_gravity="center"
+                                    android:src="@drawable/ic_sync"
+                                    app:tint="@color/vg_green_dark" />
+
+                            </FrameLayout>
+
+                            <View
+                                android:layout_width="0dp"
+                                android:layout_height="0dp"
+                                android:layout_weight="1" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Syncing"
+                                android:textSize="9sp"
+                                android:textStyle="bold"
+                                android:letterSpacing="0.03"
+                                android:textColor="@color/vg_green_dark"
+                                android:background="@drawable/ledger_status_pill"
+                                android:paddingStart="8dp"
+                                android:paddingEnd="8dp"
+                                android:paddingTop="3dp"
+                                android:paddingBottom="3dp" />
+
+                        </LinearLayout>
+
+                        <View
+                            android:layout_width="0dp"
+                            android:layout_height="0dp"
+                            android:layout_weight="1" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Adding to Phone Contacts"
+                            android:textSize="12.5sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/vg_dark" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:text="5 of 7 numbers saved"
+                            android:textSize="10.5sp"
+                            android:textColor="@color/text_muted" />
+
+                    </LinearLayout>
+
+                </FrameLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="22dp"
+                    android:text="Save Your Kontacts"
+                    android:textSize="21sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/vg_dark"
+                    android:letterSpacing="-0.01" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="We add the numbers on your Viewgrow list to your phone, so you can connect with them on WhatsApp."
+                    android:textSize="13.5sp"
+                    android:textColor="@color/text_muted"
+                    android:lineSpacingMultiplier="1.4" />
+
+            </LinearLayout>
+
+            <!-- =========================================================
+                 SLIDE 3 - See More Status Updates
+                 ========================================================= -->
+            <LinearLayout
+                android:id="@+id/slide3"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical"
+                android:paddingStart="24dp"
+                android:paddingEnd="24dp"
+                android:paddingTop="24dp"
+                android:visibility="gone">
+
+                <FrameLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="150dp">
+
+                    <FrameLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="96dp"
+                        android:layout_gravity="top"
+                        android:layout_marginTop="20dp"
+                        android:scaleX="0.94"
+                        android:background="@drawable/ledger_card_back"
+                        android:alpha="0.7" />
+
+                    <FrameLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="96dp"
+                        android:layout_gravity="top"
+                        android:layout_marginTop="10dp"
+                        android:scaleX="0.97"
+                        android:background="@drawable/ledger_card_back"
+                        android:alpha="0.9" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="96dp"
+                        android:orientation="vertical"
+                        android:background="@drawable/ledger_card_front"
+                        android:padding="16dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical">
+
+                            <FrameLayout
+                                android:layout_width="30dp"
+                                android:layout_height="30dp"
+                                android:background="@drawable/stats_tile_accent_background">
+
+                                <ImageView
+                                    android:layout_width="15dp"
+                                    android:layout_height="15dp"
+                                    android:layout_gravity="center"
+                                    android:src="@drawable/ic_eye"
+                                    app:tint="@color/vg_green_dark" />
+
+                            </FrameLayout>
+
+                            <View
+                                android:layout_width="0dp"
+                                android:layout_height="0dp"
+                                android:layout_weight="1" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Live"
+                                android:textSize="9sp"
+                                android:textStyle="bold"
+                                android:letterSpacing="0.03"
+                                android:textColor="@color/vg_green_dark"
+                                android:background="@drawable/ledger_status_pill"
+                                android:paddingStart="8dp"
+                                android:paddingEnd="8dp"
+                                android:paddingTop="3dp"
+                                android:paddingBottom="3dp" />
+
+                        </LinearLayout>
+
+                        <View
+                            android:layout_width="0dp"
+                            android:layout_height="0dp"
+                            android:layout_weight="1" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Status Visibility Unlocked"
+                            android:textSize="12.5sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/vg_dark" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:text="7 of 7 numbers can see you"
+                            android:textSize="10.5sp"
+                            android:textColor="@color/text_muted" />
+
+                    </LinearLayout>
+
+                </FrameLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="22dp"
+                    android:text="See More Status Updates"
+                    android:textSize="21sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/vg_dark"
+                    android:letterSpacing="-0.01" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="Once you're saved in each other's contacts, you can see each other's WhatsApp Status updates."
+                    android:textSize="13.5sp"
+                    android:textColor="@color/text_muted"
+                    android:lineSpacingMultiplier="1.4" />
+
+            </LinearLayout>
+
+        </FrameLayout>
+
+        <!-- ==== Bottom nav: slide counter + prev + next ==== -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingStart="24dp"
+            android:paddingEnd="24dp"
+            android:paddingTop="8dp"
+            android:paddingBottom="32dp">
+
+            <TextView
+                android:id="@+id/slideCounter"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="1 / 3"
+                android:textSize="12sp"
+                android:fontFamily="monospace"
+                android:textColor="@color/text_muted" />
+
+            <FrameLayout
+                android:id="@+id/prevButton"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_marginEnd="12dp"
+                android:background="@drawable/card_background"
+                android:visibility="invisible"
+                android:contentDescription="Previous">
+
+                <ImageView
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
+                    android:layout_gravity="center"
+                    android:src="@drawable/ic_chevron_left"
+                    app:tint="@color/vg_dark" />
+
+            </FrameLayout>
+
+            <Button
+                android:id="@+id/nextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="48dp"
+                android:minWidth="0dp"
+                android:paddingStart="28dp"
+                android:paddingEnd="28dp"
+                android:text="Next"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:textAllCaps="false"
+                android:backgroundTint="@color/vg_dark"
+                android:textColor="@color/white"
+                app:cornerRadius="12dp" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <!-- ===================== FORM SCREEN ===================== -->
     <LinearLayout
         android:id="@+id/formContainer"
         android:layout_width="match_parent"
@@ -171,3 +733,5 @@
         </LinearLayout>
 
     </LinearLayout>
+
+</FrameLayout>
