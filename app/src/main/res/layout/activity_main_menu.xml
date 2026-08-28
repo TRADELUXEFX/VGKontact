@@ -201,16 +201,15 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
-                        android:gravity="center_vertical"
-                        android:layout_marginBottom="14dp">
+                        android:gravity="center"
+                        android:layout_marginBottom="18dp">
 
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="@string/label_synced_today"
-                            android:textSize="13sp"
-                            android:textColor="@color/text_muted" />
+                        <ImageView
+                            android:layout_width="16dp"
+                            android:layout_height="16dp"
+                            android:layout_marginEnd="8dp"
+                            android:src="@drawable/ic_sync"
+                            app:tint="@color/vg_green" />
 
                         <TextView
                             android:id="@+id/statsTodayText"
@@ -219,33 +218,7 @@
                             android:textSize="13sp"
                             android:textStyle="bold"
                             android:textColor="@color/vg_dark"
-                            tools:text="0" />
-
-                    </LinearLayout>
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical"
-                        android:layout_marginBottom="18dp">
-
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="@string/label_synced_total"
-                            android:textSize="13sp"
-                            android:textColor="@color/text_muted" />
-
-                        <TextView
-                            android:id="@+id/statsTotalText"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:textSize="13sp"
-                            android:textStyle="bold"
-                            android:textColor="@color/vg_dark"
-                            tools:text="0" />
+                            tools:text="3 kontacts synced today" />
 
                     </LinearLayout>
 
