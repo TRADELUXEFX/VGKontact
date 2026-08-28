@@ -24,6 +24,8 @@ class HistoryActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_history)
 
+        window.statusBarColor = androidx.core.content.ContextCompat.getColor(this, R.color.vg_green)
+
         progressBar = findViewById(R.id.progressBar)
         emptyText = findViewById(R.id.emptyText)
         dayListContainer = findViewById(R.id.dayListContainer)
