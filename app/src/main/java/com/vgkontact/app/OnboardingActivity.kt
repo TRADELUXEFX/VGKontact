@@ -11,6 +11,7 @@ import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import com.google.android.material.textfield.TextInputEditText
 
 class OnboardingActivity : AppCompatActivity() {
@@ -55,6 +56,8 @@ class OnboardingActivity : AppCompatActivity() {
         }
 
         setContentView(R.layout.activity_onboarding)
+
+        window.statusBarColor = ContextCompat.getColor(this, R.color.vg_green)
 
         slidesContainer = findViewById(R.id.slidesContainer)
         formContainer = findViewById(R.id.formContainer)
