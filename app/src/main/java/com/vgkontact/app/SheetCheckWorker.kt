@@ -12,6 +12,24 @@ class SheetCheckWorker(context: Context, params: WorkerParameters) : CoroutineWo
 
     override suspend fun doWork(): Result {
         return try {
+            // Check permission health on every background run - this is the
+            // one place that can catch a silently-revoked permission (e.g.
+            // an OEM battery manager turning off background activity) even
+            // if the user hasn't opened the app to see the dashboard's
+            // warning banner. Only notify when something is actually wrong,
+            // so this stays silent on every normal healthy run.
+            val status = PermissionHealth.check(applicationContext)
+            if (status.severity != PermissionHealth.Severity.NONE) {
+                NotificationHelper.showPermissionWarningNotification(applicationContext, status.message())
+            }
+
+            if (!status.contactsGranted) {
+                // Can't sync at all without this - no point attempting the
+                // import, the warning notification above already told the
+                // user why.
+                return Result.success()
+            }
+
             val (submitted, failed, errorDetail) = SheetSync.importAllContactsFromSheetSuspend(applicationContext)
             
             if (submitted > 0) {
