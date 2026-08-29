@@ -39,45 +39,46 @@
             android:orientation="vertical"
             android:padding="20dp">
 
-            <!-- One box: row-head, box-level search, then the two
-                 collapsible sections (Your Groups / All Kontact Groups),
-                 matching kontact_groups_onebox.html. Search is no longer
-                 nested inside "All Kontact Groups" - it sits above both
-                 sections and filters the full combined group list. -->
+            <!-- Single card matching the Profile screen exactly: one
+                 card_background, uppercase muted labels, 1dp divider
+                 lines between sections, no nested pill boxes or mixed
+                 corner radii. -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:background="@drawable/card_background"
-                android:padding="18dp">
+                android:padding="20dp">
 
-                <LinearLayout
+                <!-- Totals label, same style as Profile's field labels -->
+                <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:layout_marginBottom="14dp">
+                    android:text="KONTACT GROUPS"
+                    android:textSize="11sp"
+                    android:textAllCaps="true"
+                    android:letterSpacing="0.05"
+                    android:textColor="@color/text_muted" />
 
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="Kontact Groups"
-                        android:textSize="13sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/vg_dark"
-                        android:fontFamily="@font/baloo2" />
+                <TextView
+                    android:id="@+id/groupsCountText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textSize="17sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/vg_dark"
+                    android:paddingTop="2dp"
+                    android:paddingBottom="16dp"
+                    tools:text="10 groups \u00B7 1 joined" />
 
-                    <TextView
-                        android:id="@+id/groupsCountText"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:textSize="11.5sp"
-                        android:textColor="@color/text_muted"
-                        tools:text="9 groups \u00B7 5 joined" />
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="@color/stats_card_border"
+                    android:layout_marginBottom="16dp" />
 
-                </LinearLayout>
-
+                <!-- Search - plain boxed field, same visual weight as the
+                     referral-code box on Profile, not a pill. -->
                 <EditText
                     android:id="@+id/groupSearchInput"
                     android:layout_width="match_parent"
@@ -86,89 +87,145 @@
                     android:inputType="number"
                     android:paddingStart="14dp"
                     android:paddingEnd="14dp"
-                    android:background="@drawable/rect_box_background"
+                    android:background="@drawable/referral_code_background"
                     android:textSize="13sp"
                     android:textColor="@color/vg_dark"
                     android:textColorHint="@color/text_muted"
                     android:fontFamily="@font/manrope"
                     android:imeOptions="actionDone"
-                    android:layout_marginBottom="14dp" />
+                    android:layout_marginBottom="16dp" />
 
-                <!-- Default view: two independently-collapsible sections
-                     inside one bordered box. -->
+                <!-- Default view: two sections, each a plain label row
+                     (tap to expand/collapse) followed by its rows,
+                     separated by divider lines - same rhythm as the rest
+                     of the Profile card. -->
                 <LinearLayout
                     android:id="@+id/sectionsView"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical">
 
+                    <!-- Your Groups -->
                     <LinearLayout
+                        android:id="@+id/yourGroupsHeader"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="vertical"
-                        android:background="@drawable/rect_box_background">
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:foreground="?attr/selectableItemBackground"
+                        android:clickable="true"
+                        android:focusable="true">
 
-                        <!-- Your Groups section -->
-                        <FrameLayout
-                            android:id="@+id/yourGroupsHeaderContainer"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content" />
+                        <ImageView
+                            android:layout_width="14dp"
+                            android:layout_height="14dp"
+                            android:src="@drawable/ic_sync"
+                            app:tint="@color/vg_green" />
 
-                        <LinearLayout
-                            android:id="@+id/yourGroupsBody"
-                            android:layout_width="match_parent"
+                        <TextView
+                            android:layout_width="0dp"
                             android:layout_height="wrap_content"
-                            android:orientation="vertical"
-                            android:background="@color/stats_card_fill"
-                            android:paddingStart="14dp"
-                            android:paddingEnd="14dp"
-                            android:paddingBottom="14dp"
-                            android:visibility="gone">
+                            android:layout_weight="1"
+                            android:layout_marginStart="8dp"
+                            android:text="YOUR GROUPS"
+                            android:textSize="11sp"
+                            android:textAllCaps="true"
+                            android:letterSpacing="0.05"
+                            android:textColor="@color/text_muted" />
 
-                            <LinearLayout
-                                android:id="@+id/yourGroupsRows"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:orientation="vertical"
-                                android:showDividers="middle"
-                                android:divider="@drawable/group_row_spacer" />
-
-                        </LinearLayout>
-
-                        <!-- All Kontact Groups section -->
-                        <FrameLayout
-                            android:id="@+id/allGroupsHeaderContainer"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:background="@drawable/rect_section_divider_background" />
-
-                        <LinearLayout
-                            android:id="@+id/allGroupsBody"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:orientation="vertical"
-                            android:background="@drawable/rect_section_body_bottom_background"
-                            android:paddingStart="14dp"
-                            android:paddingEnd="14dp"
-                            android:paddingBottom="14dp"
-                            android:visibility="gone">
-
-                            <LinearLayout
-                                android:id="@+id/allGroupsRows"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:orientation="vertical"
-                                android:showDividers="middle"
-                                android:divider="@drawable/group_row_spacer" />
-
-                        </LinearLayout>
+                        <ImageView
+                            android:id="@+id/yourGroupsChevron"
+                            android:layout_width="13dp"
+                            android:layout_height="13dp"
+                            android:src="@drawable/ic_chevron_down"
+                            app:tint="@color/text_muted" />
 
                     </LinearLayout>
 
+                    <TextView
+                        android:id="@+id/yourGroupsSubText"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textSize="17sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/vg_dark"
+                        android:paddingTop="2dp"
+                        android:paddingBottom="12dp"
+                        tools:text="1 joined \u00B7 2 kontacts" />
+
+                    <LinearLayout
+                        android:id="@+id/yourGroupsRows"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:visibility="gone" />
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="@color/stats_card_border"
+                        android:layout_marginTop="4dp"
+                        android:layout_marginBottom="16dp" />
+
+                    <!-- All Kontact Groups -->
+                    <LinearLayout
+                        android:id="@+id/allGroupsHeader"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:foreground="?attr/selectableItemBackground"
+                        android:clickable="true"
+                        android:focusable="true">
+
+                        <ImageView
+                            android:layout_width="14dp"
+                            android:layout_height="14dp"
+                            android:src="@drawable/ic_sync"
+                            app:tint="@color/text_muted" />
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginStart="8dp"
+                            android:text="ALL KONTACT GROUPS"
+                            android:textSize="11sp"
+                            android:textAllCaps="true"
+                            android:letterSpacing="0.05"
+                            android:textColor="@color/text_muted" />
+
+                        <ImageView
+                            android:id="@+id/allGroupsChevron"
+                            android:layout_width="13dp"
+                            android:layout_height="13dp"
+                            android:src="@drawable/ic_chevron_down"
+                            app:tint="@color/text_muted" />
+
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/allGroupsSubText"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textSize="17sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/vg_dark"
+                        android:paddingTop="2dp"
+                        android:paddingBottom="12dp"
+                        tools:text="9 groups" />
+
+                    <LinearLayout
+                        android:id="@+id/allGroupsRows"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:visibility="gone" />
+
                 </LinearLayout>
 
-                <!-- Search-active view: one flat results list pulled from
-                     the full combined group set (joined + not joined). -->
+                <!-- Search-active view: one flat list, same divider-row
+                     style as everything else. -->
                 <LinearLayout
                     android:id="@+id/resultsView"
                     android:layout_width="match_parent"
@@ -180,9 +237,7 @@
                         android:id="@+id/resultsList"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="vertical"
-                        android:showDividers="middle"
-                        android:divider="@drawable/group_row_spacer" />
+                        android:orientation="vertical" />
 
                     <TextView
                         android:id="@+id/noResultsText"
@@ -211,7 +266,7 @@
             </LinearLayout>
 
             <!-- Action buttons sit below the card, same pattern Profile
-                 uses for its Contact Us button - not crammed inside it. -->
+                 uses for its Contact Us button. -->
             <Button
                 android:id="@+id/joinGroupsButton"
                 android:layout_width="match_parent"
