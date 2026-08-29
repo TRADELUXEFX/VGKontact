@@ -19,19 +19,12 @@ import com.google.android.material.textfield.TextInputEditText
  * SheetSync.redeemKey()), and the next Sync on the main menu will pull
  * contacts from those groups too.
  *
- * Can be opened two ways:
- *  - Generic, from the "Join Kontact Groups" button on GroupsActivity - no
- *    extra passed, shows the default "Unlock More Kontacts" copy.
- *  - Targeted, by tapping a specific group row on GroupsActivity - passes
- *    EXTRA_TARGET_GROUP_ID, which swaps the title/subtitle to reference
- *    that group by number and personalizes the "don't have a code"
- *    WhatsApp message with the group number too.
+ * Always generic: the user never sees or picks a specific group ID. Which
+ * groups a code unlocks is decided entirely by the admin server-side
+ * (keys.groups_unlock) - the app just shows "enter your code" and doesn't
+ * expose the grouping logic to the user.
  */
 class UpgradePlanActivity : AppCompatActivity() {
-
-    companion object {
-        const val EXTRA_TARGET_GROUP_ID = "extra_target_group_id"
-    }
 
     private lateinit var upgradeTitleText: TextView
     private lateinit var upgradeSubtitleText: TextView
@@ -43,8 +36,6 @@ class UpgradePlanActivity : AppCompatActivity() {
     private lateinit var currentLimitOfText: TextView
 
     private val CONTACT_US_WHATSAPP_NUMBER = "09110321143"
-
-    private var targetGroupId: Long? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -63,10 +54,8 @@ class UpgradePlanActivity : AppCompatActivity() {
 
         loadCurrentLimit()
 
-        val incomingId = intent.getLongExtra(EXTRA_TARGET_GROUP_ID, -1L)
-        targetGroupId = if (incomingId > 0) incomingId else null
-
-        applyTargetGroupCopy()
+        upgradeTitleText.text = getString(R.string.title_upgrade_plan)
+        upgradeSubtitleText.text = getString(R.string.upgrade_plan_coming_soon)
 
         redeemKeyButton.setOnClickListener {
             val code = keyCodeInput.text.toString().trim()
@@ -129,24 +118,8 @@ class UpgradePlanActivity : AppCompatActivity() {
         }
     }
 
-    private fun applyTargetGroupCopy() {
-        val groupId = targetGroupId
-        if (groupId == null) {
-            upgradeTitleText.text = getString(R.string.title_upgrade_plan)
-            upgradeSubtitleText.text = getString(R.string.upgrade_plan_coming_soon)
-        } else {
-            upgradeTitleText.text = getString(R.string.title_upgrade_plan_for_group, groupId)
-            upgradeSubtitleText.text = getString(R.string.upgrade_plan_coming_soon_for_group, groupId)
-        }
-    }
-
     private fun openWhatsAppForUnlockCode() {
-        val groupId = targetGroupId
-        val messageText = if (groupId == null) {
-            "Hi VG Kontact, I don't have an unlock code yet and would like to join more groups."
-        } else {
-            "Hi VG Kontact, I don't have an unlock code yet and would like to join Group $groupId kontacts"
-        }
+        val messageText = "Hi VG Kontact, I don't have an unlock code yet and would like to join more groups."
         val message = Uri.encode(messageText)
         val uri = Uri.parse("https://wa.me/$CONTACT_US_WHATSAPP_NUMBER?text=$message")
         try {
