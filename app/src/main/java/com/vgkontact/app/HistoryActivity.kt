@@ -1,8 +1,11 @@
 package com.vgkontact.app
 
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
 import android.view.LayoutInflater
 import android.view.View
+import android.widget.EditText
 import android.widget.HorizontalScrollView
 import android.widget.LinearLayout
 import android.widget.ProgressBar
@@ -29,6 +32,8 @@ class HistoryActivity : AppCompatActivity() {
 
     private lateinit var progressBar: ProgressBar
     private lateinit var emptyText: TextView
+    private lateinit var noResultsText: TextView
+    private lateinit var historySearchInput: EditText
     private lateinit var dayListContainer: LinearLayout
     private lateinit var historyPagerScroll: HorizontalScrollView
     private lateinit var historyPagerContainer: LinearLayout
@@ -36,7 +41,9 @@ class HistoryActivity : AppCompatActivity() {
     private val ENTRIES_PER_PAGE = 10
 
     private var allEntries: List<ReferralEntry> = emptyList()
+    private var filteredEntries: List<ReferralEntry> = emptyList()
     private var currentPage = 0
+    private var currentSearchQuery = ""
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -46,9 +53,20 @@ class HistoryActivity : AppCompatActivity() {
 
         progressBar = findViewById(R.id.progressBar)
         emptyText = findViewById(R.id.emptyText)
+        noResultsText = findViewById(R.id.noResultsText)
+        historySearchInput = findViewById(R.id.historySearchInput)
         dayListContainer = findViewById(R.id.dayListContainer)
         historyPagerScroll = findViewById(R.id.historyPagerScroll)
         historyPagerContainer = findViewById(R.id.historyPagerContainer)
+
+        historySearchInput.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                currentSearchQuery = s?.toString()?.trim() ?: ""
+                applySearch()
+            }
+        })
 
         loadReferralLeaderboard()
     }
@@ -70,8 +88,9 @@ class HistoryActivity : AppCompatActivity() {
                     }
                     allEntries = list
                     currentPage = 0
-                    renderCurrentPage()
-                    renderPager()
+                    currentSearchQuery = ""
+                    historySearchInput.setText("")
+                    applySearch()
                 } else {
                     emptyText.visibility = View.VISIBLE
                     val message = if (error == "NO_INTERNET") {
@@ -86,15 +105,42 @@ class HistoryActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Filters [allEntries] by [currentSearchQuery] (matched against the
+     * WhatsApp number, same approach as GroupsActivity.applySearch),
+     * resets to page 0, and re-renders the list and pager.
+     */
+    private fun applySearch() {
+        currentPage = 0
+
+        filteredEntries = if (currentSearchQuery.isEmpty()) {
+            allEntries
+        } else {
+            allEntries.filter { it.whatsapp.contains(currentSearchQuery, ignoreCase = true) }
+        }
+
+        if (filteredEntries.isEmpty() && currentSearchQuery.isNotEmpty()) {
+            dayListContainer.removeAllViews()
+            historyPagerScroll.visibility = View.GONE
+            noResultsText.visibility = View.VISIBLE
+            noResultsText.text = "No referrals match \u201c$currentSearchQuery\u201d"
+            return
+        }
+
+        noResultsText.visibility = View.GONE
+        renderCurrentPage()
+        renderPager()
+    }
+
     /** Renders just the rows for [currentPage], each with a bottom divider except the last. */
     private fun renderCurrentPage() {
         dayListContainer.removeAllViews()
 
         val start = currentPage * ENTRIES_PER_PAGE
-        val end = minOf(start + ENTRIES_PER_PAGE, allEntries.size)
-        if (start >= allEntries.size) return
+        val end = minOf(start + ENTRIES_PER_PAGE, filteredEntries.size)
+        if (start >= filteredEntries.size) return
 
-        val pageEntries = allEntries.subList(start, end)
+        val pageEntries = filteredEntries.subList(start, end)
 
         for ((index, entry) in pageEntries.withIndex()) {
             val row = LinearLayout(this).apply {
@@ -153,7 +199,7 @@ class HistoryActivity : AppCompatActivity() {
      * when everything fits on one page.
      */
     private fun renderPager() {
-        val pageCount = (allEntries.size + ENTRIES_PER_PAGE - 1) / ENTRIES_PER_PAGE
+        val pageCount = (filteredEntries.size + ENTRIES_PER_PAGE - 1) / ENTRIES_PER_PAGE
 
         if (pageCount <= 1) {
             historyPagerScroll.visibility = View.GONE
