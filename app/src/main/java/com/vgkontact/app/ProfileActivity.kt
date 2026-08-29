@@ -1,9 +1,11 @@
 package com.vgkontact.app
 
+import android.Manifest
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
 import android.widget.Button
@@ -12,6 +14,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 
 class ProfileActivity : AppCompatActivity() {
@@ -81,6 +84,9 @@ class ProfileActivity : AppCompatActivity() {
         // dashboard uses, so "Verified" here always means the same thing it
         // means everywhere else in the app.
         bindVerificationStatus()
+        verificationStatusBadge.setOnClickListener {
+            fixWorstPermissionIssue(PermissionHealth.check(this))
+        }
 
         // App Version - pulled from BuildConfig so it can never go stale;
         // no manual string to remember to bump on release.
@@ -161,5 +167,91 @@ class ProfileActivity : AppCompatActivity() {
         } catch (e: Exception) {
             Toast.makeText(this, "WhatsApp is not installed", Toast.LENGTH_SHORT).show()
         }
+    }
+
+    /**
+     * Tapping the "Unverified" badge should fix whatever's actually wrong,
+     * same as the dashboard's amber banner "FIX" button - not just relabel
+     * itself. Mirrors MainMenuActivity.fixWorstPermissionIssue() exactly:
+     * contacts and notifications get the native permission popup (falling
+     * back to Settings only once permanently denied), battery always goes
+     * to Settings since Android has no popup for that one.
+     */
+    private fun fixWorstPermissionIssue(status: PermissionHealth.Status) {
+        when {
+            !status.contactsGranted -> requestContactsPermission()
+            !status.batteryExempted -> PermissionHealth.openFixForWorstIssue(this, status)
+            !status.notificationsGranted -> requestNotificationPermission()
+            else -> PermissionHealth.openFixForWorstIssue(this, status)
+        }
+    }
+
+    private fun requestContactsPermission() {
+        // Same permanently-denied check as MainMenuActivity - once denied
+        // twice (or "Don't ask again"), Android stops showing the popup
+        // and silently no-ops, so route to Settings instead of a dead tap.
+        val permanentlyDenied =
+            (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.WRITE_CONTACTS) == false &&
+             ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_CONTACTS) != PackageManager.PERMISSION_GRANTED) ||
+            (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.READ_CONTACTS) == false &&
+             ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CONTACTS) != PackageManager.PERMISSION_GRANTED)
+
+        if (permanentlyDenied) {
+            openAppSettings("Enable Contacts under Permissions, then come back")
+            return
+        }
+
+        ActivityCompat.requestPermissions(
+            this,
+            arrayOf(Manifest.permission.WRITE_CONTACTS, Manifest.permission.READ_CONTACTS),
+            PERMISSION_REQUEST_CODE
+        )
+    }
+
+    private fun requestNotificationPermission() {
+        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.TIRAMISU) {
+            return // not applicable pre-Android 13
+        }
+
+        val permanentlyDenied =
+            ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.POST_NOTIFICATIONS) == false &&
+            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+
+        if (permanentlyDenied) {
+            openAppSettings("Enable Notifications under Permissions, then come back")
+            return
+        }
+
+        ActivityCompat.requestPermissions(
+            this,
+            arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+            NOTIFICATION_PERMISSION_REQUEST_CODE
+        )
+    }
+
+    private fun openAppSettings(instruction: String) {
+        try {
+            val intent = Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                data = Uri.fromParts("package", packageName, null)
+            }
+            startActivity(intent)
+            Toast.makeText(this, instruction, Toast.LENGTH_LONG).show()
+        } catch (e: Exception) {
+            Toast.makeText(this, "Couldn't open Settings - please enable it manually", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        // Whatever the result, just refresh the badge - bindVerificationStatus()
+        // re-checks all three permissions live, so it naturally reflects
+        // whether this specific grant/deny actually fixed anything.
+        bindSyncStatus()
+        bindVerificationStatus()
+    }
+
+    companion object {
+        private const val PERMISSION_REQUEST_CODE = 3001
+        private const val NOTIFICATION_PERMISSION_REQUEST_CODE = 3002
     }
 }
