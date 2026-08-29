@@ -222,90 +222,84 @@
 
                     </LinearLayout>
 
+                    <!-- ===== Contact Limit meter =====
+                         Replaces the old "total in database / available to
+                         import" two-tile row. current = syncedToPhone,
+                         limit = contactLimit (sum of joined groups' real
+                         caps on Supabase - see ImportStats.contactLimit).
+                         Bar color + width are set entirely in Kotlin
+                         (updateLimitMeter in MainMenuActivity), same
+                         green -> amber -> red threshold behavior as the
+                         approved HTML preview. -->
                     <LinearLayout
+                        android:id="@+id/limitBlock"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal">
+                        android:orientation="vertical"
+                        android:background="@drawable/limit_block_background"
+                        android:padding="18dp">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/contact_limit_label"
+                            android:textSize="11sp"
+                            android:textStyle="bold"
+                            android:textAllCaps="true"
+                            android:letterSpacing="0.05"
+                            android:textColor="@color/text_muted"
+                            android:gravity="center" />
 
                         <LinearLayout
-                            android:layout_width="0dp"
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:layout_marginEnd="6dp"
-                            android:orientation="vertical"
+                            android:layout_marginTop="8dp"
+                            android:layout_marginBottom="14dp"
+                            android:orientation="horizontal"
                             android:gravity="center"
-                            android:background="@drawable/stats_tile_neutral_background"
-                            android:paddingTop="16dp"
-                            android:paddingBottom="16dp"
-                            android:paddingStart="10dp"
-                            android:paddingEnd="10dp">
+                            android:baselineAligned="true">
 
                             <TextView
-                                android:id="@+id/statsDatabaseTotalText"
+                                android:id="@+id/limitCurrentText"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:textSize="26sp"
+                                android:textSize="34sp"
                                 android:textStyle="bold"
                                 android:textColor="@color/vg_dark"
                                 android:fontFamily="@font/baloo2"
-                                tools:text="6" />
+                                tools:text="15" />
 
                             <TextView
+                                android:id="@+id/limitOfText"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:layout_marginTop="4dp"
-                                android:text="@string/stats_database_total_label"
-                                android:textSize="9sp"
+                                android:layout_marginStart="6dp"
+                                android:textSize="16sp"
                                 android:textStyle="bold"
-                                android:textAllCaps="true"
-                                android:letterSpacing="0.04"
                                 android:textColor="@color/text_muted"
-                                android:gravity="center" />
+                                tools:text="/ 250" />
 
                         </LinearLayout>
 
-                        <!-- id added so Kotlin can swap this tile's
-                             background to the dashed "zero" style when
-                             availableToImport == 0, matching reference's
-                             .stat-card.zero state. See MainMenuActivity. -->
-                        <LinearLayout
-                            android:id="@+id/statsAvailableTile"
-                            android:layout_width="0dp"
+                        <ProgressBar
+                            android:id="@+id/limitMeterBar"
+                            style="?android:attr/progressBarStyleHorizontal"
+                            android:layout_width="match_parent"
+                            android:layout_height="14dp"
+                            android:max="100"
+                            android:progress="2"
+                            android:progressDrawable="@drawable/limit_meter_progress" />
+
+                        <TextView
+                            android:id="@+id/limitPctText"
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:layout_marginStart="6dp"
-                            android:orientation="vertical"
+                            android:layout_marginTop="8dp"
+                            android:textSize="12sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/text_muted"
                             android:gravity="center"
-                            android:background="@drawable/stats_tile_accent_background"
-                            android:paddingTop="16dp"
-                            android:paddingBottom="16dp"
-                            android:paddingStart="10dp"
-                            android:paddingEnd="10dp">
-
-                            <TextView
-                                android:id="@+id/statsAvailableText"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:textSize="26sp"
-                                android:textStyle="bold"
-                                android:textColor="@color/vg_green"
-                                android:fontFamily="@font/baloo2"
-                                tools:text="0" />
-
-                            <TextView
-                                android:id="@+id/statsAvailableLabel"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="4dp"
-                                android:text="@string/stats_available_label"
-                                android:textSize="9sp"
-                                android:textStyle="bold"
-                                android:textAllCaps="true"
-                                android:letterSpacing="0.04"
-                                android:textColor="@color/vg_green"
-                                android:gravity="center" />
-
-                        </LinearLayout>
+                            tools:text="2% used" />
 
                     </LinearLayout>
 
@@ -342,16 +336,17 @@
             android:paddingTop="8dp"
             android:paddingBottom="26dp">
 
-            <!-- Single entry point for everything groups-related (list of
-                 joined groups + join-more action) - opens GroupsActivity.
-                 Replaces the former summary card + eye icon + separate
-                 "Join More Groups" button that used to live on this
-                 dashboard. -->
+            <!-- Primary upsell action, replacing the old "Kontact Groups"
+                 label/entry point. Same button/id (kontactGroupsButton) and
+                 same destination (GroupsActivity, which still lists every
+                 group + lets a user tap into UpgradePlanActivity per-group)
+                 - only the copy changed, from "group" language to "contact
+                 limit" language, matching the meter above it. -->
             <Button
                 android:id="@+id/kontactGroupsButton"
                 android:layout_width="match_parent"
                 android:layout_height="56dp"
-                android:text="@string/menu_kontact_groups"
+                android:text="@string/menu_increase_contact_limit"
                 android:letterSpacing="0.02"
                 android:backgroundTint="@color/vg_green"
                 android:textColor="@color/white"
