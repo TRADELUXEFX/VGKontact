@@ -39,10 +39,6 @@
             android:orientation="vertical"
             android:padding="20dp">
 
-            <!-- Single card matching the Profile screen exactly: one
-                 card_background, uppercase muted labels, 1dp divider
-                 lines between sections, no nested pill boxes or mixed
-                 corner radii. -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -50,7 +46,6 @@
                 android:background="@drawable/card_background"
                 android:padding="20dp">
 
-                <!-- Totals label, same style as Profile's field labels -->
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -77,8 +72,6 @@
                     android:background="@color/stats_card_border"
                     android:layout_marginBottom="16dp" />
 
-                <!-- Search - plain boxed field, same visual weight as the
-                     referral-code box on Profile, not a pill. -->
                 <EditText
                     android:id="@+id/groupSearchInput"
                     android:layout_width="match_parent"
@@ -95,137 +88,98 @@
                     android:imeOptions="actionDone"
                     android:layout_marginBottom="16dp" />
 
-                <!-- Default view: two sections, each a plain label row
-                     (tap to expand/collapse) followed by its rows,
-                     separated by divider lines - same rhythm as the rest
-                     of the Profile card. -->
                 <LinearLayout
                     android:id="@+id/sectionsView"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical">
 
-                    <!-- Your Groups -->
                     <LinearLayout
-                        android:id="@+id/yourGroupsHeader"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
-                        android:gravity="center_vertical"
-                        android:foreground="?attr/selectableItemBackground"
-                        android:clickable="true"
-                        android:focusable="true">
-
-                        <ImageView
-                            android:layout_width="14dp"
-                            android:layout_height="14dp"
-                            android:src="@drawable/ic_sync"
-                            app:tint="@color/vg_green" />
+                        android:background="@drawable/tab_switch_background"
+                        android:padding="3dp"
+                        android:layout_marginBottom="16dp">
 
                         <TextView
+                            android:id="@+id/yourGroupsTab"
                             android:layout_width="0dp"
-                            android:layout_height="wrap_content"
+                            android:layout_height="40dp"
                             android:layout_weight="1"
-                            android:layout_marginStart="8dp"
+                            android:gravity="center"
                             android:text="YOUR GROUPS"
-                            android:textSize="11sp"
                             android:textAllCaps="true"
-                            android:letterSpacing="0.05"
-                            android:textColor="@color/text_muted" />
+                            android:letterSpacing="0.03"
+                            android:textSize="12sp"
+                            android:textStyle="bold"
+                            android:fontFamily="@font/baloo2"
+                            android:clickable="true"
+                            android:focusable="true" />
 
-                        <ImageView
-                            android:id="@+id/yourGroupsChevron"
-                            android:layout_width="13dp"
-                            android:layout_height="13dp"
-                            android:src="@drawable/ic_chevron_down"
-                            app:tint="@color/text_muted" />
+                        <TextView
+                            android:id="@+id/allGroupsTab"
+                            android:layout_width="0dp"
+                            android:layout_height="40dp"
+                            android:layout_weight="1"
+                            android:gravity="center"
+                            android:text="ALL KONTACT GROUPS"
+                            android:textAllCaps="true"
+                            android:letterSpacing="0.03"
+                            android:textSize="12sp"
+                            android:textStyle="bold"
+                            android:fontFamily="@font/baloo2"
+                            android:clickable="true"
+                            android:focusable="true" />
 
                     </LinearLayout>
 
                     <TextView
-                        android:id="@+id/yourGroupsSubText"
+                        android:id="@+id/activeGroupsSubText"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:textSize="17sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/vg_dark"
-                        android:paddingTop="2dp"
-                        android:paddingBottom="12dp"
+                        android:textSize="13sp"
+                        android:textColor="@color/text_muted"
+                        android:paddingBottom="8dp"
                         tools:text="1 joined \u00B7 2 kontacts" />
 
                     <LinearLayout
-                        android:id="@+id/yourGroupsRows"
+                        android:id="@+id/activeGroupsRows"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="vertical"
-                        android:visibility="gone" />
-
-                    <View
-                        android:layout_width="match_parent"
-                        android:layout_height="1dp"
-                        android:background="@color/stats_card_border"
-                        android:layout_marginTop="4dp"
-                        android:layout_marginBottom="16dp" />
-
-                    <!-- All Kontact Groups -->
-                    <LinearLayout
-                        android:id="@+id/allGroupsHeader"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical"
-                        android:foreground="?attr/selectableItemBackground"
-                        android:clickable="true"
-                        android:focusable="true">
-
-                        <ImageView
-                            android:layout_width="14dp"
-                            android:layout_height="14dp"
-                            android:src="@drawable/ic_sync"
-                            app:tint="@color/text_muted" />
-
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:layout_marginStart="8dp"
-                            android:text="ALL KONTACT GROUPS"
-                            android:textSize="11sp"
-                            android:textAllCaps="true"
-                            android:letterSpacing="0.05"
-                            android:textColor="@color/text_muted" />
-
-                        <ImageView
-                            android:id="@+id/allGroupsChevron"
-                            android:layout_width="13dp"
-                            android:layout_height="13dp"
-                            android:src="@drawable/ic_chevron_down"
-                            app:tint="@color/text_muted" />
-
-                    </LinearLayout>
+                        android:orientation="vertical" />
 
                     <TextView
-                        android:id="@+id/allGroupsSubText"
+                        android:id="@+id/activeGroupsEmptyText"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:textSize="17sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/vg_dark"
-                        android:paddingTop="2dp"
-                        android:paddingBottom="12dp"
-                        tools:text="9 groups" />
+                        android:gravity="center"
+                        android:textSize="12.5sp"
+                        android:textColor="@color/text_muted"
+                        android:paddingTop="20dp"
+                        android:paddingBottom="20dp"
+                        android:visibility="gone"
+                        tools:text="None joined yet" />
 
-                    <LinearLayout
-                        android:id="@+id/allGroupsRows"
+                    <HorizontalScrollView
+                        android:id="@+id/groupsPagerScroll"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="vertical"
-                        android:visibility="gone" />
+                        android:layout_marginTop="12dp"
+                        android:scrollbars="none"
+                        android:visibility="gone">
+
+                        <LinearLayout
+                            android:id="@+id/groupsPagerContainer"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center" />
+
+                    </HorizontalScrollView>
 
                 </LinearLayout>
 
-                <!-- Search-active view: one flat list, same divider-row
-                     style as everything else. -->
                 <LinearLayout
                     android:id="@+id/resultsView"
                     android:layout_width="match_parent"
@@ -265,8 +219,6 @@
 
             </LinearLayout>
 
-            <!-- Action buttons sit below the card, same pattern Profile
-                 uses for its Contact Us button. -->
             <Button
                 android:id="@+id/joinGroupsButton"
                 android:layout_width="match_parent"
