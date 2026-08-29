@@ -39,6 +39,8 @@ class UpgradePlanActivity : AppCompatActivity() {
     private lateinit var redeemKeyButton: Button
     private lateinit var noCodeContactUsButton: Button
     private lateinit var redeemProgressBar: ProgressBar
+    private lateinit var currentLimitNumberText: TextView
+    private lateinit var currentLimitOfText: TextView
 
     private val CONTACT_US_WHATSAPP_NUMBER = "09110321143"
 
@@ -56,6 +58,10 @@ class UpgradePlanActivity : AppCompatActivity() {
         redeemKeyButton = findViewById(R.id.redeemKeyButton)
         noCodeContactUsButton = findViewById(R.id.noCodeContactUsButton)
         redeemProgressBar = findViewById(R.id.redeemProgressBar)
+        currentLimitNumberText = findViewById(R.id.currentLimitNumberText)
+        currentLimitOfText = findViewById(R.id.currentLimitOfText)
+
+        loadCurrentLimit()
 
         val incomingId = intent.getLongExtra(EXTRA_TARGET_GROUP_ID, -1L)
         targetGroupId = if (incomingId > 0) incomingId else null
@@ -85,6 +91,11 @@ class UpgradePlanActivity : AppCompatActivity() {
                             Toast.LENGTH_LONG
                         ).show()
                         keyCodeInput.text?.clear()
+                        // Newly unlocked groups just raised contactLimit
+                        // server-side - refresh the reminder card so the
+                        // user sees their new, higher limit immediately
+                        // without leaving this screen.
+                        loadCurrentLimit()
                     } else {
                         Toast.makeText(this, getString(R.string.key_redeem_invalid), Toast.LENGTH_LONG).show()
                     }
@@ -94,6 +105,27 @@ class UpgradePlanActivity : AppCompatActivity() {
 
         noCodeContactUsButton.setOnClickListener {
             openWhatsAppForUnlockCode()
+        }
+    }
+
+    /**
+     * Loads and displays the "Your Current Limit" reminder card at the top
+     * of this screen: syncedToPhone / contactLimit, same numbers and same
+     * source (SheetSync.fetchImportStats) as the dashboard meter. Called
+     * once on open, and again right after a successful key redemption
+     * since that changes contactLimit server-side immediately.
+     */
+    private fun loadCurrentLimit() {
+        SheetSync.fetchImportStats(this) { stats ->
+            runOnUiThread {
+                if (stats == null || stats.contactLimit < 0L) {
+                    currentLimitNumberText.text = "--"
+                    currentLimitOfText.text = getString(R.string.limit_meter_unknown)
+                } else {
+                    currentLimitNumberText.text = stats.syncedToPhone.toString()
+                    currentLimitOfText.text = "/ ${stats.contactLimit} contacts"
+                }
+            }
         }
     }
 
