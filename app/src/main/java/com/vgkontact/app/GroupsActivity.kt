@@ -17,6 +17,25 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 
+/**
+ * Kontact Groups screen - "one box" layout.
+ *
+ * Shows a single card containing:
+ *  - a box-level search field (searches every group, joined or not)
+ *  - two independently-collapsible sections when not searching:
+ *      "Your Groups" (groups the user has joined) and
+ *      "All Kontact Groups" (every group that exists)
+ *  - while searching, both sections are replaced by one flat results
+ *    list pulled from the combined group set; joined matches keep their
+ *    checkmark + "Joined" label so they're still distinguishable.
+ *
+ * Data comes from SheetSync.fetchAllGroupsSummary() (the
+ * get_all_groups_summary RPC) plus SheetSync.fetchImportStats() for the
+ * user's own joined-group ids. Tapping any row (joined or not) jumps to
+ * the unlock screen (UpgradePlanActivity) pre-targeted at that group via
+ * EXTRA_TARGET_GROUP_ID - joined rows just re-open the same screen,
+ * which already handles an already-unlocked group gracefully.
+ */
 class GroupsActivity : AppCompatActivity() {
 
     private lateinit var groupsCountText: TextView
@@ -102,12 +121,21 @@ class GroupsActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        // Refresh every time this screen becomes visible, so redeeming a
+        // key on UpgradePlanActivity and coming back shows the new
+        // joined state right away.
         loadGroupsSummary()
         loadAllGroups()
         groupSearchInput.setText("")
         currentSearchQuery = ""
     }
 
+    /**
+     * Inflates a section-header row into [container] and wires it to
+     * toggle [body]'s visibility + rotate its chevron on tap. Each
+     * section (Your Groups / All Kontact Groups) collapses/expands
+     * independently, matching the HTML reference.
+     */
     private fun setupSectionHeader(
         container: FrameLayout,
         body: LinearLayout,
@@ -115,18 +143,19 @@ class GroupsActivity : AppCompatActivity() {
         muted: Boolean = false
     ) {
         val header = LayoutInflater.from(this)
-            .inflate(R.layout.item_group_section_header, container, true)
+            .inflate(R.layout.item_group_section_header, container, false)
+        container.addView(header)
 
-        val dot = header.findViewById<View>(R.id.sectionDot)
+        val dot = header.findViewById<ImageView>(R.id.sectionDot)
         val titleText = header.findViewById<TextView>(R.id.sectionTitle)
         val chevron = header.findViewById<ImageView>(R.id.sectionChevron)
 
         titleText.text = title
         if (muted) {
-            dot.setBackgroundResource(R.color.stats_card_border)
+            dot.setColorFilter(ContextCompat.getColor(this, R.color.text_muted))
         }
 
-        header.tag = false
+        header.tag = false // collapsed by default
         header.setOnClickListener {
             val nowOpen = header.tag != true
             header.tag = nowOpen
@@ -160,6 +189,12 @@ class GroupsActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Central render function. When the search box is empty, shows the
+     * two collapsible sections (Your Groups / All Kontact Groups). When
+     * there's a query, hides both sections and shows one flat list of
+     * every group (joined or not) whose id contains the query.
+     */
     private fun applySearch() {
         val joined = allGroups.filter { it.groupId in joinedGroupIds }
         val notJoined = allGroups.filter { it.groupId !in joinedGroupIds }
@@ -209,6 +244,7 @@ class GroupsActivity : AppCompatActivity() {
 
     private fun kontactWord(count: Long): String = if (count == 1L) "1 kontact" else "$count kontacts"
 
+    /** Clears [container] and inflates one row per group in [groups]. */
     private fun renderRows(container: LinearLayout, groups: List<GroupSummary>) {
         container.removeAllViews()
         val inflater = LayoutInflater.from(this)
