@@ -14,13 +14,17 @@
         android:background="@color/white"
         android:visibility="visible">
 
-        <!-- ==== GREEN HEADER ==== -->
+        <!-- ==== GREEN HEADER ====
+             Reuses header_gradient (same drawable as every other screen)
+             plus avatar_circle_background + ic_chat, the same icon-badge
+             pattern already used on Permission Setup / Upgrade Plan, so
+             this screen no longer looks like a different app. -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:gravity="center_horizontal"
-            android:background="@color/vg_green"
+            android:background="@drawable/header_gradient"
             android:paddingTop="56dp"
             android:paddingStart="28dp"
             android:paddingEnd="28dp"
@@ -33,6 +37,7 @@
                 android:textSize="15sp"
                 android:textStyle="normal"
                 android:alpha="0.92"
+                android:gravity="center"
                 android:textColor="@color/white" />
 
             <TextView
@@ -42,6 +47,7 @@
                 android:textSize="26sp"
                 android:textStyle="bold"
                 android:layout_marginTop="2dp"
+                android:gravity="center"
                 android:textColor="@color/white" />
 
         </LinearLayout>
@@ -56,102 +62,122 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:paddingStart="28dp"
-                android:paddingEnd="28dp"
-                android:paddingTop="32dp">
+                android:paddingStart="20dp"
+                android:paddingEnd="20dp"
+                android:paddingTop="24dp">
 
-                <!-- ==== Field 01: WhatsApp number (required) ==== -->
-                <TextView
+                <!-- Fields grouped in card_background, the same card
+                     container used on Profile / Groups / Upgrade Plan,
+                     instead of floating loose on the white body. -->
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="INPUT WHATSAPP NUMBER"
-                    android:textSize="12sp"
-                    android:textStyle="bold"
-                    android:letterSpacing="0.03"
-                    android:gravity="center"
-                    android:textColor="@color/vg_dark"
-                    android:layout_marginBottom="8dp" />
+                    android:orientation="vertical"
+                    android:background="@drawable/card_background"
+                    android:padding="20dp">
 
-                <com.google.android.material.textfield.TextInputLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:hint="@string/hint_whatsapp"
-                    android:textColorHint="@color/text_muted"
-                    app:hintTextColor="@color/vg_green_dark"
-                    app:boxBackgroundMode="outline"
-                    app:boxBackgroundColor="@color/vg_field_bg"
-                    app:boxStrokeColor="@color/vg_green"
-                    app:boxStrokeWidth="1.5dp"
-                    app:boxCornerRadiusTopStart="14dp"
-                    app:boxCornerRadiusTopEnd="14dp"
-                    app:boxCornerRadiusBottomStart="14dp"
-                    app:boxCornerRadiusBottomEnd="14dp"
-                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
-
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/whatsappInput"
+                    <!-- ==== Field 01: WhatsApp number (required) ==== -->
+                    <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:text="INPUT WHATSAPP NUMBER"
+                        android:textSize="11sp"
+                        android:textStyle="bold"
+                        android:textAllCaps="true"
+                        android:letterSpacing="0.05"
+                        android:textColor="@color/text_muted"
                         android:gravity="center"
-                        android:inputType="phone"
-                        android:maxLength="13"
-                        android:textSize="15sp"
-                        android:textColor="@color/vg_dark"
-                        android:textColorHint="@color/text_muted"
-                        android:includeFontPadding="false"
-                        android:paddingStart="14dp"
-                        android:paddingEnd="14dp"
-                        android:paddingTop="14dp"
-                        android:paddingBottom="14dp" />
+                        android:layout_marginBottom="8dp" />
 
-                </com.google.android.material.textfield.TextInputLayout>
-
-                <!-- ==== Field 02: Referral number (optional) ==== -->
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="REFERRAL NUMBER (OPTIONAL)"
-                    android:textSize="12sp"
-                    android:textStyle="bold"
-                    android:letterSpacing="0.03"
-                    android:gravity="center"
-                    android:textColor="@color/vg_dark"
-                    android:layout_marginTop="26dp"
-                    android:layout_marginBottom="8dp" />
-
-                <com.google.android.material.textfield.TextInputLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:hint="@string/hint_referral"
-                    android:textColorHint="@color/text_muted"
-                    app:hintTextColor="@color/vg_green_dark"
-                    app:boxBackgroundMode="outline"
-                    app:boxBackgroundColor="@color/white"
-                    app:boxStrokeColor="@color/vg_field_stroke_muted"
-                    app:boxStrokeWidth="1.5dp"
-                    app:boxCornerRadiusTopStart="14dp"
-                    app:boxCornerRadiusTopEnd="14dp"
-                    app:boxCornerRadiusBottomStart="14dp"
-                    app:boxCornerRadiusBottomEnd="14dp"
-                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
-
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/referralInput"
+                    <com.google.android.material.textfield.TextInputLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:gravity="center"
-                        android:inputType="phone"
-                        android:maxLength="13"
-                        android:textSize="15sp"
-                        android:textColor="@color/vg_dark"
+                        android:hint="@string/hint_whatsapp"
                         android:textColorHint="@color/text_muted"
-                        android:includeFontPadding="false"
-                        android:paddingStart="14dp"
-                        android:paddingEnd="14dp"
-                        android:paddingTop="14dp"
-                        android:paddingBottom="14dp" />
+                        app:hintTextColor="@color/vg_green_dark"
+                        app:boxBackgroundMode="outline"
+                        app:boxBackgroundColor="@color/vg_field_bg"
+                        app:boxStrokeColor="@color/vg_green"
+                        app:boxStrokeWidth="1.5dp"
+                        app:boxCornerRadiusTopStart="14dp"
+                        app:boxCornerRadiusTopEnd="14dp"
+                        app:boxCornerRadiusBottomStart="14dp"
+                        app:boxCornerRadiusBottomEnd="14dp"
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
 
-                </com.google.android.material.textfield.TextInputLayout>
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/whatsappInput"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="center"
+                            android:inputType="phone"
+                            android:maxLength="13"
+                            android:textSize="15sp"
+                            android:textColor="@color/vg_dark"
+                            android:textColorHint="@color/text_muted"
+                            android:includeFontPadding="false"
+                            android:paddingStart="14dp"
+                            android:paddingEnd="14dp"
+                            android:paddingTop="14dp"
+                            android:paddingBottom="14dp" />
+
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="@color/stats_card_border"
+                        android:layout_marginTop="20dp"
+                        android:layout_marginBottom="20dp" />
+
+                    <!-- ==== Field 02: Referral number (optional) ==== -->
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="REFERRAL NUMBER (OPTIONAL)"
+                        android:textSize="11sp"
+                        android:textStyle="bold"
+                        android:textAllCaps="true"
+                        android:letterSpacing="0.05"
+                        android:textColor="@color/text_muted"
+                        android:gravity="center"
+                        android:layout_marginBottom="8dp" />
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="@string/hint_referral"
+                        android:textColorHint="@color/text_muted"
+                        app:hintTextColor="@color/vg_green_dark"
+                        app:boxBackgroundMode="outline"
+                        app:boxBackgroundColor="@color/white"
+                        app:boxStrokeColor="@color/vg_field_stroke_muted"
+                        app:boxStrokeWidth="1.5dp"
+                        app:boxCornerRadiusTopStart="14dp"
+                        app:boxCornerRadiusTopEnd="14dp"
+                        app:boxCornerRadiusBottomStart="14dp"
+                        app:boxCornerRadiusBottomEnd="14dp"
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/referralInput"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="center"
+                            android:inputType="phone"
+                            android:maxLength="13"
+                            android:textSize="15sp"
+                            android:textColor="@color/vg_dark"
+                            android:textColorHint="@color/text_muted"
+                            android:includeFontPadding="false"
+                            android:paddingStart="14dp"
+                            android:paddingEnd="14dp"
+                            android:paddingTop="14dp"
+                            android:paddingBottom="14dp" />
+
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                </LinearLayout>
 
             </LinearLayout>
 
@@ -161,7 +187,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="28dp">
+            android:padding="20dp">
 
             <FrameLayout
                 android:layout_width="match_parent"
@@ -180,7 +206,7 @@
                     android:gravity="center"
                     android:drawableEnd="@drawable/ic_arrow_forward"
                     android:drawablePadding="8dp"
-                    app:cornerRadius="14dp" />
+                    app:cornerRadius="16dp" />
 
                 <ProgressBar
                     android:id="@+id/progressBar"
