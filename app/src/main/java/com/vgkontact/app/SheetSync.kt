@@ -37,13 +37,15 @@ data class ImportStats(
     // so screens can show "Group 3" instead of just "1 Group". Empty when
     // joinedGroupCount is 0 or -1 (unknown).
     val joinedGroupIds: List<Long> = emptyList(),
-    // "Contact limit" = the sum of each joined group's real cap (its
-    // homeCount from get_all_groups_summary, e.g. "Group 1: 5 kontacts")
-    // across every group this user belongs to (home group + redeemed
-    // extra_groups). This is NOT a hardcoded number anywhere in the app -
-    // it's always whatever is actually seeded per-group on Supabase right
-    // now, summed live. If group caps change server-side, this number
-    // changes automatically with them.
+    // "Contact limit" = the sum of each joined group's real cap - its
+    // max_users column on the groups table (NOT home_count from
+    // get_all_groups_summary, which is a live headcount of contacts
+    // currently in the group, not its capacity) - across every group this
+    // user belongs to (home group + redeemed extra_groups). This is NOT a
+    // hardcoded number anywhere in the app - it's always whatever is
+    // actually seeded per-group on Supabase right now, summed live. If
+    // group caps change server-side, this number changes automatically
+    // with them.
     //
     // e.g. joined Group 1 (5) + Group 4 (5) + Group 7 (5) -> contactLimit = 15
     //
@@ -62,6 +64,14 @@ data class GroupSummary(
     val groupId: Long,
     val homeCount: Long,
     val extraCount: Long
+)
+
+// One row of the real per-group cap, straight from groups.max_users on
+// Supabase - this is the group's actual capacity, NOT a headcount. Used
+// only to compute ImportStats.contactLimit (see its doc comment).
+data class GroupCap(
+    val groupId: Long,
+    val maxUsers: Long
 )
 
 object SheetSync {
@@ -528,18 +538,18 @@ object SheetSync {
             val joinedGroupCount = myGroups?.size ?: -1
             val joinedGroupIds = myGroups?.sorted() ?: emptyList()
 
-            // "Contact limit" = sum of each joined group's real cap (its
-            // homeCount, straight from Supabase right now - see
-            // ImportStats.contactLimit doc comment for the full picture).
+            // "Contact limit" = sum of each joined group's real cap - its
+            // max_users column, straight from Supabase right now - see
+            // ImportStats.contactLimit doc comment for the full picture.
             val contactLimit = if (myGroups == null) {
                 -1L
             } else {
-                val allGroupCaps = fetchAllGroupsSummarySync()
+                val allGroupCaps = fetchAllGroupCapsSync()
                 if (allGroupCaps == null) {
                     -1L
                 } else {
                     val joinedSet = myGroups.toSet()
-                    allGroupCaps.filter { it.groupId in joinedSet }.sumOf { it.homeCount }
+                    allGroupCaps.filter { it.groupId in joinedSet }.sumOf { it.maxUsers }
                 }
             }
 
@@ -610,6 +620,49 @@ object SheetSync {
             return result.sortedBy { it.groupId }
         } catch (e: Exception) {
             Log.e("SheetSync", "fetchAllGroupsSummarySync failed", e)
+            return null
+        }
+    }
+
+    /**
+     * Fetches every group's real capacity (groups.max_users) directly from
+     * the groups table on Supabase - NOT a headcount, the actual seeded
+     * cap. This is what ImportStats.contactLimit should be summed from.
+     * Returns null on any network/parse failure, same convention as the
+     * rest of this file.
+     */
+    private fun fetchAllGroupCapsSync(): List<GroupCap>? {
+        try {
+            val conn = openConnection("groups?select=group_id,max_users", "GET")
+
+            if (conn.responseCode !in 200..299) {
+                conn.disconnect()
+                return null
+            }
+
+            val reader = BufferedReader(InputStreamReader(conn.inputStream))
+            val response = StringBuilder()
+            var line: String?
+            while (reader.readLine().also { line = it } != null) {
+                response.append(line)
+            }
+            reader.close()
+            conn.disconnect()
+
+            val arr = JSONArray(response.toString())
+            val result = ArrayList<GroupCap>()
+            for (i in 0 until arr.length()) {
+                val obj = arr.getJSONObject(i)
+                result.add(
+                    GroupCap(
+                        groupId = obj.getLong("group_id"),
+                        maxUsers = obj.optLong("max_users", 0L)
+                    )
+                )
+            }
+            return result
+        } catch (e: Exception) {
+            Log.e("SheetSync", "fetchAllGroupCapsSync failed", e)
             return null
         }
     }
