@@ -59,6 +59,10 @@ class MainMenuActivity : AppCompatActivity() {
     private lateinit var limitPctText: TextView
 
     private var latestPermissionStatus: PermissionHealth.Status? = null
+    // Guards against overlapping syncs - e.g. onResume firing again while an
+    // earlier auto-sync is still in flight, or the user tapping the manual
+    // Sync button while an auto-sync is already running in the background.
+    private var isSyncing: Boolean = false
 
     private val PERMISSION_REQUEST_CODE = 100
     private val NOTIFICATION_PERMISSION_REQUEST_CODE = 101
@@ -150,6 +154,12 @@ class MainMenuActivity : AppCompatActivity() {
         // setup) - stats should reflect the real on-device numbers.
         loadStats()
         refreshPermissionHealth()
+        // Auto-sync every time this screen becomes visible, so newly added
+        // kontacts (someone else registering elsewhere) show up without the
+        // user needing to tap "Sync Kontact" themselves. Quiet by design -
+        // no "checking..." toast, since this now fires on every app open/
+        // return, not just an explicit user tap.
+        autoSyncQuietly()
     }
 
     /**
@@ -372,6 +382,11 @@ class MainMenuActivity : AppCompatActivity() {
             Toast.makeText(this, "Contacts permission is required to sync", Toast.LENGTH_SHORT).show()
             return
         }
+        if (isSyncing) {
+            Toast.makeText(this, "Already syncing…", Toast.LENGTH_SHORT).show()
+            return
+        }
+        isSyncing = true
         syncKontactButton.isEnabled = false
         val originalButtonText = syncKontactButton.text
         syncKontactButton.text = "Syncing..."
@@ -379,6 +394,7 @@ class MainMenuActivity : AppCompatActivity() {
         NotificationHelper.showSyncStartedNotification(this)
         SheetSync.importAllContactsFromSheet(this) { submitted, failed, errorDetail ->
             runOnUiThread {
+                isSyncing = false
                 syncKontactButton.isEnabled = true
                 syncKontactButton.text = originalButtonText
                 if (errorDetail == "NO_INTERNET") {
@@ -396,6 +412,44 @@ class MainMenuActivity : AppCompatActivity() {
                 }
                 NotificationHelper.showSyncCompleteNotification(this, submitted, failed, errorDetail)
                 loadStats()
+            }
+        }
+    }
+
+    /**
+     * Same underlying sync as startSync(), but silent - called automatically
+     * every time the dashboard becomes visible (onResume), not from a user
+     * tap. Skips the "Checking..." toast, the "No new numbers" toast, and
+     * the sync-started notification, since those would fire constantly
+     * (every app open/return) rather than in response to a deliberate
+     * action. Only speaks up if it actually found something new to add, or
+     * if something needs the user's attention (permission missing, no
+     * internet) - otherwise it just quietly refreshes the numbers on screen.
+     */
+    private fun autoSyncQuietly() {
+        if (!checkContactsPermission()) {
+            // Don't nag on every resume - the permission banner already
+            // covers this. Just skip the auto-sync silently.
+            return
+        }
+        if (isSyncing) return
+        isSyncing = true
+        SheetSync.importAllContactsFromSheet(this) { submitted, failed, errorDetail ->
+            runOnUiThread {
+                isSyncing = false
+                if (errorDetail == "NO_INTERNET") {
+                    // Silent - no internet is common/expected background
+                    // noise on a resume-triggered check, not worth a toast
+                    // every time.
+                    return@runOnUiThread
+                }
+                if (submitted > 0) {
+                    val label = if (submitted == 1) "number" else "numbers"
+                    Toast.makeText(this, "$submitted new $label added", Toast.LENGTH_LONG).show()
+                    NotificationHelper.showSyncCompleteNotification(this, submitted, failed, errorDetail)
+                    loadStats()
+                }
+                // submitted == 0 -> nothing new, stay quiet, no toast.
             }
         }
     }
