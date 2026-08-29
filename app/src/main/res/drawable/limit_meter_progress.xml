@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Standard Android horizontal ProgressBar layer-list: background track
+     + a clipped "progress" layer that ProgressBar scales horizontally
+     based on its progress/max values. Swap the progress item's drawable
+     at runtime (setProgressDrawable) to switch fill color between
+     normal/warn/danger - see MainMenuActivity.updateLimitMeterStyle(). -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item android:id="@android:id/background">
+        <shape android:shape="rectangle">
+            <solid android:color="@color/vg_green_tint" />
+            <corners android:radius="8dp" />
+        </shape>
+    </item>
+
+    <item android:id="@android:id/progress">
+        <clip>
+            <shape android:shape="rectangle">
+                <gradient
+                    android:startColor="@color/vg_green"
+                    android:endColor="@color/vg_green_dark"
+                    android:angle="0" />
+                <corners android:radius="8dp" />
+            </shape>
+        </clip>
+    </item>
+
+</layer-list>
