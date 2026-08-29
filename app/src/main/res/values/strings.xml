@@ -48,11 +48,10 @@
 
     <!-- Upgrade Plan -->
     <string name="title_upgrade_plan">Unlock More Kontacts</string>
-    <string name="upgrade_plan_coming_soon">Enter a key code to unlock more Kontact groups.</string>
-    <string name="hint_key_code">Enter key code</string>
+    <string name="upgrade_plan_coming_soon">Enter a key code to unlock more contacts limit.</string>
+    <string name="hint_key_code">e.g. VGK-XXXX-XXXX</string>
     <string name="btn_redeem_key">Unlock</string>
     <string name="key_redeem_empty">Please enter a key code</string>
-    <string name="key_redeem_success">Success! You unlocked %1$d more group(s).</string>
     <string name="key_redeem_invalid">Invalid, expired, or already-used key</string>
     <string name="key_redeem_error">Could not check that key. Check your connection and try again.</string>
 
