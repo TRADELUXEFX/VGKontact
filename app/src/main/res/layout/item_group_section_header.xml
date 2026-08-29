@@ -21,13 +21,13 @@
     android:paddingTop="15dp"
     android:paddingBottom="15dp">
 
-    <View
+    <ImageView
         android:id="@+id/sectionDot"
-        android:layout_width="8dp"
-        android:layout_height="8dp"
+        android:layout_width="16dp"
+        android:layout_height="16dp"
         android:layout_marginEnd="10dp"
-        android:background="@drawable/group_check_mini_background"
-        tools:ignore="MissingConstraints" />
+        android:src="@drawable/ic_sync"
+        app:tint="@color/vg_green" />
 
     <LinearLayout
         android:layout_width="0dp"
