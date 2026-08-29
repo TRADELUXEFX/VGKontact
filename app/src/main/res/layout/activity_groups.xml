@@ -39,6 +39,11 @@
             android:orientation="vertical"
             android:padding="20dp">
 
+            <!-- One box: row-head, box-level search, then the two
+                 collapsible sections (Your Groups / All Kontact Groups),
+                 matching kontact_groups_onebox.html. Search is no longer
+                 nested inside "All Kontact Groups" - it sits above both
+                 sections and filters the full combined group list. -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -89,6 +94,8 @@
                     android:imeOptions="actionDone"
                     android:layout_marginBottom="14dp" />
 
+                <!-- Default view: two independently-collapsible sections
+                     inside one bordered box. -->
                 <LinearLayout
                     android:id="@+id/sectionsView"
                     android:layout_width="match_parent"
@@ -101,6 +108,7 @@
                         android:orientation="vertical"
                         android:background="@drawable/rect_box_background">
 
+                        <!-- Your Groups section -->
                         <FrameLayout
                             android:id="@+id/yourGroupsHeaderContainer"
                             android:layout_width="match_parent"
@@ -127,6 +135,7 @@
 
                         </LinearLayout>
 
+                        <!-- All Kontact Groups section -->
                         <FrameLayout
                             android:id="@+id/allGroupsHeaderContainer"
                             android:layout_width="match_parent"
@@ -138,7 +147,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:orientation="vertical"
-                            android:background="@color/stats_card_fill"
+                            android:background="@drawable/rect_section_body_bottom_background"
                             android:paddingStart="14dp"
                             android:paddingEnd="14dp"
                             android:paddingBottom="14dp"
@@ -158,6 +167,8 @@
 
                 </LinearLayout>
 
+                <!-- Search-active view: one flat results list pulled from
+                     the full combined group set (joined + not joined). -->
                 <LinearLayout
                     android:id="@+id/resultsView"
                     android:layout_width="match_parent"
@@ -199,6 +210,8 @@
 
             </LinearLayout>
 
+            <!-- Action buttons sit below the card, same pattern Profile
+                 uses for its Contact Us button - not crammed inside it. -->
             <Button
                 android:id="@+id/joinGroupsButton"
                 android:layout_width="match_parent"
