@@ -44,16 +44,17 @@ class MainMenuActivity : AppCompatActivity() {
     private lateinit var statsProgressBar: ProgressBar
     private lateinit var statsContent: LinearLayout
     private lateinit var statsTodayText: TextView
-    private lateinit var statsDatabaseTotalText: TextView
-    private lateinit var statsAvailableText: TextView
     private lateinit var notificationIcon: ImageView
     private lateinit var profileIcon: ImageView
     private lateinit var planPreviewText: TextView
     private lateinit var permissionWarningBanner: LinearLayout
     private lateinit var permissionWarningText: TextView
 
-    private lateinit var statsAvailableTile: LinearLayout
-    private lateinit var statsAvailableLabel: TextView
+    // Contact limit meter (replaces the old database-total / available tiles)
+    private lateinit var limitCurrentText: TextView
+    private lateinit var limitOfText: TextView
+    private lateinit var limitMeterBar: ProgressBar
+    private lateinit var limitPctText: TextView
 
     private var latestPermissionStatus: PermissionHealth.Status? = null
 
@@ -79,16 +80,16 @@ class MainMenuActivity : AppCompatActivity() {
         statsProgressBar = findViewById(R.id.statsProgressBar)
         statsContent = findViewById(R.id.statsContent)
         statsTodayText = findViewById(R.id.statsTodayText)
-        statsDatabaseTotalText = findViewById(R.id.statsDatabaseTotalText)
-        statsAvailableText = findViewById(R.id.statsAvailableText)
         notificationIcon = findViewById(R.id.notificationIcon)
         profileIcon = findViewById(R.id.profileIcon)
         planPreviewText = findViewById(R.id.planPreviewText)
         permissionWarningBanner = findViewById(R.id.permissionWarningBanner)
         permissionWarningText = findViewById(R.id.permissionWarningText)
 
-        statsAvailableTile = findViewById(R.id.statsAvailableTile)
-        statsAvailableLabel = findViewById(R.id.statsAvailableLabel)
+        limitCurrentText = findViewById(R.id.limitCurrentText)
+        limitOfText = findViewById(R.id.limitOfText)
+        limitMeterBar = findViewById(R.id.limitMeterBar)
+        limitPctText = findViewById(R.id.limitPctText)
 
         permissionWarningBanner.setOnClickListener {
             latestPermissionStatus?.let { status ->
@@ -315,10 +316,7 @@ class MainMenuActivity : AppCompatActivity() {
                 statsProgressBar.visibility = View.GONE
                 statsContent.visibility = View.VISIBLE
                 if (stats != null) {
-                    statsDatabaseTotalText.text = stats.totalInDatabase.toString()
-                    statsAvailableText.text = stats.availableToImport.toString()
-
-                    updateAvailableTileStyle(stats.availableToImport)
+                    updateLimitMeter(stats.syncedToPhone, stats.contactLimit)
                 }
                 // else: network/stats failure - leave the last-known values on
                 // screen rather than overwriting them with zeros/placeholders.
@@ -327,21 +325,39 @@ class MainMenuActivity : AppCompatActivity() {
     }
 
     /**
-     * Matches the reference's .stat-card.zero treatment: when there's
-     * nothing new to import, the right-hand tile becomes a plain dashed
-     * card instead of the green-tinted "there's something here" style, and
-     * its number/label switch to a muted color to match.
+     * Drives the "Contact Limit" meter block: current (synced) / limit
+     * (sum of joined groups' real caps on Supabase - see
+     * ImportStats.contactLimit). Bar fill percentage and color follow the
+     * same green -> amber (>=80%) -> red (>=100%, capped) thresholds as
+     * the approved HTML preview.
+     *
+     * contactLimit == -1L means "couldn't be determined" (offline, or the
+     * groups-summary call failed) - shown as "-- / --" rather than a
+     * misleading 0, same "unknown" convention SheetSync uses elsewhere.
      */
-    private fun updateAvailableTileStyle(availableToImport: Int) {
-        if (availableToImport <= 0) {
-            statsAvailableTile.setBackgroundResource(R.drawable.stats_tile_accent_background_zero)
-            statsAvailableText.setTextColor(ContextCompat.getColor(this, R.color.locked_chip_text))
-            statsAvailableLabel.setTextColor(ContextCompat.getColor(this, R.color.text_muted))
-        } else {
-            statsAvailableTile.setBackgroundResource(R.drawable.stats_tile_accent_background)
-            statsAvailableText.setTextColor(ContextCompat.getColor(this, R.color.vg_green))
-            statsAvailableLabel.setTextColor(ContextCompat.getColor(this, R.color.vg_green))
+    private fun updateLimitMeter(current: Int, limit: Long) {
+        if (limit < 0L) {
+            limitCurrentText.text = "--"
+            limitOfText.text = "/ --"
+            limitPctText.text = getString(R.string.limit_meter_unknown)
+            limitMeterBar.progress = 0
+            limitMeterBar.progressDrawable = ContextCompat.getDrawable(this, R.drawable.limit_meter_progress)
+            return
         }
+
+        limitCurrentText.text = current.toString()
+        limitOfText.text = "/ $limit"
+
+        val pct = if (limit <= 0L) 0 else ((current.toLong() * 100) / limit).toInt().coerceIn(0, 100)
+        limitMeterBar.progress = pct
+        limitPctText.text = "$pct% used"
+
+        val fillDrawableRes = when {
+            pct >= 100 -> R.drawable.limit_meter_progress_danger
+            pct >= 80 -> R.drawable.limit_meter_progress_warn
+            else -> R.drawable.limit_meter_progress
+        }
+        limitMeterBar.progressDrawable = ContextCompat.getDrawable(this, fillDrawableRes)
     }
 
     private fun startSync() {
