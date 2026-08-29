@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    One row inside the Kontact Groups "one box" UI - used for both the
+    "Your Groups" section, the "All Kontact Groups" section, and the
+    flat search-results list. Styling (background, text color, checkmark
+    badge) is switched at bind time in GroupsActivity depending on
+    whether the group is joined, matching .rect-row / .rect-row.joined
+    in kontact_groups_onebox.html.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/groupRowRoot"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:background="@drawable/group_row_background"
+    android:foreground="?attr/selectableItemBackground"
+    android:clickable="true"
+    android:focusable="true"
+    android:paddingStart="13dp"
+    android:paddingEnd="13dp"
+    android:paddingTop="11dp"
+    android:paddingBottom="11dp">
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <ImageView
+            android:id="@+id/groupRowCheck"
+            android:layout_width="15dp"
+            android:layout_height="15dp"
+            android:layout_marginEnd="7dp"
+            android:background="@drawable/group_check_mini_background"
+            android:padding="3.5dp"
+            android:src="@drawable/ic_check"
+            app:tint="@color/vg_green_dark"
+            android:visibility="gone"
+            tools:visibility="visible" />
+
+        <TextView
+            android:id="@+id/groupRowTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="12.5sp"
+            android:textStyle="bold"
+            android:textColor="@color/vg_dark"
+            android:fontFamily="@font/baloo2"
+            tools:text="Group 1" />
+
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/groupRowCounts"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:gravity="end"
+        android:textSize="11.5sp"
+        android:textColor="@color/text_muted"
+        tools:text="Joined \u00B7 5 kontacts" />
+
+</LinearLayout>
