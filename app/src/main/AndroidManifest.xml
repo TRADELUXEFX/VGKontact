@@ -43,11 +43,6 @@
             android:name=".MainMenuActivity"
             android:exported="false" />
 
-        <!-- Kontact Groups (list of joined groups + entry point to join more) -->
-        <activity
-            android:name=".GroupsActivity"
-            android:exported="false" />
-
         <!-- History View -->
         <activity
             android:name=".HistoryActivity"
