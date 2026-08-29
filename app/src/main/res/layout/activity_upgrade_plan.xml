@@ -38,19 +38,10 @@
             android:paddingEnd="24dp"
             android:gravity="center">
 
-            <ImageView
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:padding="12dp"
-                android:src="@drawable/ic_add"
-                android:background="@drawable/avatar_circle_background"
-                app:tint="@color/vg_green" />
-
             <TextView
                 android:id="@+id/upgradeTitleText"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="14dp"
                 android:text="@string/title_upgrade_plan"
                 android:textSize="21sp"
                 android:textStyle="bold"
@@ -165,6 +156,7 @@
                         android:inputType="textCapCharacters"
                         android:textSize="15sp"
                         android:letterSpacing="0.05"
+                        android:maxLength="13"
                         android:maxLines="1" />
 
                 </com.google.android.material.textfield.TextInputLayout>
