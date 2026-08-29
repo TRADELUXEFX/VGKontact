@@ -113,4 +113,40 @@ object NotificationHelper {
 
         notificationManager.notify(NEW_NUMBERS_NOTIFICATION_ID, builder.build())
     }
+
+    private const val PERMISSION_WARNING_NOTIFICATION_ID = 1003
+
+    /**
+     * Alerts the user in their notification tray when a permission has gone
+     * missing - catches the case where an OEM battery manager (or the user
+     * themself, in system Settings) silently turns something off and the
+     * user hasn't opened the app to see the dashboard's warning banner.
+     * Without this, a background sync failure (e.g. contacts permission
+     * revoked) could go unnoticed indefinitely.
+     */
+    fun showPermissionWarningNotification(context: Context, message: String) {
+        val notificationManager =
+            context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+        val intent = Intent(context, MainMenuActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            context,
+            0,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val builder = NotificationCompat.Builder(context, CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setContentTitle("VG Kontact needs attention")
+            .setContentText(message)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(message))
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setAutoCancel(true)
+            .setContentIntent(pendingIntent)
+
+        notificationManager.notify(PERMISSION_WARNING_NOTIFICATION_ID, builder.build())
+    }
 }
