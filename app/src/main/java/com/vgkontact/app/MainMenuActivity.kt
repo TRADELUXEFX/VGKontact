@@ -105,7 +105,11 @@ class MainMenuActivity : AppCompatActivity() {
         // go stale whichever way the user flips a permission.
 
         kontactGroupsButton.setOnClickListener {
-            startActivity(Intent(this, GroupsActivity::class.java))
+            // This button is labeled "Increase Contact Limit" (see
+            // activity_main_menu.xml, menu_increase_contact_limit) and should
+            // take the user straight to the redeem-a-code screen, not the
+            // group-browser screen.
+            startActivity(Intent(this, UpgradePlanActivity::class.java))
         }
 
         SheetCheckWorker.schedule(this)
