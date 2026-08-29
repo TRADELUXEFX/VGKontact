@@ -35,7 +35,7 @@ class HistoryActivity : AppCompatActivity() {
 
     private val ENTRIES_PER_PAGE = 10
 
-    private var allEntries: List<ReferralLeaderboardEntry> = emptyList()
+    private var allEntries: List<ReferralEntry> = emptyList()
     private var currentPage = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
