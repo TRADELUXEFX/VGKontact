@@ -25,8 +25,6 @@ class ProfileActivity : AppCompatActivity() {
     private lateinit var syncStatusText: TextView
     private lateinit var lastSyncedText: TextView
 
-    private lateinit var totalKontactsText: TextView
-
     private lateinit var verificationStatusBadge: TextView
 
     private lateinit var appVersionText: TextView
@@ -55,8 +53,6 @@ class ProfileActivity : AppCompatActivity() {
         syncStatusText = findViewById(R.id.syncStatusText)
         lastSyncedText = findViewById(R.id.lastSyncedText)
 
-        totalKontactsText = findViewById(R.id.totalKontactsText)
-
         verificationStatusBadge = findViewById(R.id.verificationStatusBadge)
 
         appVersionText = findViewById(R.id.appVersionText)
@@ -80,9 +76,6 @@ class ProfileActivity : AppCompatActivity() {
         // Sync Status - derived live, same source the dashboard banner uses,
         // so this never drifts out of sync with what the user sees there.
         bindSyncStatus()
-
-        // Total Kontacts Registered
-        totalKontactsText.text = UserPrefs.getContactCounter(this).toString()
 
         // Verification Status - mirrors the same three-permission check the
         // dashboard uses, so "Verified" here always means the same thing it
