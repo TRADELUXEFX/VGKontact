@@ -97,13 +97,16 @@ object PermissionHealth {
     }
 
     private fun openBatterySettings(activity: Activity) {
+        val instruction = "Allow background activity (battery), then come back"
         try {
             val intent = Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
             intent.data = Uri.parse("package:${activity.packageName}")
             activity.startActivity(intent)
+            android.widget.Toast.makeText(activity, instruction, android.widget.Toast.LENGTH_LONG).show()
         } catch (e: Exception) {
             try {
                 activity.startActivity(Intent(android.provider.Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+                android.widget.Toast.makeText(activity, instruction, android.widget.Toast.LENGTH_LONG).show()
             } catch (e2: Exception) {
                 openAppDetailsSettings(activity)
             }
@@ -115,6 +118,7 @@ object PermissionHealth {
             val intent = Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS)
             intent.putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, activity.packageName)
             activity.startActivity(intent)
+            android.widget.Toast.makeText(activity, "Enable Notifications, then come back", android.widget.Toast.LENGTH_LONG).show()
         } catch (e: Exception) {
             openAppDetailsSettings(activity)
         }
