@@ -64,7 +64,7 @@ class GroupsActivity : AppCompatActivity() {
     private lateinit var noResultsText: TextView
 
     private val CONTACT_US_WHATSAPP_NUMBER = "09110321143"
-    private val ENTRIES_PER_PAGE = 10
+    private val ENTRIES_PER_PAGE = 5
 
     private var allGroups: List<GroupSummary> = emptyList()
     private var joinedGroupIds: Set<Long> = emptySet()
