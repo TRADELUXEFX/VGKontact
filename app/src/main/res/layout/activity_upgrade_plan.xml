@@ -7,12 +7,12 @@
     different, older app the moment a user taps "Join More Groups" from the
     dashboard.
 
-    Title/subtitle carry IDs (upgradeTitleText / upgradeSubtitleText) so
-    UpgradePlanActivity can swap in group-specific copy when opened from a
-    tap on a specific group row (see GroupsActivity / EXTRA_TARGET_GROUP_ID).
-    A "Don't have a code? Contact Us" button is included here too, matching
-    the one on the Groups screen, so a user who lands here without a code
-    still has a way out.
+    Title/subtitle are always the generic "enter your code" copy -
+    UpgradePlanActivity no longer swaps in group-specific text, since the
+    app doesn't let users see or pick a specific group ID (that's an
+    admin-only decision via keys.groups_unlock).
+    A "Don't have a code? Contact Us" button is included here too, so a
+    user who lands here without a code still has a way out.
 -->
 <androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
