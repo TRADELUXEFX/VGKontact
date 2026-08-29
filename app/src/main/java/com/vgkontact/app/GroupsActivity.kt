@@ -184,9 +184,8 @@ class GroupsActivity : AppCompatActivity() {
     private fun applySearch() {
         val joined = allGroups.filter { it.groupId in joinedGroupIds }
         val notJoined = allGroups.filter { it.groupId !in joinedGroupIds }
-        val totalKontacts = joined.sumOf { it.homeCount }
 
-        groupsCountText.text = "${allGroups.size} groups \u00B7 ${joined.size} joined"
+        groupsCountText.text = "${allGroups.size}"
 
         if (currentSearchQuery.isEmpty()) {
             sectionsView.visibility = View.VISIBLE
@@ -196,9 +195,9 @@ class GroupsActivity : AppCompatActivity() {
 
             activeGroupsSubText.text = if (showingYourGroups) {
                 if (joined.isEmpty()) "None joined yet"
-                else "${joined.size} joined \u00B7 ${kontactWord(totalKontacts)}"
+                else "${joined.size} ${if (joined.size == 1) "kontact group" else "kontact groups"} joined"
             } else {
-                "${notJoined.size} ${if (notJoined.size == 1) "group" else "groups"}"
+                "${notJoined.size} ${if (notJoined.size == 1) "kontact group" else "kontact groups"} available"
             }
 
             if (activeList.isEmpty()) {
