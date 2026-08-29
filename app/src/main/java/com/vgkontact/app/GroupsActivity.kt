@@ -19,16 +19,21 @@ import androidx.core.content.ContextCompat
 /**
  * Kontact Groups screen.
  *
- * Styled to match the Profile screen exactly: a single card_background
- * card, uppercase muted field labels, bold value text, and thin
+ * Styled to match the Profile screen: a single card_background card,
+ * uppercase muted field labels, bold value text, and thin
  * stats_card_border divider lines between sections/rows - no nested
  * pill-shaped boxes or per-row rounded corners.
  *
  * Contains a box-level search field (searches every group, joined or
- * not), two tap-to-expand sections when not searching ("Your Groups"
- * and "All Kontact Groups"), and while searching, one flat results list
- * pulled from the combined group set (joined matches shown in green
- * with "Joined \u00B7" prefixed to their kontact count).
+ * not) and, when not searching, a two-way tab switch ("Your Groups" /
+ * "All Kontact Groups") above a single paginated list - only one of
+ * the two lists is ever visible at a time, matching the referral
+ * leaderboard's pager (HistoryActivity: same ENTRIES_PER_PAGE pattern,
+ * same item_group_page_button.xml / page_button_selected_background /
+ * page_button_default_background drawables). Joined rows show a small
+ * sync icon next to the group name instead of a "Joined" label. While
+ * searching, one flat results list is shown instead, pulled from the
+ * combined group set (joined matches still shown with the sync icon).
  *
  * Data comes from SheetSync.fetchAllGroupsSummary() (the
  * get_all_groups_summary RPC) plus SheetSync.fetchImportStats() for the
@@ -45,24 +50,28 @@ class GroupsActivity : AppCompatActivity() {
     private lateinit var allGroupsErrorText: TextView
 
     private lateinit var sectionsView: LinearLayout
-    private lateinit var yourGroupsHeader: LinearLayout
-    private lateinit var yourGroupsChevron: ImageView
-    private lateinit var yourGroupsSubText: TextView
-    private lateinit var yourGroupsRows: LinearLayout
-    private lateinit var allGroupsHeader: LinearLayout
-    private lateinit var allGroupsChevron: ImageView
-    private lateinit var allGroupsSubText: TextView
-    private lateinit var allGroupsRows: LinearLayout
+    private lateinit var yourGroupsTab: TextView
+    private lateinit var allGroupsTab: TextView
+    private lateinit var activeGroupsSubText: TextView
+    private lateinit var activeGroupsRows: LinearLayout
+    private lateinit var activeGroupsEmptyText: TextView
+    private lateinit var groupsPagerScroll: HorizontalScrollView
+    private lateinit var groupsPagerContainer: LinearLayout
 
     private lateinit var resultsView: LinearLayout
     private lateinit var resultsList: LinearLayout
     private lateinit var noResultsText: TextView
 
     private val CONTACT_US_WHATSAPP_NUMBER = "09110321143"
+    private val ENTRIES_PER_PAGE = 10
 
     private var allGroups: List<GroupSummary> = emptyList()
     private var joinedGroupIds: Set<Long> = emptySet()
     private var currentSearchQuery = ""
+
+    /** true = "Your Groups" tab active, false = "All Kontact Groups". */
+    private var showingYourGroups = true
+    private var currentPage = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -77,21 +86,21 @@ class GroupsActivity : AppCompatActivity() {
         allGroupsErrorText = findViewById(R.id.allGroupsErrorText)
 
         sectionsView = findViewById(R.id.sectionsView)
-        yourGroupsHeader = findViewById(R.id.yourGroupsHeader)
-        yourGroupsChevron = findViewById(R.id.yourGroupsChevron)
-        yourGroupsSubText = findViewById(R.id.yourGroupsSubText)
-        yourGroupsRows = findViewById(R.id.yourGroupsRows)
-        allGroupsHeader = findViewById(R.id.allGroupsHeader)
-        allGroupsChevron = findViewById(R.id.allGroupsChevron)
-        allGroupsSubText = findViewById(R.id.allGroupsSubText)
-        allGroupsRows = findViewById(R.id.allGroupsRows)
+        yourGroupsTab = findViewById(R.id.yourGroupsTab)
+        allGroupsTab = findViewById(R.id.allGroupsTab)
+        activeGroupsSubText = findViewById(R.id.activeGroupsSubText)
+        activeGroupsRows = findViewById(R.id.activeGroupsRows)
+        activeGroupsEmptyText = findViewById(R.id.activeGroupsEmptyText)
+        groupsPagerScroll = findViewById(R.id.groupsPagerScroll)
+        groupsPagerContainer = findViewById(R.id.groupsPagerContainer)
 
         resultsView = findViewById(R.id.resultsView)
         resultsList = findViewById(R.id.resultsList)
         noResultsText = findViewById(R.id.noResultsText)
 
-        wireSectionToggle(yourGroupsHeader, yourGroupsChevron, yourGroupsRows)
-        wireSectionToggle(allGroupsHeader, allGroupsChevron, allGroupsRows)
+        yourGroupsTab.setOnClickListener { switchTab(showYourGroups = true) }
+        allGroupsTab.setOnClickListener { switchTab(showYourGroups = false) }
+        updateTabStyles()
 
         groupSearchInput.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
@@ -122,15 +131,28 @@ class GroupsActivity : AppCompatActivity() {
         currentSearchQuery = ""
     }
 
-    /** Tapping [header] toggles [rows]' visibility and rotates [chevron]. */
-    private fun wireSectionToggle(header: LinearLayout, chevron: ImageView, rows: LinearLayout) {
-        header.tag = false // collapsed by default
-        header.setOnClickListener {
-            val nowOpen = header.tag != true
-            header.tag = nowOpen
-            rows.visibility = if (nowOpen) View.VISIBLE else View.GONE
-            chevron.rotation = if (nowOpen) 180f else 0f
-        }
+    /** Switches the active tab, resets to page 0, and re-renders. */
+    private fun switchTab(showYourGroups: Boolean) {
+        if (showingYourGroups == showYourGroups) return
+        showingYourGroups = showYourGroups
+        currentPage = 0
+        updateTabStyles()
+        applySearch()
+    }
+
+    private fun updateTabStyles() {
+        yourGroupsTab.setBackgroundResource(
+            if (showingYourGroups) R.drawable.tab_selected_background else 0
+        )
+        yourGroupsTab.setTextColor(
+            ContextCompat.getColor(this, if (showingYourGroups) R.color.white else R.color.text_muted)
+        )
+        allGroupsTab.setBackgroundResource(
+            if (!showingYourGroups) R.drawable.tab_selected_background else 0
+        )
+        allGroupsTab.setTextColor(
+            ContextCompat.getColor(this, if (!showingYourGroups) R.color.white else R.color.text_muted)
+        )
     }
 
     private fun loadGroupsSummary() {
@@ -165,16 +187,31 @@ class GroupsActivity : AppCompatActivity() {
 
         groupsCountText.text = "${allGroups.size} groups \u00B7 ${joined.size} joined"
 
-        yourGroupsSubText.text = if (joined.isEmpty()) "None joined yet"
-            else "${joined.size} joined \u00B7 ${kontactWord(totalKontacts)}"
-        allGroupsSubText.text = "${notJoined.size} ${if (notJoined.size == 1) "group" else "groups"}"
-
         if (currentSearchQuery.isEmpty()) {
             sectionsView.visibility = View.VISIBLE
             resultsView.visibility = View.GONE
 
-            renderRows(yourGroupsRows, joined)
-            renderRows(allGroupsRows, notJoined)
+            val activeList = if (showingYourGroups) joined else notJoined
+
+            activeGroupsSubText.text = if (showingYourGroups) {
+                if (joined.isEmpty()) "None joined yet"
+                else "${joined.size} joined \u00B7 ${kontactWord(totalKontacts)}"
+            } else {
+                "${notJoined.size} ${if (notJoined.size == 1) "group" else "groups"}"
+            }
+
+            if (activeList.isEmpty()) {
+                activeGroupsRows.visibility = View.GONE
+                groupsPagerScroll.visibility = View.GONE
+                activeGroupsEmptyText.visibility = View.VISIBLE
+                activeGroupsEmptyText.text = if (showingYourGroups) "None joined yet" else "No groups yet"
+            } else {
+                activeGroupsRows.visibility = View.VISIBLE
+                activeGroupsEmptyText.visibility = View.GONE
+                if (currentPage * ENTRIES_PER_PAGE >= activeList.size) currentPage = 0
+                renderPage(activeGroupsRows, activeList, currentPage, showJoinedIcon = showingYourGroups)
+                renderPager(activeList.size)
+            }
         } else {
             sectionsView.visibility = View.GONE
             resultsView.visibility = View.VISIBLE
@@ -197,13 +234,71 @@ class GroupsActivity : AppCompatActivity() {
 
     private fun kontactWord(count: Long): String = if (count == 1L) "1 kontact" else "$count kontacts"
 
+    /** Clears [container] and inflates only the rows for [page] of [groups], [ENTRIES_PER_PAGE] at a time. */
+    private fun renderPage(container: LinearLayout, groups: List<GroupSummary>, page: Int, showJoinedIcon: Boolean) {
+        val start = page * ENTRIES_PER_PAGE
+        val end = minOf(start + ENTRIES_PER_PAGE, groups.size)
+        if (start >= groups.size) {
+            container.removeAllViews()
+            return
+        }
+        renderRows(container, groups.subList(start, end), showJoinedIcon)
+    }
+
+    /**
+     * Builds the numbered page row (1, 2, 3...) below the active list,
+     * identical pattern to HistoryActivity's pager. Hidden entirely
+     * when everything fits on one page.
+     */
+    private fun renderPager(totalCount: Int) {
+        val pageCount = (totalCount + ENTRIES_PER_PAGE - 1) / ENTRIES_PER_PAGE
+
+        if (pageCount <= 1) {
+            groupsPagerScroll.visibility = View.GONE
+            return
+        }
+
+        groupsPagerScroll.visibility = View.VISIBLE
+        groupsPagerContainer.removeAllViews()
+        val inflater = LayoutInflater.from(this)
+
+        for (pageIndex in 0 until pageCount) {
+            val pageButton = inflater.inflate(R.layout.item_group_page_button, groupsPagerContainer, false) as TextView
+            pageButton.text = (pageIndex + 1).toString()
+            pageButton.setOnClickListener {
+                if (currentPage != pageIndex) {
+                    currentPage = pageIndex
+                    applySearch()
+                }
+            }
+            groupsPagerContainer.addView(pageButton)
+        }
+
+        updatePagerSelection()
+    }
+
+    /** Re-styles every page button so only currentPage shows as selected. */
+    private fun updatePagerSelection() {
+        for (i in 0 until groupsPagerContainer.childCount) {
+            val pageButton = groupsPagerContainer.getChildAt(i) as TextView
+            val isSelected = i == currentPage
+            pageButton.setBackgroundResource(
+                if (isSelected) R.drawable.page_button_selected_background else R.drawable.page_button_default_background
+            )
+            pageButton.setTextColor(
+                ContextCompat.getColor(this, if (isSelected) R.color.white else R.color.vg_dark)
+            )
+        }
+    }
+
     /** Clears [container] and inflates one plain row per group in [groups]. */
-    private fun renderRows(container: LinearLayout, groups: List<GroupSummary>) {
+    private fun renderRows(container: LinearLayout, groups: List<GroupSummary>, showJoinedIcon: Boolean = true) {
         container.removeAllViews()
         val inflater = LayoutInflater.from(this)
 
         for ((index, group) in groups.withIndex()) {
             val row = inflater.inflate(R.layout.item_group_row, container, false)
+            val syncIcon = row.findViewById<ImageView>(R.id.groupRowSyncIcon)
             val title = row.findViewById<TextView>(R.id.groupRowTitle)
             val counts = row.findViewById<TextView>(R.id.groupRowCounts)
             val divider = row.findViewById<View>(R.id.groupRowDivider)
@@ -211,18 +306,19 @@ class GroupsActivity : AppCompatActivity() {
             val isJoined = group.groupId in joinedGroupIds
             title.text = "Group ${group.groupId}"
 
-            if (isJoined) {
+            if (isJoined && showJoinedIcon) {
+                syncIcon.visibility = View.VISIBLE
                 title.setTextColor(ContextCompat.getColor(this, R.color.vg_green_dark))
                 counts.setTextColor(ContextCompat.getColor(this, R.color.vg_green_dark))
-                counts.text = "Joined \u00B7 ${kontactWord(group.homeCount)}"
             } else {
+                syncIcon.visibility = View.GONE
                 title.setTextColor(ContextCompat.getColor(this, R.color.vg_dark))
                 counts.setTextColor(ContextCompat.getColor(this, R.color.text_muted))
-                counts.text = kontactWord(group.homeCount)
             }
+            counts.text = kontactWord(group.homeCount)
 
             // Skip the divider under the last row so the list doesn't end
-            // with a trailing line right before the next section label.
+            // with a trailing line right before the pager/button below.
             divider.visibility = if (index == groups.lastIndex) View.GONE else View.VISIBLE
 
             row.setOnClickListener {
