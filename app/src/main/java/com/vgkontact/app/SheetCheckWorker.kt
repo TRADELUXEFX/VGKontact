@@ -6,19 +6,16 @@ import androidx.work.WorkerParameters
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import java.util.concurrent.TimeUnit
 
 class SheetCheckWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
         return try {
-            val newCount = withContext(Dispatchers.IO) {
-                SheetSync.checkForNewNumbersSync(applicationContext)
-            }
-            if (newCount > 0) {
-                NotificationHelper.showNewNumbersAvailableNotification(applicationContext, newCount)
+            val (submitted, failed, errorDetail) = SheetSync.importAllContactsFromSheetSuspend(applicationContext)
+            
+            if (submitted > 0) {
+                NotificationHelper.showNewNumbersAvailableNotification(applicationContext, submitted)
             }
             Result.success()
         } catch (e: Exception) {
