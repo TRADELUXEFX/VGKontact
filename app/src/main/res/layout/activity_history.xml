@@ -102,12 +102,35 @@
                     android:layout_height="1dp"
                     android:background="@color/stats_card_border" />
 
-                <!-- Referral leaderboard list -->
+                <!-- Referral leaderboard list - one page of rows at a
+                     time, each row given its own bottom divider except
+                     the last, wired in HistoryActivity.renderCurrentPage() -->
                 <LinearLayout
                     android:id="@+id/dayListContainer"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical" />
+
+                <!-- Numbered page row, same pattern/drawables as the old
+                     Groups pager (page_button_selected_background /
+                     page_button_default_background). Hidden entirely
+                     when everything fits on one page. -->
+                <HorizontalScrollView
+                    android:id="@+id/historyPagerScroll"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:scrollbars="none"
+                    android:visibility="gone">
+
+                    <LinearLayout
+                        android:id="@+id/historyPagerContainer"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center" />
+
+                </HorizontalScrollView>
 
             </LinearLayout>
 
