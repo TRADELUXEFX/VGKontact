@@ -29,9 +29,11 @@ import androidx.core.content.ContextCompat
  * it then instead of silently failing. If it's already granted (the normal case),
  * tapping Sync never shows a permission prompt - it just syncs.
  *
- * Groups UI (joined-groups summary + join-more-groups action) has moved off
- * this dashboard entirely into GroupsActivity - this screen now only holds
- * a single "Kontact Groups" button as the entry point to that screen.
+ * The "Increase Contact Limit" button (kontactGroupsButton) goes straight
+ * to UpgradePlanActivity's generic code-redeem screen. There is no group
+ * browser/picker in the app - which groups a code unlocks is decided
+ * entirely by the admin server-side (keys.groups_unlock); the user never
+ * sees or chooses a specific group ID.
  */
 class MainMenuActivity : AppCompatActivity() {
 
