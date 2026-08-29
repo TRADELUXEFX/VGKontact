@@ -43,60 +43,180 @@
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/notification_frequency_desc"
-                android:textSize="12sp"
+                android:text="CHECK FREQUENCY"
+                android:textSize="11sp"
+                android:textStyle="bold"
                 android:textColor="@color/text_muted"
+                android:letterSpacing="0.08"
+                android:gravity="center"
+                android:paddingBottom="6dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/notification_frequency_desc"
+                android:textSize="13sp"
+                android:textColor="@color/vg_dark"
                 android:paddingBottom="20dp"
                 android:gravity="center" />
 
-            <!-- Input container with label and input field - centered -->
+            <TextView
+                android:id="@+id/frequencySummaryText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/freq_summary_pill_background"
+                android:padding="16dp"
+                android:textSize="15sp"
+                android:textColor="@color/vg_green_dark"
+                android:gravity="center"
+                android:layout_marginBottom="18dp"
+                android:text="Notifications sent every 24 hours" />
+
             <LinearLayout
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:paddingBottom="20dp">
+                android:layout_marginBottom="12dp">
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Once every"
-                    android:textSize="16sp"
-                    android:textColor="@color/vg_dark"
-                    android:paddingEnd="8dp" />
-
-                <EditText
-                    android:id="@+id/hoursInputField"
-                    android:layout_width="70dp"
-                    android:layout_height="48dp"
-                    android:inputType="number"
+                <LinearLayout
+                    android:id="@+id/tile1Hour"
+                    android:layout_width="0dp"
+                    android:layout_height="80dp"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="6dp"
+                    android:orientation="vertical"
                     android:gravity="center"
-                    android:textSize="20sp"
-                    android:textStyle="bold"
-                    android:textColor="@color/vg_green"
-                    android:backgroundTint="@color/vg_green"
-                    android:padding="8dp"
-                    android:maxLength="2"
-                    android:hint="0"
-                    android:textColorHint="@color/text_muted" />
+                    android:background="@drawable/freq_tile_default_background"
+                    android:clickable="true"
+                    android:focusable="true">
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="hours"
-                    android:textSize="16sp"
-                    android:textColor="@color/vg_dark"
-                    android:paddingStart="8dp" />
+                    <TextView
+                        android:id="@+id/tile1HourValue"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="1"
+                        android:textSize="22sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/vg_dark" />
+
+                    <TextView
+                        android:id="@+id/tile1HourLabel"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="hour"
+                        android:textSize="12sp"
+                        android:textColor="@color/text_muted" />
+
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/tile6Hours"
+                    android:layout_width="0dp"
+                    android:layout_height="80dp"
+                    android:layout_weight="1"
+                    android:layout_marginStart="6dp"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:background="@drawable/freq_tile_default_background"
+                    android:clickable="true"
+                    android:focusable="true">
+
+                    <TextView
+                        android:id="@+id/tile6HoursValue"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="6"
+                        android:textSize="22sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/vg_dark" />
+
+                    <TextView
+                        android:id="@+id/tile6HoursLabel"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="hours"
+                        android:textSize="12sp"
+                        android:textColor="@color/text_muted" />
+
+                </LinearLayout>
 
             </LinearLayout>
 
-            <TextView
-                android:layout_width="wrap_content"
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:textSize="11sp"
-                android:textColor="@color/text_muted"
-                android:paddingBottom="20dp"
-                android:text="(Max is 24 hours)" />
+                android:orientation="horizontal"
+                android:layout_marginBottom="18dp">
+
+                <LinearLayout
+                    android:id="@+id/tile12Hours"
+                    android:layout_width="0dp"
+                    android:layout_height="80dp"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="6dp"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:background="@drawable/freq_tile_default_background"
+                    android:clickable="true"
+                    android:focusable="true">
+
+                    <TextView
+                        android:id="@+id/tile12HoursValue"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="12"
+                        android:textSize="22sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/vg_dark" />
+
+                    <TextView
+                        android:id="@+id/tile12HoursLabel"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="hours"
+                        android:textSize="12sp"
+                        android:textColor="@color/text_muted" />
+
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/tile24Hours"
+                    android:layout_width="0dp"
+                    android:layout_height="80dp"
+                    android:layout_weight="1"
+                    android:layout_marginStart="6dp"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:background="@drawable/freq_tile_selected_background"
+                    android:clickable="true"
+                    android:focusable="true">
+
+                    <TextView
+                        android:id="@+id/tile24HoursValue"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="24"
+                        android:textSize="22sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/vg_green_dark" />
+
+                    <TextView
+                        android:id="@+id/tile24HoursLabel"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="hours"
+                        android:textSize="12sp"
+                        android:textColor="@color/vg_green_dark" />
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="@color/stats_card_border"
+                android:layout_marginBottom="18dp" />
 
             <Button
                 android:id="@+id/saveFrequencyButton"
