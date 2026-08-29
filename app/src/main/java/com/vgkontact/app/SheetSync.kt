@@ -17,6 +17,8 @@ import java.io.OutputStreamWriter
 import java.net.HttpURLConnection
 import java.net.URL
 import kotlin.concurrent.thread
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 data class DayCount(val date: String, val count: Int)
 
@@ -877,6 +879,57 @@ object SheetSync {
         }
         if (existingPhones.isNotEmpty()) {
             UserPrefs.addSyncedNumbers(context, existingPhones)
+        }
+    }
+
+    suspend fun importAllContactsFromSheetSuspend(context: Context): Triple<Int, Int, String?> {
+        return withContext(Dispatchers.Default) {
+            var submitted = 0
+            var failed = 0
+            var errorDetail: String? = null
+
+            if (!isOnline(context)) {
+                return@withContext Triple(0, 0, "NO_INTERNET")
+            }
+
+            reconcileFromExistingContacts(context)
+            var contactCount = UserPrefs.getContactCounter(context)
+            val newlySynced = HashSet<String>()
+
+            try {
+                val contacts = fetchAllContacts(context)
+                if (contacts == null) {
+                    return@withContext Triple(0, 1, "Failed to fetch contacts from server")
+                }
+
+                val alreadySynced = UserPrefs.getSyncedNumbers(context).map { normalizePhone(it) }.toSet()
+                for ((phone, _) in contacts) {
+                    if (phone.isEmpty() || alreadySynced.contains(normalizePhone(phone))) {
+                        continue
+                    }
+
+                    val candidateName = "VG KONTACT ${contactCount + 1}"
+                    val (ok, err) = addSingleContactDetailed(context, candidateName, phone)
+                    if (ok) {
+                        contactCount++
+                        submitted++
+                        newlySynced.add(phone)
+                    } else {
+                        failed++
+                        if (errorDetail == null) errorDetail = err
+                    }
+                }
+                if (newlySynced.isNotEmpty()) {
+                    UserPrefs.addSyncedNumbers(context, newlySynced)
+                    UserPrefs.setContactCounter(context, contactCount)
+                    UserPrefs.recordSyncedToday(context, newlySynced.size)
+                }
+            } catch (e: Exception) {
+                Log.e("SheetSync", "Error importing contacts", e)
+                failed++
+                errorDetail = e.message ?: e.javaClass.simpleName
+            }
+            Triple(submitted, failed, errorDetail)
         }
     }
 
