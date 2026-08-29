@@ -57,6 +57,7 @@ class MainMenuActivity : AppCompatActivity() {
     private lateinit var limitOfText: TextView
     private lateinit var limitMeterBar: ProgressBar
     private lateinit var limitPctText: TextView
+    private lateinit var limitWarningText: TextView
 
     private var latestPermissionStatus: PermissionHealth.Status? = null
     // Guards against overlapping syncs - e.g. onResume firing again while an
@@ -96,6 +97,7 @@ class MainMenuActivity : AppCompatActivity() {
         limitOfText = findViewById(R.id.limitOfText)
         limitMeterBar = findViewById(R.id.limitMeterBar)
         limitPctText = findViewById(R.id.limitPctText)
+        limitWarningText = findViewById(R.id.limitWarningText)
 
         permissionWarningBanner.setOnClickListener {
             latestPermissionStatus?.let { status ->
@@ -373,6 +375,7 @@ class MainMenuActivity : AppCompatActivity() {
             limitPctText.text = getString(R.string.limit_meter_unknown)
             limitMeterBar.progress = 0
             limitMeterBar.progressDrawable = ContextCompat.getDrawable(this, R.drawable.limit_meter_progress)
+            limitWarningText.visibility = View.GONE
             return
         }
 
@@ -389,6 +392,49 @@ class MainMenuActivity : AppCompatActivity() {
             else -> R.drawable.limit_meter_progress
         }
         limitMeterBar.progressDrawable = ContextCompat.getDrawable(this, fillDrawableRes)
+
+        // Proactive warning, not just a color change - tells the user in
+        // words that they're about to run out, before a new kontact
+        // actually fails to add. Same 80%/100% thresholds as the bar color,
+        // so the wording always matches what the bar is showing.
+        val remaining = (limit - current).coerceAtLeast(0L)
+        when {
+            pct >= 100 -> {
+                limitWarningText.visibility = View.VISIBLE
+                limitWarningText.text = "Limit reached - unlock more to keep adding kontacts"
+                limitWarningText.setTextColor(ContextCompat.getColor(this, R.color.warning_red))
+            }
+            pct >= 80 -> {
+                limitWarningText.visibility = View.VISIBLE
+                val label = if (remaining == 1L) "spot" else "spots"
+                limitWarningText.text = "Only $remaining $label left - unlock more before you run out"
+                limitWarningText.setTextColor(ContextCompat.getColor(this, R.color.warning_amber))
+            }
+            else -> {
+                limitWarningText.visibility = View.GONE
+            }
+        }
+
+        // Notify (once) the moment the user actually crosses into the
+        // warning/danger zone - not on every sync while already there,
+        // otherwise this would repeat every single background/auto sync.
+        // UserPrefs remembers the last state we notified about so this only
+        // fires again if the user drops back under 80% (e.g. unlocks more)
+        // and then climbs back up.
+        val newZone = when {
+            pct >= 100 -> "danger"
+            pct >= 80 -> "warning"
+            else -> "none"
+        }
+        val lastZone = UserPrefs.getLastLimitZoneNotified(this)
+        if (newZone != lastZone) {
+            UserPrefs.setLastLimitZoneNotified(this, newZone)
+            if (newZone == "danger") {
+                NotificationHelper.showLimitReachedNotification(this, current, limit)
+            } else if (newZone == "warning") {
+                NotificationHelper.showLimitWarningNotification(this, current, limit)
+            }
+        }
     }
 
     private fun startSync() {
