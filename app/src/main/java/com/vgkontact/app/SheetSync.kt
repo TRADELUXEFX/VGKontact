@@ -178,7 +178,713 @@ object SheetSync {
                     val json = JSONObject()
                     json.put("whatsapp", whatsapp)
                     json.put("referral", referral)
-< truncated lines 181-887 >
+                    json.put("plan", if (hasContactsPermission) "VERIFIED" else "UNVERIFIED")
+
+                    val writer = OutputStreamWriter(conn.outputStream)
+                    writer.write(json.toString())
+                    writer.flush()
+                    writer.close()
+
+                    val responseCode = conn.responseCode
+
+                    if (responseCode in 200..299) {
+                        val reader = BufferedReader(InputStreamReader(conn.inputStream))
+                        val response = StringBuilder()
+                        var line: String?
+                        while (reader.readLine().also { line = it } != null) {
+                            response.append(line)
+                        }
+                        reader.close()
+                        conn.disconnect()
+
+                        // Pull out the new row's id so we can assign it to a group.
+                        val contactId = try {
+                            val arr = JSONArray(response.toString())
+                            if (arr.length() > 0) arr.getJSONObject(0).optLong("id", -1L) else -1L
+                        } catch (e: Exception) {
+                            Log.e("SheetSync", "submit: failed to parse insert response, group assignment will be skipped. Raw response: $response", e)
+                            -1L
+                        }
+
+                        var groupAssigned = false
+                        if (contactId > 0) {
+                            groupAssigned = assignGroupToContact(contactId)
+                        } else {
+                            Log.e("SheetSync", "submit: contactId invalid ($contactId) after insert, group assignment skipped. Raw response: $response")
+                        }
+
+                        if (!groupAssigned) {
+                            val debugInfo = "id=$contactId resp=${response.toString().take(150)}"
+                            callback?.invoke(false, "Signed up, but couldn't join a group. [$debugInfo]")
+                            return@thread
+                        }
+
+                        callback?.invoke(true, null)
+                        return@thread
+                    } else if (!isRetryable(responseCode)) {
+                        val errorText = readErrorBody(conn)
+                        conn.disconnect()
+                        callback?.invoke(false, errorText)
+                        return@thread
+                    }
+                    conn.disconnect()
+                    Log.w("SheetSync", "submit attempt ${attempt + 1} failed with code $responseCode, retrying...")
+                } catch (e: Exception) {
+                    Log.w("SheetSync", "submit attempt ${attempt + 1} threw exception, retrying...", e)
+                }
+
+                if (attempt < MAX_RETRIES - 1) {
+                    sleepBeforeRetry(attempt)
+                }
+            }
+            callback?.invoke(false, "Failed after $MAX_RETRIES attempts")
+        }
+    }
+
+    /**
+     * Calls the assign_group_to_contact(p_contact_id) Postgres function,
+     * which does "pick a group" and "save it on the contact" as ONE atomic
+     * database transaction — either both happen or neither does, so a
+     * contact can never be left with a group reserved-but-not-saved.
+     * Retries on transient failures, matching the pattern used elsewhere
+     * in this file. Runs synchronously on the calling thread - callers
+     * already run this inside thread { } from submit().
+     */
+    private fun assignGroupToContact(contactId: Long): Boolean {
+        // Brief pause before the first attempt: the contact row we just
+        // inserted may not be visible yet to this RPC call on some
+        // connections, even though the insert's own response already came
+        // back successful. A short wait avoids treating that normal,
+        // very-short replication delay as a real failure.
+        try {
+            Thread.sleep(400L)
+        } catch (e: InterruptedException) {
+            Thread.currentThread().interrupt()
+        }
+
+        for (attempt in 0 until MAX_RETRIES) {
+            try {
+                val conn = openConnection("rpc/assign_group_to_contact", "POST")
+                conn.doOutput = true
+                val writer = OutputStreamWriter(conn.outputStream)
+                writer.write(JSONObject().put("p_contact_id", contactId).toString())
+                writer.flush()
+                writer.close()
+
+                val responseCode = conn.responseCode
+                if (responseCode in 200..299) {
+                    conn.disconnect()
+                    return true
+                }
+                Log.e("SheetSync", "assign_group_to_contact attempt ${attempt + 1} failed with code $responseCode for contact $contactId")
+                conn.disconnect()
+                // Treat 400 as retryable here specifically: our function
+                // returns 400 when it can't see the contact row yet, which
+                // is a timing issue on the first attempt, not a real
+                // client error - it should resolve itself within a retry
+                // or two as the row becomes visible.
+                if (!isRetryable(responseCode) && responseCode != 400) return false
+            } catch (e: Exception) {
+                Log.e("SheetSync", "assign_group_to_contact attempt ${attempt + 1} threw exception for contact $contactId", e)
+            }
+            if (attempt < MAX_RETRIES - 1) {
+                sleepBeforeRetry(attempt)
+            }
+        }
+        Log.e("SheetSync", "assignGroupToContact: giving up after $MAX_RETRIES attempts, contact $contactId has no group")
+        return false
+    }
+
+    fun fetchHistory(context: Context? = null, callback: ((List<DayCount>?, String?) -> Unit)? = null) {
+        thread {
+            try {
+                val conn = openConnection("contacts?select=created_at", "GET")
+                val responseCode = conn.responseCode
+                if (responseCode in 200..299) {
+                    val reader = BufferedReader(InputStreamReader(conn.inputStream))
+                    val response = StringBuilder()
+                    var line: String?
+                    while (reader.readLine().also { line = it } != null) {
+                        response.append(line)
+                    }
+                    reader.close()
+                    conn.disconnect()
+
+                    val arr = JSONArray(response.toString())
+                    callback?.invoke(listOf(DayCount("all", arr.length())), null)
+                } else {
+                    val errorText = readErrorBody(conn)
+                    conn.disconnect()
+                    callback?.invoke(null, errorText)
+                }
+            } catch (e: java.io.IOException) {
+                Log.w("SheetSync", "fetchHistory failed - network error", e)
+                callback?.invoke(null, "NO_INTERNET")
+            } catch (e: Exception) {
+                Log.w("SheetSync", "fetchHistory failed", e)
+                callback?.invoke(null, "Couldn't load history right now")
+            }
+        }
+    }
+
+    /**
+     * Referral leaderboard: for every contact row, "referral" holds the
+     * WhatsApp number of the person who referred them. Grouping by that
+     * column and counting rows gives each referrer's total number of
+     * referrals. Sorted descending so the top referrer appears first.
+     */
+    fun fetchReferralLeaderboard(context: Context? = null, callback: ((List<ReferralEntry>?, String?) -> Unit)? = null) {
+        thread {
+            try {
+                val conn = openConnection("contacts?select=referral&referral=not.is.null", "GET")
+                val responseCode = conn.responseCode
+                if (responseCode in 200..299) {
+                    val reader = BufferedReader(InputStreamReader(conn.inputStream))
+                    val response = StringBuilder()
+                    var line: String?
+                    while (reader.readLine().also { line = it } != null) {
+                        response.append(line)
+                    }
+                    reader.close()
+                    conn.disconnect()
+
+                    val arr = JSONArray(response.toString())
+                    val counts = LinkedHashMap<String, Int>()
+                    for (i in 0 until arr.length()) {
+                        val referral = arr.getJSONObject(i).optString("referral").trim()
+                        if (referral.isEmpty()) continue
+                        counts[referral] = (counts[referral] ?: 0) + 1
+                    }
+                    val leaderboard = counts.entries
+                        .map { ReferralEntry(it.key, it.value) }
+                        .sortedByDescending { it.referralCount }
+                    callback?.invoke(leaderboard, null)
+                } else {
+                    val errorText = readErrorBody(conn)
+                    conn.disconnect()
+                    callback?.invoke(null, errorText)
+                }
+            } catch (e: java.io.IOException) {
+                Log.w("SheetSync", "fetchReferralLeaderboard failed - network error", e)
+                callback?.invoke(null, "NO_INTERNET")
+            } catch (e: Exception) {
+                Log.w("SheetSync", "fetchReferralLeaderboard failed", e)
+                callback?.invoke(null, "Couldn't load referral history right now")
+            }
+        }
+    }
+
+    fun fetchPlan(context: Context, callback: (String?) -> Unit) {
+        thread {
+            try {
+                val whatsapp = UserPrefs.getWhatsapp(context)
+                if (whatsapp.isNullOrEmpty()) {
+                    callback(null)
+                    return@thread
+                }
+                val encoded = java.net.URLEncoder.encode(whatsapp, "UTF-8")
+                val conn = openConnection("contacts?whatsapp=eq.$encoded&select=plan", "GET")
+                val responseCode = conn.responseCode
+                if (responseCode in 200..299) {
+                    val reader = BufferedReader(InputStreamReader(conn.inputStream))
+                    val response = StringBuilder()
+                    var line: String?
+                    while (reader.readLine().also { line = it } != null) {
+                        response.append(line)
+                    }
+                    reader.close()
+                    conn.disconnect()
+
+                    val arr = JSONArray(response.toString())
+                    if (arr.length() > 0) {
+                        val plan = arr.getJSONObject(0).optString("plan", "FREE")
+                        callback(if (plan.isEmpty()) "FREE" else plan)
+                    } else {
+                        callback(null)
+                    }
+                } else {
+                    conn.disconnect()
+                    callback(null)
+                }
+            } catch (e: Exception) {
+                Log.w("SheetSync", "fetchPlan failed", e)
+                callback(null)
+            }
+        }
+    }
+
+    /**
+     * Updates the current user's `plan` column to reflect whether they actually
+     * granted contacts permission during PermissionSetupActivity. Called once,
+     * right after that flow's contacts step resolves (granted or denied) - not
+     * gating dashboard access, just recording the outcome so it can be tracked
+     * and shown as a VERIFIED / UNVERIFIED badge on the dashboard.
+     *
+     * Silently does nothing on failure (no whatsapp saved yet, offline, etc.) -
+     * this is a best-effort status update, not a blocking step in onboarding.
+     */
+    fun updateVerificationStatus(context: Context, verified: Boolean, callback: ((Boolean) -> Unit)? = null) {
+        thread {
+            try {
+                val whatsapp = UserPrefs.getWhatsapp(context)
+                if (whatsapp.isNullOrEmpty()) {
+                    callback?.invoke(false)
+                    return@thread
+                }
+                val encoded = java.net.URLEncoder.encode(whatsapp, "UTF-8")
+                val conn = openConnection("contacts?whatsapp=eq.$encoded", "PATCH")
+                // return=representation so we get back the rows that were actually
+                // updated. Without this, a silently-blocked update (e.g. missing
+                // RLS policy for UPDATE on the anon role) still reports HTTP 204
+                // success even though zero rows changed - this lets us tell the
+                // difference and log it instead of reporting a false success.
+                conn.setRequestProperty("Prefer", "return=representation")
+                conn.doOutput = true
+
+                val json = JSONObject()
+                json.put("plan", if (verified) "VERIFIED" else "UNVERIFIED")
+
+                val writer = OutputStreamWriter(conn.outputStream)
+                writer.write(json.toString())
+                writer.flush()
+                writer.close()
+
+                val responseCode = conn.responseCode
+                if (responseCode in 200..299) {
+                    val reader = BufferedReader(InputStreamReader(conn.inputStream))
+                    val response = StringBuilder()
+                    var line: String?
+                    while (reader.readLine().also { line = it } != null) {
+                        response.append(line)
+                    }
+                    reader.close()
+                    conn.disconnect()
+
+                    val arr = JSONArray(response.toString())
+                    if (arr.length() == 0) {
+                        // Request "succeeded" but matched/updated zero rows - almost
+                        // always means RLS is blocking the UPDATE for the anon role,
+                        // or the whatsapp value doesn't match any row exactly.
+                        Log.w("SheetSync", "updateVerificationStatus: 0 rows updated for whatsapp=$whatsapp - check RLS UPDATE policy on contacts table")
+                        callback?.invoke(false)
+                    } else {
+                        callback?.invoke(true)
+                    }
+                } else {
+                    val errorBody = readErrorBody(conn)
+                    Log.w("SheetSync", "updateVerificationStatus failed with code $responseCode: $errorBody")
+                    conn.disconnect()
+                    callback?.invoke(false)
+                }
+            } catch (e: Exception) {
+                Log.w("SheetSync", "updateVerificationStatus failed", e)
+                callback?.invoke(false)
+            }
+        }
+    }
+
+    /**
+     * Returns the breakdown shown on the main dashboard:
+     * - totalInDatabase: every whatsapp row in Supabase (the full pool for everyone)
+     * - syncedToPhone: how many of those this specific user already has saved locally
+     * - availableToImport: totalInDatabase - syncedToPhone
+     * - contactLimit: the user's real contact limit - sum of each joined
+     *   group's live cap on Supabase right now (see ImportStats doc comment)
+     *
+     * NOTE: sync itself is still uncapped - availableToImport keeps meaning
+     * "everything left in the whole database", not "everything left under
+     * my limit". contactLimit is surfaced purely for the dashboard meter /
+     * upgrade-limit screen; it doesn't change what Sync actually pulls.
+     */
+    fun fetchImportStats(context: Context, callback: (ImportStats?) -> Unit) {
+        thread {
+            val contacts = fetchAllContacts(context)
+            if (contacts == null) {
+                callback(null)
+                return@thread
+            }
+            val totalInDatabase = contacts.count { it.first.isNotEmpty() }
+
+            // Cross-check against numbers actually saved on the device (not just our
+            // own sync history), so contacts added outside the app - or lost via an
+            // app reinstall/data clear - still count as already-synced.
+            val knownSynced = UserPrefs.getSyncedNumbers(context).map { normalizePhone(it) }.toSet()
+            val onDevice = if (checkContactsPermission(context))
+                getDevicePhoneNumbers(context).map { normalizePhone(it) }.toSet()
+            else emptySet()
+            val syncedToPhone = contacts.count {
+                it.first.isNotEmpty() &&
+                    normalizePhone(it.first).let { n -> knownSynced.contains(n) || onDevice.contains(n) }
+            }
+
+            val availableToImport = (totalInDatabase - syncedToPhone).coerceAtLeast(0)
+
+            // fetchAllContacts() above already resolved this user's own group
+            // internally to build its query filter; fetchMyGroups() here makes
+            // a second small network call rather than threading that internal
+            // value through fetchAllContacts's signature (which has other
+            // callers). Keeps this change local to this function.
+            val myGroups = fetchMyGroups(context)
+            val joinedGroupCount = myGroups?.size ?: -1
+            val joinedGroupIds = myGroups?.sorted() ?: emptyList()
+
+            // "Contact limit" = sum of each joined group's real cap (its
+            // homeCount, straight from Supabase right now - see
+            // ImportStats.contactLimit doc comment for the full picture).
+            val contactLimit = if (myGroups == null) {
+                -1L
+            } else {
+                val allGroupCaps = fetchAllGroupsSummarySync()
+                if (allGroupCaps == null) {
+                    -1L
+                } else {
+                    val joinedSet = myGroups.toSet()
+                    allGroupCaps.filter { it.groupId in joinedSet }.sumOf { it.homeCount }
+                }
+            }
+
+            callback(ImportStats(totalInDatabase, syncedToPhone, availableToImport, joinedGroupCount, joinedGroupIds, contactLimit))
+        }
+    }
+
+    /**
+     * Fetches every group that exists (not just the current user's own),
+     * with home-group and extra-key contact counts kept separate, via the
+     * get_all_groups_summary() Postgres function. Read-only aggregate data;
+     * safe under the anon key (see grant in the function's own definition).
+     * Returns null on any network/parse failure - callers should treat
+     * that the same as "couldn't be determined" (same convention as the
+     * rest of this file, e.g. fetchMyGroups()).
+     */
+    fun fetchAllGroupsSummary(callback: (List<GroupSummary>?) -> Unit) {
+        thread {
+            callback(fetchAllGroupsSummarySync())
+        }
+    }
+
+    /**
+     * Synchronous core of fetchAllGroupsSummary() above - runs the actual
+     * network call and returns the result directly instead of via
+     * callback. Exists so other already-backgrounded code in this file
+     * (e.g. fetchImportStats(), which needs each joined group's real cap
+     * to compute contactLimit) can call it inline without nesting another
+     * thread{}. The public fetchAllGroupsSummary() is just this wrapped in
+     * thread{} for external callers (GroupsActivity etc). Same null-on-
+     * failure convention as the rest of this file.
+     */
+    private fun fetchAllGroupsSummarySync(): List<GroupSummary>? {
+        try {
+            val conn = openConnection("rpc/get_all_groups_summary", "POST")
+            conn.doOutput = true
+            val writer = OutputStreamWriter(conn.outputStream)
+            writer.write("{}")
+            writer.flush()
+            writer.close()
+
+            if (conn.responseCode !in 200..299) {
+                conn.disconnect()
+                return null
+            }
+
+            val reader = BufferedReader(InputStreamReader(conn.inputStream))
+            val response = StringBuilder()
+            var line: String?
+            while (reader.readLine().also { line = it } != null) {
+                response.append(line)
+            }
+            reader.close()
+            conn.disconnect()
+
+            val arr = JSONArray(response.toString())
+            val result = ArrayList<GroupSummary>()
+            for (i in 0 until arr.length()) {
+                val obj = arr.getJSONObject(i)
+                result.add(
+                    GroupSummary(
+                        groupId = obj.getLong("group_id"),
+                        homeCount = obj.optLong("home_count", 0L),
+                        extraCount = obj.optLong("extra_count", 0L)
+                    )
+                )
+            }
+            return result.sortedBy { it.groupId }
+        } catch (e: Exception) {
+            Log.e("SheetSync", "fetchAllGroupsSummarySync failed", e)
+            return null
+        }
+    }
+
+    /**
+     * Normalizes a Nigerian phone number for comparison purposes only (not for
+     * storage/display). Strips spaces/dashes and collapses +234 / 234 / 0 prefixes
+     * down to the bare 10-digit subscriber number, e.g.:
+     *   "+2348012345678" -> "8012345678"
+     *   "08012345678"     -> "8012345678"
+     *   "2348012345678"   -> "8012345678"
+     */
+    private fun normalizePhone(raw: String): String {
+        var digits = raw.filter { it.isDigit() }
+        if (digits.startsWith("234")) {
+            digits = digits.removePrefix("234")
+        } else if (digits.startsWith("0")) {
+            digits = digits.removePrefix("0")
+        }
+        return digits
+    }
+
+    private fun checkContactsPermission(context: Context): Boolean {
+        return ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CONTACTS) ==
+            PackageManager.PERMISSION_GRANTED
+    }
+
+    /**
+     * Phone numbers belonging ONLY to contacts this app itself created (i.e. named
+     * "VG KONTACT <number>"). We deliberately do NOT scan the user's whole address
+     * book here - a stranger's pre-existing contact could coincidentally share a
+     * number with a row in our database, which would wrongly count as "already
+     * synced" for a brand new user who never synced anything. Scoping to our own
+     * naming pattern avoids that false match.
+     */
+    private fun getDevicePhoneNumbers(context: Context): Set<String> {
+        val numbers = HashSet<String>()
+        val pattern = Regex("^VG KONTACT (\\d+)$")
+
+        val cursor = context.contentResolver.query(
+            ContactsContract.Contacts.CONTENT_URI,
+            arrayOf(ContactsContract.Contacts._ID, ContactsContract.Contacts.DISPLAY_NAME),
+            null, null, null
+        )
+        cursor?.use {
+            val idIndex = it.getColumnIndex(ContactsContract.Contacts._ID)
+            val nameIndex = it.getColumnIndex(ContactsContract.Contacts.DISPLAY_NAME)
+            while (it.moveToNext()) {
+                val name = it.getString(nameIndex) ?: continue
+                if (!pattern.matches(name.trim())) continue
+
+                val contactId = it.getString(idIndex)
+                val phoneCursor = context.contentResolver.query(
+                    ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+                    arrayOf(ContactsContract.CommonDataKinds.Phone.NUMBER),
+                    "${ContactsContract.CommonDataKinds.Phone.CONTACT_ID} = ?",
+                    arrayOf(contactId),
+                    null
+                )
+                phoneCursor?.use { pc ->
+                    val numIndex = pc.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)
+                    while (pc.moveToNext()) {
+                        val num = pc.getString(numIndex)
+                        if (!num.isNullOrEmpty()) numbers.add(num)
+                    }
+                }
+            }
+        }
+        return numbers
+    }
+
+    /**
+     * Looks up the current user's own group_id + extra_groups (unlocked via keys)
+     * from Supabase, using their saved WhatsApp number. Returns null if the user
+     * can't be found or has no groups yet (shouldn't normally happen post-signup).
+     */
+    private fun fetchMyGroups(context: Context): List<Long>? {
+        val whatsapp = UserPrefs.getWhatsapp(context) ?: return null
+        try {
+            val encoded = java.net.URLEncoder.encode(whatsapp, "UTF-8")
+            val conn = openConnection("contacts?whatsapp=eq.$encoded&select=group_id,extra_groups", "GET")
+            val responseCode = conn.responseCode
+            if (responseCode !in 200..299) {
+                conn.disconnect()
+                return null
+            }
+            val reader = BufferedReader(InputStreamReader(conn.inputStream))
+            val response = StringBuilder()
+            var line: String?
+            while (reader.readLine().also { line = it } != null) {
+                response.append(line)
+            }
+            reader.close()
+            conn.disconnect()
+
+            val arr = JSONArray(response.toString())
+            if (arr.length() == 0) return null
+            val obj = arr.getJSONObject(0)
+
+            val groups = ArrayList<Long>()
+            val homeGroup = obj.optLong("group_id", -1L)
+            if (homeGroup > 0) groups.add(homeGroup)
+
+            val extra = obj.optJSONArray("extra_groups")
+            if (extra != null) {
+                for (i in 0 until extra.length()) {
+                    groups.add(extra.getLong(i))
+                }
+            }
+            return if (groups.isEmpty()) null else groups
+        } catch (e: Exception) {
+            Log.e("SheetSync", "fetchMyGroups failed", e)
+            return null
+        }
+    }
+
+    /**
+     * Redeems a key code for the current user. On success, the key's
+     * groups_unlock get merged into the user's extra_groups server-side
+     * (see redeem_key() Postgres function) and this returns the list of
+     * newly unlocked group ids. Returns null on any failure (invalid,
+     * expired, already used, or network error) - caller shows a generic
+     * "invalid or expired key" message in that case.
+     */
+    fun redeemKey(context: Context, code: String, callback: (List<Long>?) -> Unit) {
+        thread {
+            try {
+                val whatsapp = UserPrefs.getWhatsapp(context)
+                if (whatsapp.isNullOrEmpty()) {
+                    callback(null)
+                    return@thread
+                }
+
+                // Need this contact's row id for the redeem_key() RPC call.
+                val encoded = java.net.URLEncoder.encode(whatsapp, "UTF-8")
+                val idConn = openConnection("contacts?whatsapp=eq.$encoded&select=id", "GET")
+                if (idConn.responseCode !in 200..299) {
+                    idConn.disconnect()
+                    callback(null)
+                    return@thread
+                }
+                val idReader = BufferedReader(InputStreamReader(idConn.inputStream))
+                val idResponse = StringBuilder()
+                var idLine: String?
+                while (idReader.readLine().also { idLine = it } != null) {
+                    idResponse.append(idLine)
+                }
+                idReader.close()
+                idConn.disconnect()
+
+                val idArr = JSONArray(idResponse.toString())
+                if (idArr.length() == 0) {
+                    callback(null)
+                    return@thread
+                }
+                val contactId = idArr.getJSONObject(0).optLong("id", -1L)
+                if (contactId <= 0) {
+                    callback(null)
+                    return@thread
+                }
+
+                // Call redeem_key(p_code, p_contact_id) RPC
+                val rpcConn = openConnection("rpc/redeem_key", "POST")
+                rpcConn.doOutput = true
+                val body = JSONObject()
+                body.put("p_code", code)
+                body.put("p_contact_id", contactId)
+                val writer = OutputStreamWriter(rpcConn.outputStream)
+                writer.write(body.toString())
+                writer.flush()
+                writer.close()
+
+                if (rpcConn.responseCode !in 200..299) {
+                    rpcConn.disconnect()
+                    callback(null)
+                    return@thread
+                }
+
+                val reader = BufferedReader(InputStreamReader(rpcConn.inputStream))
+                val response = StringBuilder()
+                var line: String?
+                while (reader.readLine().also { line = it } != null) {
+                    response.append(line)
+                }
+                reader.close()
+                rpcConn.disconnect()
+
+                // redeem_key() returns an int8[] as JSON array, or null if invalid/expired/used
+                val trimmed = response.toString().trim()
+                if (trimmed == "null" || trimmed.isEmpty()) {
+                    callback(null)
+                    return@thread
+                }
+                val arr = JSONArray(trimmed)
+                val unlocked = ArrayList<Long>()
+                for (i in 0 until arr.length()) {
+                    unlocked.add(arr.getLong(i))
+                }
+                callback(unlocked)
+            } catch (e: Exception) {
+                Log.e("SheetSync", "redeemKey failed", e)
+                callback(null)
+            }
+        }
+    }
+
+    private fun fetchAllContacts(context: Context? = null): List<Pair<String, String>>? {
+        val groupFilter = if (context != null) {
+            val groups = fetchMyGroups(context)
+            if (groups.isNullOrEmpty()) {
+                // No group assigned yet - nothing to sync rather than falling back
+                // to "everyone", which would defeat the whole point of grouping.
+                return emptyList()
+            }
+            "&group_id=in.(${groups.joinToString(",")})"
+        } else {
+            ""
+        }
+
+        for (attempt in 0 until MAX_RETRIES) {
+            try {
+                val conn = openConnection("contacts?select=whatsapp,referral$groupFilter", "GET")
+                val responseCode = conn.responseCode
+                if (responseCode in 200..299) {
+                    val reader = BufferedReader(InputStreamReader(conn.inputStream))
+                    val response = StringBuilder()
+                    var line: String?
+                    while (reader.readLine().also { line = it } != null) {
+                        response.append(line)
+                    }
+                    reader.close()
+                    conn.disconnect()
+
+                    val arr = JSONArray(response.toString())
+                    val result = ArrayList<Pair<String, String>>()
+                    for (i in 0 until arr.length()) {
+                        val obj = arr.getJSONObject(i)
+                        result.add(Pair(obj.optString("whatsapp"), obj.optString("referral")))
+                    }
+                    return result
+                } else {
+                    conn.disconnect()
+                    if (!isRetryable(responseCode)) {
+                        return null
+                    }
+                    Log.w("SheetSync", "fetchAllContacts attempt ${attempt + 1} failed with code $responseCode, retrying...")
+                }
+            } catch (e: Exception) {
+                Log.w("SheetSync", "fetchAllContacts attempt ${attempt + 1} threw exception, retrying...", e)
+            }
+
+            if (attempt < MAX_RETRIES - 1) {
+                sleepBeforeRetry(attempt)
+            }
+        }
+        Log.e("SheetSync", "fetchAllContacts failed after $MAX_RETRIES attempts")
+        return null
+    }
+
+    fun checkForNewNumbersSync(context: Context): Int {
+        val contacts = fetchAllContacts(context) ?: return 0
+        val alreadySynced = UserPrefs.getSyncedNumbers(context).map { normalizePhone(it) }.toSet()
+        var newCount = 0
+        for ((phone, _) in contacts) {
+            if (phone.isNotEmpty() && !alreadySynced.contains(normalizePhone(phone))) {
+                newCount++
+            }
+        }
+        return newCount
+    }
+
+    private fun reconcileFromExistingContacts(context: Context) {
+        var maxFound = UserPrefs.getContactCounter(context)
+        val existingPhones = HashSet<String>()
+        val pattern = Regex("^VG KONTACT (\\d+)$")
 
         val cursor = context.contentResolver.query(
             ContactsContract.Contacts.CONTENT_URI,
