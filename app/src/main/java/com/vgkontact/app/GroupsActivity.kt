@@ -3,8 +3,11 @@ package com.vgkontact.app
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
 import android.view.LayoutInflater
 import android.widget.Button
+import android.widget.EditText
 import android.widget.HorizontalScrollView
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -36,6 +39,7 @@ class GroupsActivity : AppCompatActivity() {
     private lateinit var allGroupsErrorText: TextView
     private lateinit var groupsPagerScroll: HorizontalScrollView
     private lateinit var groupsPagerContainer: LinearLayout
+    private lateinit var groupSearchInput: EditText
 
     private val CONTACT_US_WHATSAPP_NUMBER = "09110321143"
 
@@ -50,7 +54,9 @@ class GroupsActivity : AppCompatActivity() {
     private val GROUPS_PER_PAGE = 5
 
     private var allGroups: List<GroupSummary> = emptyList()
+    private var filteredGroups: List<GroupSummary> = emptyList()
     private var currentPage = 0
+    private var currentSearchQuery = ""
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -67,6 +73,17 @@ class GroupsActivity : AppCompatActivity() {
         allGroupsErrorText = findViewById(R.id.allGroupsErrorText)
         groupsPagerScroll = findViewById(R.id.groupsPagerScroll)
         groupsPagerContainer = findViewById(R.id.groupsPagerContainer)
+        groupSearchInput = findViewById(R.id.groupSearchInput)
+
+        // Setup search listener
+        groupSearchInput.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                currentSearchQuery = s?.toString()?.trim() ?: ""
+                applySearch()
+            }
+        })
 
         joinGroupsButton.setOnClickListener {
             startActivity(Intent(this, UpgradePlanActivity::class.java))
@@ -87,6 +104,9 @@ class GroupsActivity : AppCompatActivity() {
         // right away.
         loadGroupsSummary()
         loadAllGroups()
+        // Clear search field when returning to this screen
+        groupSearchInput.setText("")
+        currentSearchQuery = ""
     }
 
     private fun loadGroupsSummary() {
@@ -122,6 +142,18 @@ class GroupsActivity : AppCompatActivity() {
         // preserve whatever page the user was on, since the group list/
         // counts may have changed.
         currentPage = 0
+        applySearch()
+    }
+
+    private fun applySearch() {
+        filteredGroups = if (currentSearchQuery.isEmpty()) {
+            allGroups
+        } else {
+            allGroups.filter { group ->
+                group.groupId.toString().contains(currentSearchQuery, ignoreCase = true)
+            }
+        }
+        currentPage = 0
         renderCurrentPage()
         renderPager()
     }
@@ -131,10 +163,21 @@ class GroupsActivity : AppCompatActivity() {
         val inflater = LayoutInflater.from(this)
 
         val start = currentPage * GROUPS_PER_PAGE
-        val end = minOf(start + GROUPS_PER_PAGE, allGroups.size)
-        if (start >= allGroups.size) return
+        val end = minOf(start + GROUPS_PER_PAGE, filteredGroups.size)
+        if (start >= filteredGroups.size) return
 
-        for (group in allGroups.subList(start, end)) {
+        // Show "no results" message if search yielded nothing
+        if (filteredGroups.isEmpty() && currentSearchQuery.isNotEmpty()) {
+            val noResultsText = TextView(this)
+            noResultsText.text = "No groups match \"$currentSearchQuery\""
+            noResultsText.textSize = 14f
+            noResultsText.setTextColor(ContextCompat.getColor(this, R.color.text_muted))
+            noResultsText.setPadding(0, 16, 0, 16)
+            allGroupsContainer.addView(noResultsText)
+            return
+        }
+
+        for (group in filteredGroups.subList(start, end)) {
             val row = inflater.inflate(R.layout.item_group_summary, allGroupsContainer, false)
             val title = row.findViewById<TextView>(R.id.groupRowTitle)
             val counts = row.findViewById<TextView>(R.id.groupRowCounts)
@@ -159,7 +202,7 @@ class GroupsActivity : AppCompatActivity() {
      * button with nothing else to switch to would just be clutter.
      */
     private fun renderPager() {
-        val pageCount = (allGroups.size + GROUPS_PER_PAGE - 1) / GROUPS_PER_PAGE
+        val pageCount = (filteredGroups.size + GROUPS_PER_PAGE - 1) / GROUPS_PER_PAGE
 
         if (pageCount <= 1) {
             groupsPagerScroll.visibility = android.view.View.GONE
