@@ -58,7 +58,11 @@ class UpgradePlanActivity : AppCompatActivity() {
         upgradeSubtitleText.text = getString(R.string.upgrade_plan_coming_soon)
 
         redeemKeyButton.setOnClickListener {
-            val code = keyCodeInput.text.toString().trim()
+            // Codes are generated as VGK-XXXX-XXXX (uppercase) by the admin
+            // panel, but redeem_key() does a case-sensitive match - so
+            // normalize whatever the user typed to uppercase here rather
+            // than requiring them to match case exactly.
+            val code = keyCodeInput.text.toString().trim().uppercase()
             if (code.isEmpty()) {
                 Toast.makeText(this, getString(R.string.key_redeem_empty), Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
@@ -85,6 +89,10 @@ class UpgradePlanActivity : AppCompatActivity() {
                         // user sees their new, higher limit immediately
                         // without leaving this screen.
                         loadCurrentLimit()
+                        // Also pull in the newly-unlocked group's contacts
+                        // right away, instead of making the user go back to
+                        // the dashboard and tap Sync manually.
+                        syncAfterRedeem()
                     } else {
                         Toast.makeText(this, getString(R.string.key_redeem_invalid), Toast.LENGTH_LONG).show()
                     }
@@ -132,5 +140,38 @@ class UpgradePlanActivity : AppCompatActivity() {
     private fun setLoading(loading: Boolean) {
         redeemKeyButton.isEnabled = !loading
         redeemProgressBar.visibility = if (loading) View.VISIBLE else View.GONE
+    }
+
+    /**
+     * Called right after a successful key redemption. Pulls in the newly
+     * unlocked group's contacts immediately, instead of leaving the user's
+     * synced count stale until they go back to the dashboard and tap Sync
+     * manually. If contacts permission isn't granted, this silently does
+     * nothing - the user can still sync manually from the dashboard like
+     * before, so this is never worse than the old behavior, just better
+     * when permission is already in place (the common case).
+     */
+    private fun syncAfterRedeem() {
+        val hasPermission = ContextCompat.checkSelfPermission(
+            this, android.Manifest.permission.WRITE_CONTACTS
+        ) == android.content.pm.PackageManager.PERMISSION_GRANTED &&
+            ContextCompat.checkSelfPermission(
+                this, android.Manifest.permission.READ_CONTACTS
+            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+
+        if (!hasPermission) return
+
+        Toast.makeText(this, "Syncing your new kontacts…", Toast.LENGTH_SHORT).show()
+        SheetSync.importAllContactsFromSheet(this) { submitted, failed, errorDetail ->
+            runOnUiThread {
+                // Refresh the limit card again now that syncedToPhone has
+                // moved too, not just contactLimit from the redeem itself.
+                loadCurrentLimit()
+                if (errorDetail == null && submitted > 0) {
+                    val label = if (submitted == 1) "number" else "numbers"
+                    Toast.makeText(this, "$submitted new $label added", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
     }
 }
