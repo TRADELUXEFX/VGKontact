@@ -1,67 +1,53 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    One row inside the Kontact Groups "one box" UI - used for both the
-    "Your Groups" section, the "All Kontact Groups" section, and the
-    flat search-results list. Styling (background, text color, checkmark
-    badge) is switched at bind time in GroupsActivity depending on
-    whether the group is joined, matching .rect-row / .rect-row.joined
-    in kontact_groups_onebox.html.
+    One group row, styled like a plain Profile field row: no pill
+    background, no per-row rounded corners - just text on the card's
+    own background with a thin divider underneath (added at bind time,
+    skipped for the last row in a list).
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/groupRowRoot"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="horizontal"
-    android:gravity="center_vertical"
-    android:background="@drawable/group_row_background"
+    android:orientation="vertical"
     android:foreground="?attr/selectableItemBackground"
     android:clickable="true"
-    android:focusable="true"
-    android:paddingStart="13dp"
-    android:paddingEnd="13dp"
-    android:paddingTop="11dp"
-    android:paddingBottom="11dp">
+    android:focusable="true">
 
     <LinearLayout
-        android:layout_width="0dp"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_weight="1"
         android:orientation="horizontal"
-        android:gravity="center_vertical">
-
-        <ImageView
-            android:id="@+id/groupRowCheck"
-            android:layout_width="15dp"
-            android:layout_height="15dp"
-            android:layout_marginEnd="7dp"
-            android:background="@drawable/group_check_mini_background"
-            android:padding="3.5dp"
-            android:src="@drawable/ic_check"
-            app:tint="@color/vg_green_dark"
-            android:visibility="gone"
-            tools:visibility="visible" />
+        android:gravity="center_vertical"
+        android:paddingTop="12dp"
+        android:paddingBottom="12dp">
 
         <TextView
             android:id="@+id/groupRowTitle"
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:textSize="12.5sp"
+            android:layout_weight="1"
+            android:textSize="14sp"
             android:textStyle="bold"
             android:textColor="@color/vg_dark"
-            android:fontFamily="@font/baloo2"
             tools:text="Group 1" />
+
+        <TextView
+            android:id="@+id/groupRowCounts"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="end"
+            android:textSize="13sp"
+            android:textColor="@color/text_muted"
+            tools:text="5 kontacts" />
 
     </LinearLayout>
 
-    <TextView
-        android:id="@+id/groupRowCounts"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:gravity="end"
-        android:textSize="11.5sp"
-        android:textColor="@color/text_muted"
-        tools:text="Joined \u00B7 5 kontacts" />
+    <View
+        android:id="@+id/groupRowDivider"
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/stats_card_border" />
 
 </LinearLayout>
