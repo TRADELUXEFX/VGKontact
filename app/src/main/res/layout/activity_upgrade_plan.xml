@@ -16,6 +16,7 @@
 -->
 <androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/apk/res-android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/stats_card_fill"
@@ -75,6 +76,70 @@
                 android:textColor="@color/text_muted"
                 android:gravity="center"
                 android:layout_marginBottom="22dp" />
+
+            <!-- "Your Current Limit" reminder card - shows the same
+                 syncedToPhone / contactLimit numbers as the dashboard
+                 meter, loaded fresh here via SheetSync.fetchImportStats()
+                 (see UpgradePlanActivity.loadCurrentLimit()) so it's
+                 accurate no matter how the user got to this screen. -->
+            <LinearLayout
+                android:id="@+id/currentLimitCard"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@drawable/card_background"
+                android:padding="20dp"
+                android:layout_marginBottom="24dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/current_limit_label"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:textAllCaps="true"
+                    android:letterSpacing="0.05"
+                    android:textColor="@color/text_muted" />
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:orientation="horizontal"
+                    android:gravity="bottom">
+
+                    <TextView
+                        android:id="@+id/currentLimitNumberText"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textSize="28sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/vg_dark"
+                        android:fontFamily="@font/baloo2"
+                        tools:text="15" />
+
+                    <TextView
+                        android:id="@+id/currentLimitOfText"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="6dp"
+                        android:textSize="15sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/text_muted"
+                        tools:text="/ 250 contacts" />
+
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="@string/current_limit_sub"
+                    android:textSize="12.5sp"
+                    android:lineSpacingMultiplier="1.4"
+                    android:textColor="@color/text_muted" />
+
+            </LinearLayout>
 
             <LinearLayout
                 android:layout_width="match_parent"
