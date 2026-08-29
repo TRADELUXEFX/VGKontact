@@ -78,20 +78,19 @@ class UpgradePlanActivity : AppCompatActivity() {
                 runOnUiThread {
                     setLoading(false)
                     if (unlockedGroups != null && unlockedGroups.isNotEmpty()) {
-                        Toast.makeText(
-                            this,
-                            getString(R.string.key_redeem_success, unlockedGroups.size),
-                            Toast.LENGTH_LONG
-                        ).show()
                         keyCodeInput.text?.clear()
                         // Newly unlocked groups just raised contactLimit
                         // server-side - refresh the reminder card so the
                         // user sees their new, higher limit immediately
                         // without leaving this screen.
                         loadCurrentLimit()
-                        // Also pull in the newly-unlocked group's contacts
-                        // right away, instead of making the user go back to
-                        // the dashboard and tap Sync manually.
+                        // Pull in the newly-unlocked group's contacts right
+                        // away, instead of making the user go back to the
+                        // dashboard and tap Sync manually. The only success
+                        // feedback the user sees is the "X contacts added"
+                        // toast from this sync, not a separate "unlocked N
+                        // groups" message - the user doesn't need to know
+                        // about groups at all.
                         syncAfterRedeem()
                     } else {
                         Toast.makeText(this, getString(R.string.key_redeem_invalid), Toast.LENGTH_LONG).show()
@@ -161,15 +160,14 @@ class UpgradePlanActivity : AppCompatActivity() {
 
         if (!hasPermission) return
 
-        Toast.makeText(this, "Syncing your new kontacts…", Toast.LENGTH_SHORT).show()
         SheetSync.importAllContactsFromSheet(this) { submitted, failed, errorDetail ->
             runOnUiThread {
                 // Refresh the limit card again now that syncedToPhone has
                 // moved too, not just contactLimit from the redeem itself.
                 loadCurrentLimit()
                 if (errorDetail == null && submitted > 0) {
-                    val label = if (submitted == 1) "number" else "numbers"
-                    Toast.makeText(this, "$submitted new $label added", Toast.LENGTH_SHORT).show()
+                    val label = if (submitted == 1) "contact" else "contacts"
+                    Toast.makeText(this, "$submitted $label added", Toast.LENGTH_LONG).show()
                 }
             }
         }
