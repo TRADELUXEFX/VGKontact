@@ -39,6 +39,10 @@
             android:orientation="vertical"
             android:padding="20dp">
 
+            <!-- Single card matching the Profile screen exactly: one
+                 card_background, uppercase muted labels, 1dp divider
+                 lines between sections, no nested pill boxes or mixed
+                 corner radii. -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -46,6 +50,7 @@
                 android:background="@drawable/card_background"
                 android:padding="20dp">
 
+                <!-- Totals label, same style as Profile's field labels -->
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -72,6 +77,8 @@
                     android:background="@color/stats_card_border"
                     android:layout_marginBottom="16dp" />
 
+                <!-- Search - plain boxed field, same visual weight as the
+                     referral-code box on Profile, not a pill. -->
                 <EditText
                     android:id="@+id/groupSearchInput"
                     android:layout_width="match_parent"
@@ -88,6 +95,10 @@
                     android:imeOptions="actionDone"
                     android:layout_marginBottom="16dp" />
 
+                <!-- Default view: a two-way tab switch (Your Groups / All
+                     Kontact Groups) - only one list is ever visible at a
+                     time, driven by GroupsActivity.switchTab(). Reuses
+                     the same numbered pager pattern as HistoryActivity. -->
                 <LinearLayout
                     android:id="@+id/sectionsView"
                     android:layout_width="match_parent"
@@ -161,6 +172,9 @@
                         android:visibility="gone"
                         tools:text="None joined yet" />
 
+                    <!-- Numbered page row, same pattern/drawables as
+                         HistoryActivity's pager. Hidden entirely when
+                         the active tab's list fits on one page. -->
                     <HorizontalScrollView
                         android:id="@+id/groupsPagerScroll"
                         android:layout_width="match_parent"
@@ -180,6 +194,8 @@
 
                 </LinearLayout>
 
+                <!-- Search-active view: one flat list, same divider-row
+                     style as everything else. -->
                 <LinearLayout
                     android:id="@+id/resultsView"
                     android:layout_width="match_parent"
@@ -219,6 +235,8 @@
 
             </LinearLayout>
 
+            <!-- Action buttons sit below the card, same pattern Profile
+                 uses for its Contact Us button. -->
             <Button
                 android:id="@+id/joinGroupsButton"
                 android:layout_width="match_parent"
@@ -257,3 +275,4 @@
     </LinearLayout>
 
 </androidx.core.widget.NestedScrollView>
+
