@@ -161,32 +161,6 @@
                 android:background="@color/stats_card_border"
                 android:layout_marginBottom="16dp" />
 
-            <!-- 4. Total Kontacts Registered -->
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/profile_label_total_kontacts"
-                android:textSize="11sp"
-                android:textAllCaps="true"
-                android:letterSpacing="0.05"
-                android:textColor="@color/text_muted" />
-
-            <TextView
-                android:id="@+id/totalKontactsText"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:textSize="17sp"
-                android:textStyle="bold"
-                android:textColor="@color/vg_dark"
-                android:paddingBottom="16dp"
-                tools:text="5" />
-
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:background="@color/stats_card_border"
-                android:layout_marginBottom="16dp" />
-
             <!-- 5. My Referral Code -->
             <TextView
                 android:layout_width="match_parent"
