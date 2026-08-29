@@ -249,6 +249,21 @@ class MainMenuActivity : AppCompatActivity() {
         if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.TIRAMISU) {
             return // not applicable pre-Android 13
         }
+
+        // Same permanently-denied check as requestContactsPermission() -
+        // once the user has denied this twice (or checked "Don't ask
+        // again"), Android stops showing the popup entirely and silently
+        // no-ops instead. Route to Settings in that case instead of a
+        // dead-end tap.
+        val permanentlyDenied =
+            ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.POST_NOTIFICATIONS) == false &&
+            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+
+        if (permanentlyDenied) {
+            openAppSettings("Enable Notifications under Permissions, then come back")
+            return
+        }
+
         ActivityCompat.requestPermissions(
             this,
             arrayOf(Manifest.permission.POST_NOTIFICATIONS),
@@ -301,15 +316,15 @@ class MainMenuActivity : AppCompatActivity() {
      * the Permissions screen isn't possible generically, but the app details
      * page is one tap away from it and is the standard fallback everywhere.
      */
-    private fun openAppSettings() {
+    private fun openAppSettings(instruction: String = "Enable Contacts under Permissions, then come back") {
         try {
             val intent = Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
                 data = Uri.fromParts("package", packageName, null)
             }
             startActivity(intent)
-            Toast.makeText(this, "Enable Contacts under Permissions, then come back", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, instruction, Toast.LENGTH_LONG).show()
         } catch (e: Exception) {
-            Toast.makeText(this, "Couldn't open Settings - please enable Contacts permission manually", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "Couldn't open Settings - please enable it manually", Toast.LENGTH_LONG).show()
         }
     }
 
