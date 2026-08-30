@@ -26,6 +26,7 @@
     <string name="menu_profile">My Profile</string>
     <string name="menu_kontact_groups">Kontact Groups</string>
     <string name="menu_increase_contact_limit">Increase Contact Limit</string>
+    <string name="menu_share_app">Share App</string>
     <string name="contact_limit_label">Contact Limit</string>
     <string name="limit_meter_unknown">Contact limit unavailable right now</string>
     <string name="current_limit_label">Your Current Limit</string>
