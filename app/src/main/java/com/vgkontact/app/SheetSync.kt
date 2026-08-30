@@ -69,6 +69,24 @@ data class GroupSummary(
 // One row of the real per-group cap, straight from groups.max_users on
 // Supabase - this is the group's actual capacity, NOT a headcount. Used
 // only to compute ImportStats.contactLimit (see its doc comment).
+// One row of the campaign_progress view - a single active campaign's
+// status for the current user. qualifyingReferrals counts people whose
+// `referral` matches this user's whatsapp AND who reached the campaign's
+// trigger_stage - i.e. real, qualifying referrals, not just anyone who
+// typed in their number as a referrer.
+data class CampaignProgress(
+    val campaignId: Long,
+    val campaignName: String,
+    val triggerStage: Int,
+    val requiredReferrals: Int,
+    val rewardGroupId: Long,
+    val qualifyingReferrals: Int,
+    val alreadyClaimed: Boolean
+) {
+    val isEligibleToClaim: Boolean
+        get() = !alreadyClaimed && qualifyingReferrals >= requiredReferrals
+}
+
 data class GroupCap(
     val groupId: Long,
     val maxUsers: Long
@@ -380,6 +398,129 @@ object SheetSync {
             } catch (e: Exception) {
                 Log.w("SheetSync", "fetchReferralLeaderboard failed", e)
                 callback?.invoke(null, "Couldn't load referral history right now")
+            }
+        }
+    }
+
+    /**
+     * Fetches every active campaign's progress for the current user, straight
+     * from the campaign_progress view (which does all the counting server-side
+     * - see campaign_migration_v2_claim.sql). Returns an empty list if the
+     * user has no whatsapp saved yet or on any error - callers should treat
+     * that the same as "no campaigns to show" rather than a hard failure,
+     * since this is a supplementary/promotional screen, not core sync.
+     */
+    fun fetchCampaignProgress(context: Context, callback: (List<CampaignProgress>?, String?) -> Unit) {
+        thread {
+            try {
+                val whatsapp = UserPrefs.getWhatsapp(context)
+                if (whatsapp.isNullOrEmpty()) {
+                    callback(null, "No user registered yet")
+                    return@thread
+                }
+                val encoded = java.net.URLEncoder.encode(whatsapp, "UTF-8")
+                val conn = openConnection(
+                    "campaign_progress?whatsapp=eq.$encoded&select=campaign_id,campaign_name,trigger_stage,required_referrals,reward_group_id,qualifying_referrals,already_claimed",
+                    "GET"
+                )
+                val responseCode = conn.responseCode
+                if (responseCode in 200..299) {
+                    val reader = BufferedReader(InputStreamReader(conn.inputStream))
+                    val response = StringBuilder()
+                    var line: String?
+                    while (reader.readLine().also { line = it } != null) {
+                        response.append(line)
+                    }
+                    reader.close()
+                    conn.disconnect()
+
+                    val arr = JSONArray(response.toString())
+                    val results = mutableListOf<CampaignProgress>()
+                    for (i in 0 until arr.length()) {
+                        val obj = arr.getJSONObject(i)
+                        results.add(
+                            CampaignProgress(
+                                campaignId = obj.optLong("campaign_id"),
+                                campaignName = obj.optString("campaign_name"),
+                                triggerStage = obj.optInt("trigger_stage"),
+                                requiredReferrals = obj.optInt("required_referrals"),
+                                rewardGroupId = obj.optLong("reward_group_id"),
+                                qualifyingReferrals = obj.optInt("qualifying_referrals"),
+                                alreadyClaimed = obj.optBoolean("already_claimed")
+                            )
+                        )
+                    }
+                    callback(results, null)
+                } else {
+                    val errorText = readErrorBody(conn)
+                    conn.disconnect()
+                    callback(null, errorText)
+                }
+            } catch (e: java.io.IOException) {
+                Log.w("SheetSync", "fetchCampaignProgress failed - network error", e)
+                callback(null, "NO_INTERNET")
+            } catch (e: Exception) {
+                Log.w("SheetSync", "fetchCampaignProgress failed", e)
+                callback(null, "Couldn't load campaigns right now")
+            }
+        }
+    }
+
+    /**
+     * Calls claim_campaign_reward(whatsapp, campaign_id) via Postgres RPC.
+     * The function re-checks eligibility itself server-side (never trusts
+     * that the app's cached CampaignProgress is still accurate) - so this is
+     * safe to call directly from a "Claim" button tap with no admin step.
+     *
+     * Returns the unlocked group_id on success, or null if the claim was
+     * rejected (already claimed, not eligible, or the campaign was paused
+     * since the screen loaded). The UI should treat null as "couldn't claim
+     * right now" and prompt a refresh, rather than assuming the tap failed
+     * for a network reason.
+     */
+    fun claimCampaignReward(context: Context, campaignId: Long, callback: (Long?, String?) -> Unit) {
+        thread {
+            try {
+                val whatsapp = UserPrefs.getWhatsapp(context)
+                if (whatsapp.isNullOrEmpty()) {
+                    callback(null, "No user registered yet")
+                    return@thread
+                }
+                val conn = openConnection("rpc/claim_campaign_reward", "POST")
+                conn.doOutput = true
+                val body = JSONObject().apply {
+                    put("p_whatsapp", whatsapp)
+                    put("p_campaign_id", campaignId)
+                }
+                OutputStreamWriter(conn.outputStream).use { it.write(body.toString()) }
+
+                val responseCode = conn.responseCode
+                if (responseCode in 200..299) {
+                    val reader = BufferedReader(InputStreamReader(conn.inputStream))
+                    val response = StringBuilder()
+                    var line: String?
+                    while (reader.readLine().also { line = it } != null) {
+                        response.append(line)
+                    }
+                    reader.close()
+                    conn.disconnect()
+
+                    val text = response.toString().trim()
+                    // Postgres returns `null` (bare, no quotes) for an ineligible
+                    // claim, or a bare integer for the unlocked group_id.
+                    val unlockedGroupId = if (text.isEmpty() || text == "null") null else text.toLongOrNull()
+                    callback(unlockedGroupId, null)
+                } else {
+                    val errorText = readErrorBody(conn)
+                    conn.disconnect()
+                    callback(null, errorText)
+                }
+            } catch (e: java.io.IOException) {
+                Log.w("SheetSync", "claimCampaignReward failed - network error", e)
+                callback(null, "NO_INTERNET")
+            } catch (e: Exception) {
+                Log.w("SheetSync", "claimCampaignReward failed", e)
+                callback(null, "Couldn't claim right now")
             }
         }
     }
