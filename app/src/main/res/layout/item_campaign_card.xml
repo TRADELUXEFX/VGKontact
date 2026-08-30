@@ -16,43 +16,68 @@
     android:padding="18dp"
     android:layout_marginBottom="12dp">
 
-    <!-- Plain-language description of the reward, e.g. "Get 5 friends to
-         register on this app and unlock 20 new WhatsApp status viewers".
-         Built entirely in Kotlin from the campaign's required_referrals
-         and reward group size - never shows the campaign's internal name,
-         group id, or trigger stage. -->
-    <TextView
-        android:id="@+id/campaignDescriptionText"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:textSize="13sp"
-        android:lineSpacingExtra="4dp"
-        android:textColor="@color/text_secondary"
-        android:layout_marginBottom="12dp"
-        tools:text="Get 5 friends to register on this app and unlock 20 new WhatsApp status viewers" />
-
+    <!-- Top row: "Refer N friends" on the left, reward pill on the right
+         (e.g. "+20 viewers"). Both built in Kotlin from the campaign's
+         required_referrals and reward group size - never shows the
+         campaign's internal name, group id, or trigger stage. -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:layout_marginBottom="6dp">
+        android:gravity="center_vertical"
+        android:layout_marginBottom="14dp">
 
         <TextView
+            android:id="@+id/campaignDescriptionText"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="@string/label_friends_registered"
-            android:textSize="12sp"
-            android:textColor="@color/text_muted" />
+            android:textSize="15sp"
+            android:textColor="@color/vg_dark"
+            tools:text="Refer 5 friends" />
+
+        <TextView
+            android:id="@+id/campaignRewardBadge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingStart="14dp"
+            android:paddingEnd="14dp"
+            android:paddingTop="6dp"
+            android:paddingBottom="6dp"
+            android:background="@drawable/reward_badge_background"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:textColor="@color/vg_dark"
+            tools:text="+20 viewers" />
+
+    </LinearLayout>
+
+    <!-- Big progress number, e.g. "3" + "of 5 friends registered" -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="bottom"
+        android:layout_marginBottom="10dp">
 
         <TextView
             android:id="@+id/campaignProgressCountText"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textSize="13sp"
+            android:textSize="28sp"
             android:textStyle="bold"
             android:textColor="@color/vg_dark"
-            tools:text="3 of 5" />
+            tools:text="3" />
+
+        <TextView
+            android:id="@+id/campaignProgressLabelText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_marginBottom="3dp"
+            android:textSize="14sp"
+            android:textColor="@color/text_muted"
+            tools:text="of 5 friends registered" />
 
     </LinearLayout>
 
