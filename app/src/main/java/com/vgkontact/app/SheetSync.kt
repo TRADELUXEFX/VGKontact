@@ -494,6 +494,102 @@ object SheetSync {
     }
 
     /**
+     * Reports this user's live 0-3 setup stage (see PermissionHealth.Status.stage)
+     * to the database every time it's checked, and separately stamps the
+     * *first ever* time each stage was reached with a permanent timestamp
+     * that never moves backwards - even as the live stage number itself
+     * goes up and down over time.
+     *
+     * Two different things are written here, for two different jobs:
+     *  - setup_stage: live, overwritten every call, always reflects right
+     *    now. This is what shows "where is this person currently at."
+     *  - first_reached_stage_1_at / _2_at / _3_at: each stamped exactly
+     *    once, the first time that stage is ever hit, and never touched
+     *    again after that. These are what the admin panel is expected to
+     *    use for anything reward-related, since they can't un-happen.
+     *
+     * This function does not decide or apply any reward - it only reports
+     * the raw facts. Reward rules live entirely in the admin panel.
+     */
+    fun reportSetupStage(context: Context, stage: Int, callback: ((Boolean) -> Unit)? = null) {
+        thread {
+            try {
+                val whatsapp = UserPrefs.getWhatsapp(context)
+                if (whatsapp.isNullOrEmpty()) {
+                    callback?.invoke(false)
+                    return@thread
+                }
+                val encoded = java.net.URLEncoder.encode(whatsapp, "UTF-8")
+
+                // Always update the live stage number, regardless of
+                // whether it went up or down since last time.
+                val json = JSONObject()
+                json.put("setup_stage", stage)
+
+                // Also stamp whichever "first reached stage N" columns this
+                // stage number qualifies for. Each one is only written if it
+                // is still empty (see stampFirstReachedIfNull below), so a
+                // milestone already reached in the past is never overwritten.
+                val nowIso = java.time.Instant.now().toString()
+
+                val conn = openConnection("contacts?whatsapp=eq.$encoded", "PATCH")
+                conn.doOutput = true
+                val writer = OutputStreamWriter(conn.outputStream)
+                writer.write(json.toString())
+                writer.flush()
+                writer.close()
+                val responseCode = conn.responseCode
+                conn.disconnect()
+
+                if (responseCode !in 200..299) {
+                    Log.w("SheetSync", "reportSetupStage: live stage update failed with code $responseCode")
+                    callback?.invoke(false)
+                    return@thread
+                }
+
+                // Now stamp any newly-reached milestones - each PATCH only
+                // targets its own column while that column is still null,
+                // so a milestone already reached in the past is left alone.
+                if (stage >= 1) stampFirstReachedIfNull(encoded, "first_reached_stage_1_at", nowIso)
+                if (stage >= 2) stampFirstReachedIfNull(encoded, "first_reached_stage_2_at", nowIso)
+                if (stage >= 3) stampFirstReachedIfNull(encoded, "first_reached_stage_3_at", nowIso)
+
+                callback?.invoke(true)
+            } catch (e: Exception) {
+                Log.w("SheetSync", "reportSetupStage failed", e)
+                callback?.invoke(false)
+            }
+        }
+    }
+
+    /**
+     * Stamps a single "first reached stage N" column with the given
+     * timestamp, but only for rows where that column is still null - so
+     * this is safe to call every time the stage is checked without ever
+     * overwriting a milestone that was already reached in the past.
+     */
+    private fun stampFirstReachedIfNull(encodedWhatsapp: String, column: String, nowIso: String) {
+        try {
+            val conn = openConnection("contacts?whatsapp=eq.$encodedWhatsapp&$column=is.null", "PATCH")
+            conn.doOutput = true
+            val json = JSONObject()
+            json.put(column, nowIso)
+            val writer = OutputStreamWriter(conn.outputStream)
+            writer.write(json.toString())
+            writer.flush()
+            writer.close()
+            val responseCode = conn.responseCode
+            if (responseCode !in 200..299) {
+                val errorBody = readErrorBody(conn)
+                Log.w("SheetSync", "stampFirstReachedIfNull($column) failed with code $responseCode: $errorBody")
+            }
+            conn.disconnect()
+        } catch (e: Exception) {
+            Log.w("SheetSync", "stampFirstReachedIfNull($column) failed", e)
+        }
+    }
+
+    /**
      * Returns the breakdown shown on the main dashboard:
      * - totalInDatabase: every whatsapp row in Supabase (the full pool for everyone)
      * - syncedToPhone: how many of those this specific user already has saved locally
