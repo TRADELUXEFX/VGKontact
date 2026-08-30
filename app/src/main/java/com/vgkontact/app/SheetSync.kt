@@ -793,40 +793,54 @@ object SheetSync {
 
             val availableToImport = (totalInDatabase - syncedToPhone).coerceAtLeast(0)
 
-            // fetchAllContacts() above already resolved this user's own group
-            // internally to build its query filter; fetchMyGroups() here makes
-            // a second small network call rather than threading that internal
-            // value through fetchAllContacts's signature (which has other
-            // callers). Keeps this change local to this function.
-            val myGroups = fetchMyGroups(context)
-            val joinedGroupCount = myGroups?.size ?: -1
-            val joinedGroupIds = myGroups?.sorted() ?: emptyList()
+            // Single source of truth for this user's joined groups: home
+            // group + extra_groups from one fetchMyGroupsSplit() call.
+            // Previously this also called fetchMyGroups() separately to
+            // compute contactLimit, which meant two independent network
+            // calls to the same contacts row and two independent sums
+            // that could disagree (e.g. if a group cap lookup silently
+            // dropped a group in one path but not the other) - that
+            // divergence is what was hiding the Free plan / Referral
+            // bonus breakdown even when contactLimit displayed fine.
+            val groupsSplit = fetchMyGroupsSplit(context)
+            val joinedGroupIds = groupsSplit?.let { (home, extra) ->
+                (listOfNotNull(home) + extra).sorted()
+            } ?: emptyList()
+            val joinedGroupCount = if (groupsSplit != null) joinedGroupIds.size else -1
 
             // "Contact limit" = sum of each joined group's real cap - its
             // max_users column, straight from Supabase right now - see
             // ImportStats.contactLimit doc comment for the full picture.
             // Also split into baseLimit/bonusLimit (home group vs
             // extra_groups) for the dashboard breakdown - see
-            // ImportStats.baseLimit doc comment. Reuses one
-            // fetchAllGroupCapsSync() call for both.
-            val allGroupCaps = if (myGroups != null) fetchAllGroupCapsSync() else null
-            val contactLimit = if (myGroups == null || allGroupCaps == null) {
-                -1L
-            } else {
-                val joinedSet = myGroups.toSet()
-                allGroupCaps.filter { it.groupId in joinedSet }.sumOf { it.maxUsers }
-            }
-
-            val groupsSplit = fetchMyGroupsSplit(context)
+            // ImportStats.baseLimit doc comment. Both totals are derived
+            // from the same joinedGroupIds/capsById below so they can
+            // never disagree.
+            val allGroupCaps = if (groupsSplit != null) fetchAllGroupCapsSync() else null
             val (baseLimit, bonusLimit) = if (groupsSplit == null || allGroupCaps == null) {
                 Pair(-1L, -1L)
             } else {
                 val capsById = allGroupCaps.associateBy { it.groupId }
                 val (homeGroup, extraGroups) = groupsSplit
-                val base = homeGroup?.let { capsById[it]?.maxUsers } ?: 0L
-                val bonus = extraGroups.mapNotNull { capsById[it]?.maxUsers }.sum()
+                // Log (rather than silently drop) any joined group whose
+                // cap is missing from allGroupCaps, so a stale/deleted
+                // group_id shows up in logs instead of just quietly
+                // shrinking the bonus to 0.
+                val base = homeGroup?.let {
+                    capsById[it]?.maxUsers ?: run {
+                        Log.w("SheetSync", "home group $it has no matching cap in allGroupCaps")
+                        0L
+                    }
+                } ?: 0L
+                val bonus = extraGroups.sumOf {
+                    capsById[it]?.maxUsers ?: run {
+                        Log.w("SheetSync", "extra group $it has no matching cap in allGroupCaps")
+                        0L
+                    }
+                }
                 Pair(base, bonus)
             }
+            val contactLimit = if (baseLimit < 0L || bonusLimit < 0L) -1L else baseLimit + bonusLimit
 
             callback(ImportStats(totalInDatabase, syncedToPhone, availableToImport, joinedGroupCount, joinedGroupIds, contactLimit, baseLimit, bonusLimit))
         }
