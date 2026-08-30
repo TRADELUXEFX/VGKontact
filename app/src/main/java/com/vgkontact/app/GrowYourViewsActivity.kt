@@ -12,23 +12,25 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 
 /**
- * "Grow your views" - referral milestone screen. Entered from a new
- * dashboard button (see MainMenuActivity wiring notes in the handoff
- * doc). Shows:
+ * "Grow your views" - repeating referral milestone screen. Entered
+ * from a dashboard button (see MainMenuActivity wiring). Shows:
  *   1. The user's real current contact limit (same numbers/meter style
  *      as the dashboard, via SheetSync.fetchImportStats)
  *   2. A share button for their invite link
- *   3. One card per active campaign (SheetSync.fetchCampaignProgress),
- *      each in plain language - no mention of "campaign", "group", or
- *      "stage" anywhere in the UI text. A card's Claim button is only
- *      enabled once that campaign's isEligibleToClaim is true.
+ *   3. One card per active campaign (SheetSync.fetchMyCampaignStatus),
+ *      each showing live progress like "3 of 5 friends" and a button
+ *      that's enabled once the next milestone is reached.
  *
- * Tapping Claim calls SheetSync.claimCampaignReward, which hits
- * claim_campaign_reward() on Supabase - a server-side function that
- * re-checks eligibility itself, so this is safe to wire directly to a
- * button tap with no admin approval step. On success, this screen
- * reloads both the limit meter and the campaign list, so the user sees
- * their new, higher limit immediately.
+ * FINAL DESIGN (agreed): campaigns are self-serve and repeating.
+ * There is ONE plain reusable code per campaign (not locked to any
+ * phone number). The app computes live progress itself from
+ * qualifying_referrals vs nextTarget - no admin lookup per user.
+ * Tapping "Unlock reward" calls SheetSync.claimCampaignMilestone(),
+ * which re-checks eligibility server-side and redeems the shared
+ * code. On success we show a simple inline success state (no code
+ * text ever shown on screen, since the code is shared/reusable and
+ * displaying it would just be something to screenshot and pass
+ * around), then the card resets to count toward the next milestone.
  */
 class GrowYourViewsActivity : AppCompatActivity() {
 
@@ -94,7 +96,7 @@ class GrowYourViewsActivity : AppCompatActivity() {
         campaignCardsContainer.removeAllViews()
         noCampaignsText.visibility = View.GONE
 
-        SheetSync.fetchCampaignProgress(this) { list, error ->
+        SheetSync.fetchMyCampaignStatus(this) { list, error ->
             runOnUiThread {
                 progressBar.visibility = View.GONE
                 if (list == null) {
@@ -117,81 +119,86 @@ class GrowYourViewsActivity : AppCompatActivity() {
     }
 
     /**
-     * Builds one card per campaign via item_campaign_card.xml, entirely
-     * in plain language - "friends" and "status viewers", never
-     * "campaign", "group", or "stage". A campaign the user already
-     * claimed is skipped, since there's nothing left to show them.
+     * Builds one card per active campaign via item_campaign_card.xml.
+     * Shows real live progress ("3 of 5 friends") using
+     * qualifyingReferrals / nextTarget from CampaignStatus. The button
+     * is enabled ("Unlock reward") once readyToClaim is true, disabled
+     * ("Keep referring") otherwise, or a permanent "Claimed" state for
+     * a non-repeating campaign that's already been used.
      */
-    private fun renderCampaignCards(campaigns: List<CampaignProgress>) {
+    private fun renderCampaignCards(campaigns: List<CampaignStatus>) {
         campaignCardsContainer.removeAllViews()
         val inflater = LayoutInflater.from(this)
-        var visibleCount = 0
 
         for (campaign in campaigns) {
-            if (campaign.alreadyClaimed) continue
-            visibleCount++
-
             val card = inflater.inflate(R.layout.item_campaign_card, campaignCardsContainer, false)
 
             val descriptionText = card.findViewById<TextView>(R.id.campaignDescriptionText)
             val progressCountText = card.findViewById<TextView>(R.id.campaignProgressCountText)
             val progressBarView = card.findViewById<ProgressBar>(R.id.campaignProgressBar)
-            val claimButton = card.findViewById<Button>(R.id.campaignClaimButton)
+            val actionButton = card.findViewById<Button>(R.id.campaignClaimButton)
 
-            // rewardGroupId's size (max_users) is what the user actually
-            // gets - but that number lives on the groups table, not on
-            // CampaignProgress. Until that's threaded through, show the
-            // referral requirement plainly and let the claim result speak
-            // for itself via the limit meter jumping after a successful
-            // claim. See handoff notes for wiring rewardGroupId -> its
-            // real max_users if you want the exact number shown here too.
-            descriptionText.text = "Get ${campaign.requiredReferrals} friends to register on this " +
-                "app and unlock more WhatsApp status viewers"
+            descriptionText.text = "Refer friends to unlock more WhatsApp status viewers"
+            progressCountText.visibility = View.VISIBLE
+            progressBarView.visibility = View.VISIBLE
 
-            val current = campaign.qualifyingReferrals.coerceAtMost(campaign.requiredReferrals)
-            progressCountText.text = "$current of ${campaign.requiredReferrals}"
-            val pct = if (campaign.requiredReferrals <= 0) 0
-                else ((current * 100) / campaign.requiredReferrals).coerceIn(0, 100)
-            progressBarView.progress = pct
+            val target = campaign.nextTarget
+            progressCountText.text = "${campaign.qualifyingReferrals} of $target friends"
+            progressBarView.max = target
+            progressBarView.progress = campaign.qualifyingReferrals.coerceAtMost(target)
 
-            if (campaign.isEligibleToClaim) {
-                claimButton.isEnabled = true
-                claimButton.text = getString(R.string.btn_claim_views)
-                claimButton.alpha = 1f
-            } else {
-                claimButton.isEnabled = false
-                claimButton.alpha = 0.5f
-                val remaining = (campaign.requiredReferrals - campaign.qualifyingReferrals).coerceAtLeast(0)
-                claimButton.text = "Refer $remaining more to claim views"
-            }
-
-            claimButton.setOnClickListener {
-                claimButton.isEnabled = false
-                claimButton.text = "Claiming..."
-                SheetSync.claimCampaignReward(this, campaign.campaignId) { unlockedGroupId, error ->
-                    runOnUiThread {
-                        if (unlockedGroupId != null) {
-                            Toast.makeText(this, "Views unlocked!", Toast.LENGTH_SHORT).show()
-                            loadLimitMeter()
-                            loadCampaigns()
-                        } else {
-                            Toast.makeText(
-                                this,
-                                "Couldn't claim right now - please try again",
-                                Toast.LENGTH_SHORT
-                            ).show()
-                            claimButton.isEnabled = true
-                            claimButton.text = getString(R.string.btn_claim_views)
-                        }
-                    }
+            when {
+                campaign.fullyClaimed -> {
+                    actionButton.isEnabled = false
+                    actionButton.alpha = 0.5f
+                    actionButton.text = "Claimed"
+                    actionButton.setOnClickListener(null)
+                }
+                campaign.readyToClaim -> {
+                    actionButton.isEnabled = true
+                    actionButton.alpha = 1f
+                    actionButton.text = "Unlock reward"
+                    actionButton.setOnClickListener { claimMilestone(campaign, actionButton) }
+                }
+                else -> {
+                    actionButton.isEnabled = false
+                    actionButton.alpha = 0.5f
+                    actionButton.text = "Keep referring"
+                    actionButton.setOnClickListener(null)
                 }
             }
 
             campaignCardsContainer.addView(card)
         }
+    }
 
-        if (visibleCount == 0) {
-            noCampaignsText.visibility = View.VISIBLE
+    /**
+     * Taps "Unlock reward" -> claimCampaignMilestone() re-checks
+     * eligibility and redeems the campaign's shared code server-side.
+     * On success: simple success toast (no code shown on screen - see
+     * class doc), then reload so the card resets toward the next
+     * milestone. On failure: generic error, nothing changes.
+     */
+    private fun claimMilestone(campaign: CampaignStatus, actionButton: Button) {
+        if (!SheetSync.isOnline(this)) {
+            Toast.makeText(this, "No internet connection", Toast.LENGTH_SHORT).show()
+            return
+        }
+        actionButton.isEnabled = false
+        actionButton.text = "Unlocking..."
+
+        SheetSync.claimCampaignMilestone(this, campaign.campaignId) { unlockedGroups ->
+            runOnUiThread {
+                if (unlockedGroups != null && unlockedGroups.isNotEmpty()) {
+                    Toast.makeText(this, "Reward unlocked! Your extra status viewer slots are now active.", Toast.LENGTH_LONG).show()
+                    loadLimitMeter()
+                    loadCampaigns()
+                } else {
+                    Toast.makeText(this, "Couldn't unlock right now. Please try again.", Toast.LENGTH_LONG).show()
+                    actionButton.isEnabled = true
+                    actionButton.text = "Unlock reward"
+                }
+            }
         }
     }
 
