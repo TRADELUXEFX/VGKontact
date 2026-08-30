@@ -68,4 +68,14 @@
     <string name="profile_label_my_referral_code">My Referral Code</string>
     <string name="profile_referral_code_hint">Share this so others can enter it when they sign up</string>
     <string name="btn_copy">COPY</string>
+
+    <string name="title_grow_your_views">Grow your views</string>
+    <string name="subtitle_grow_your_views">Refer friends, get more status views</string>
+    <string name="label_your_status_viewers">Your status viewers</string>
+    <string name="btn_share_invite_link">Share invite link</string>
+    <string name="label_earn_more_views">Get more status views</string>
+    <string name="empty_no_active_campaigns">No active rewards right now — check back soon.</string>
+    <string name="label_friends_registered">Friends registered</string>
+    <string name="btn_claim_views">Claim views</string>
+    <string name="menu_grow_your_views">Grow your views</string>
 </resources>
