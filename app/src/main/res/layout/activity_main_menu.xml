@@ -389,6 +389,23 @@
                 app:cornerRadius="16dp" />
 
             <Button
+                android:id="@+id/growYourViewsButton"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:layout_marginTop="12dp"
+                android:text="@string/menu_grow_your_views"
+                android:textAllCaps="true"
+                android:letterSpacing="0.02"
+                android:textStyle="bold"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                app:strokeColor="@color/primary_light"
+                android:textColor="@color/primary_light"
+                app:icon="@drawable/ic_history"
+                app:iconTint="@color/primary_light"
+                app:iconGravity="textStart"
+                app:cornerRadius="16dp" />
+
+            <Button
                 android:id="@+id/referralHistoryButton"
                 android:layout_width="match_parent"
                 android:layout_height="56dp"
