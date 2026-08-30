@@ -141,6 +141,13 @@ class ProfileActivity : AppCompatActivity() {
         val status = PermissionHealth.check(this)
         val isVerified = status.contactsGranted && status.notificationsGranted && status.batteryExempted
 
+        // Same live stage report as MainMenuActivity - Profile is another
+        // place the dashboard's permission state gets checked, so it needs
+        // to report too, or the stage in the database could go stale
+        // whenever a user only ever opens Profile and not the main
+        // dashboard in a given session.
+        SheetSync.reportSetupStage(this, status.stage)
+
         if (isVerified) {
             verificationStatusBadge.text = "Verified"
             verificationStatusBadge.setTextColor(ContextCompat.getColor(this, R.color.vg_green))
