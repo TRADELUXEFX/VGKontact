@@ -60,6 +60,9 @@ class MainMenuActivity : AppCompatActivity() {
     private lateinit var limitMeterBar: ProgressBar
     private lateinit var limitPctText: TextView
     private lateinit var limitWarningText: TextView
+    private lateinit var limitBreakdownBlock: android.widget.LinearLayout
+    private lateinit var limitBaseText: TextView
+    private lateinit var limitBonusText: TextView
 
     private var latestPermissionStatus: PermissionHealth.Status? = null
     // Guards against overlapping syncs - e.g. onResume firing again while an
@@ -102,6 +105,9 @@ class MainMenuActivity : AppCompatActivity() {
         limitMeterBar = findViewById(R.id.limitMeterBar)
         limitPctText = findViewById(R.id.limitPctText)
         limitWarningText = findViewById(R.id.limitWarningText)
+        limitBreakdownBlock = findViewById(R.id.limitBreakdownBlock)
+        limitBaseText = findViewById(R.id.limitBaseText)
+        limitBonusText = findViewById(R.id.limitBonusText)
 
         permissionWarningBanner.setOnClickListener {
             latestPermissionStatus?.let { status ->
@@ -400,7 +406,7 @@ class MainMenuActivity : AppCompatActivity() {
                 statsProgressBar.visibility = View.GONE
                 statsContent.visibility = View.VISIBLE
                 if (stats != null) {
-                    updateLimitMeter(stats.syncedToPhone, stats.contactLimit)
+                    updateLimitMeter(stats.syncedToPhone, stats.contactLimit, stats.baseLimit, stats.bonusLimit)
                 }
                 // else: network/stats failure - leave the last-known values on
                 // screen rather than overwriting them with zeros/placeholders.
@@ -436,7 +442,7 @@ class MainMenuActivity : AppCompatActivity() {
         }
     }
 
-    private fun updateLimitMeter(current: Int, limit: Long) {
+    private fun updateLimitMeter(current: Int, limit: Long, baseLimit: Long = -1L, bonusLimit: Long = -1L) {
         if (limit < 0L) {
             limitCurrentText.text = "--"
             limitOfText.text = "/ --"
@@ -444,11 +450,24 @@ class MainMenuActivity : AppCompatActivity() {
             limitMeterBar.progress = 0
             limitMeterBar.progressDrawable = ContextCompat.getDrawable(this, R.drawable.limit_meter_progress)
             limitWarningText.visibility = View.GONE
+            limitBreakdownBlock.visibility = View.GONE
             return
         }
 
         limitCurrentText.text = current.toString()
         limitOfText.text = "/ $limit"
+
+        // Breakdown row (Free plan / Referral bonus) - only shown once
+        // both halves are known and there's an actual bonus to show,
+        // so a brand-new free user with no referral/redeemed groups
+        // yet doesn't see a confusing "+0" row.
+        if (baseLimit >= 0L && bonusLimit > 0L) {
+            limitBreakdownBlock.visibility = View.VISIBLE
+            limitBaseText.text = baseLimit.toString()
+            limitBonusText.text = "+$bonusLimit"
+        } else {
+            limitBreakdownBlock.visibility = View.GONE
+        }
 
         val pct = if (limit <= 0L) 0 else ((current.toLong() * 100) / limit).toInt().coerceIn(0, 100)
         animateLimitMeterTo(pct)
