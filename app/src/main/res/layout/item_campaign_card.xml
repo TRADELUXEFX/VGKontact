@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    One campaign's card - inflated once per active CampaignProgress row
+    in GrowYourViewsActivity.renderCampaignCards(). Copies card_background
+    for the outer card (same drawable as every other card on this
+    screen/app) so it sits visually identical to the contact-limit card
+    above it.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/apk/res-android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@drawable/card_background"
+    android:padding="18dp"
+    android:layout_marginBottom="12dp">
+
+    <!-- Plain-language description of the reward, e.g. "Get 5 friends to
+         register on this app and unlock 20 new WhatsApp status viewers".
+         Built entirely in Kotlin from the campaign's required_referrals
+         and reward group size - never shows the campaign's internal name,
+         group id, or trigger stage. -->
+    <TextView
+        android:id="@+id/campaignDescriptionText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textSize="13sp"
+        android:lineSpacingExtra="4dp"
+        android:textColor="@color/text_secondary"
+        android:layout_marginBottom="12dp"
+        tools:text="Get 5 friends to register on this app and unlock 20 new WhatsApp status viewers" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginBottom="6dp">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/label_friends_registered"
+            android:textSize="12sp"
+            android:textColor="@color/text_muted" />
+
+        <TextView
+            android:id="@+id/campaignProgressCountText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:textColor="@color/vg_dark"
+            tools:text="3 of 5" />
+
+    </LinearLayout>
+
+    <ProgressBar
+        android:id="@+id/campaignProgressBar"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent"
+        android:layout_height="8dp"
+        android:max="100"
+        android:progress="60"
+        android:progressDrawable="@drawable/limit_meter_progress"
+        android:layout_marginBottom="14dp" />
+
+    <Button
+        android:id="@+id/campaignClaimButton"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:text="@string/btn_claim_views"
+        android:textAllCaps="true"
+        android:letterSpacing="0.02"
+        android:textSize="12.5sp"
+        android:textStyle="bold"
+        android:backgroundTint="@color/vg_green"
+        android:textColor="@color/white"
+        app:cornerRadius="16dp" />
+
+</LinearLayout>
