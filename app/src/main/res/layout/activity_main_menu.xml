@@ -313,6 +313,75 @@
                             tools:text="Only 1 spot left - unlock more before you run out"
                             tools:visibility="visible" />
 
+                        <!-- Contact limit breakdown - shows where the total
+                             comes from (base plan vs referral/redeemed
+                             bonus), using ImportStats.baseLimit/bonusLimit.
+                             Hidden entirely when either is unknown (-1) or
+                             bonusLimit is 0, so a brand-new free user with
+                             no bonus yet doesn't see a confusing "+0" row. -->
+                        <LinearLayout
+                            android:id="@+id/limitBreakdownBlock"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:layout_marginTop="14dp"
+                            android:paddingTop="12dp"
+                            android:background="@drawable/limit_breakdown_divider"
+                            android:visibility="gone"
+                            tools:visibility="visible">
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                android:paddingTop="3dp"
+                                android:paddingBottom="3dp">
+
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:text="@string/label_free_plan"
+                                    android:textSize="13sp"
+                                    android:textColor="@color/text_secondary" />
+
+                                <TextView
+                                    android:id="@+id/limitBaseText"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:textSize="13sp"
+                                    android:textColor="@color/vg_dark"
+                                    tools:text="250" />
+
+                            </LinearLayout>
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                android:paddingTop="3dp"
+                                android:paddingBottom="3dp">
+
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:text="@string/label_referral_bonus"
+                                    android:textSize="13sp"
+                                    android:textColor="@color/text_secondary" />
+
+                                <TextView
+                                    android:id="@+id/limitBonusText"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:textSize="13sp"
+                                    android:textColor="@color/vg_green_dark"
+                                    tools:text="+20" />
+
+                            </LinearLayout>
+
+                        </LinearLayout>
+
                     </LinearLayout>
 
                     <!-- Sync Kontact -->
