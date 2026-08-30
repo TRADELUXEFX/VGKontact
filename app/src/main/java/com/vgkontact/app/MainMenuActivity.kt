@@ -39,6 +39,7 @@ class MainMenuActivity : AppCompatActivity() {
 
     private lateinit var syncKontactButton: Button
     private lateinit var kontactGroupsButton: Button
+    private lateinit var shareAppButton: Button
     private lateinit var referralHistoryButton: Button
     private lateinit var contactUsButton: Button
     private lateinit var phoneNumberText: TextView
@@ -80,6 +81,7 @@ class MainMenuActivity : AppCompatActivity() {
 
         syncKontactButton = findViewById(R.id.syncKontactButton)
         kontactGroupsButton = findViewById(R.id.kontactGroupsButton)
+        shareAppButton = findViewById(R.id.shareAppButton)
         referralHistoryButton = findViewById(R.id.referralHistoryButton)
         contactUsButton = findViewById(R.id.contactUsButton)
         phoneNumberText = findViewById(R.id.phoneNumberText)
@@ -136,6 +138,10 @@ class MainMenuActivity : AppCompatActivity() {
             startActivity(Intent(this, HistoryActivity::class.java))
         }
 
+        shareAppButton.setOnClickListener {
+            shareReferralLink()
+        }
+
         contactUsButton.setOnClickListener {
             openWhatsAppContactUs()
         }
@@ -176,6 +182,14 @@ class MainMenuActivity : AppCompatActivity() {
     private fun refreshPermissionHealth() {
         val status = PermissionHealth.check(this)
         latestPermissionStatus = status
+
+        // Report the live 0-3 setup stage to the database every time it's
+        // checked (dashboard open/resume), so the admin panel always has an
+        // up-to-date picture. This also stamps any "first reached stage N"
+        // milestone columns that haven't been set yet - see
+        // SheetSync.reportSetupStage doc comment for the full split between
+        // the live number and the permanent first-reached timestamps.
+        SheetSync.reportSetupStage(this, status.stage)
 
         // The button must stay enabled even when contacts permission is off -
         // a disabled Button swallows taps entirely, which was the bug: users
@@ -283,6 +297,37 @@ class MainMenuActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Builds a share message containing the user's own WhatsApp number (the
+     * same value already used as "My Referral Code" on the Profile screen)
+     * baked into the website link as a ?ref= parameter, then hands it to
+     * Android's native share sheet so the user can send it through
+     * WhatsApp, SMS, or anything else installed.
+     *
+     * The person on the other end still has to type the code in manually
+     * at signup - there's no app-store install-referrer to auto-carry it
+     * through, since this app isn't distributed via the Play Store. The
+     * link's ?ref= is there so a future website update can display the
+     * code back to them automatically instead of relying on them
+     * remembering it from the chat message.
+     */
+    private fun shareReferralLink() {
+        val myCode = UserPrefs.getWhatsapp(this)
+        if (myCode.isNullOrEmpty()) {
+            Toast.makeText(this, "Referral code unavailable", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val link = "https://vgkontact.netlify.app?ref=$myCode"
+        val message = "Join me on VGKontact! Download here: $link\n\nUse my code $myCode when you sign up."
+
+        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, message)
+        }
+        startActivity(Intent.createChooser(shareIntent, "Share VGKontact"))
+    }
+
     private fun checkContactsPermission(): Boolean {
         return ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_CONTACTS) == PackageManager.PERMISSION_GRANTED &&
                ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED
@@ -368,6 +413,23 @@ class MainMenuActivity : AppCompatActivity() {
      * groups-summary call failed) - shown as "-- / --" rather than a
      * misleading 0, same "unknown" convention SheetSync uses elsewhere.
      */
+    /**
+     * Smoothly animates the meter bar filling from its current position to
+     * the new percentage, instead of the bar silently snapping straight to
+     * the new value with no visual feedback.
+     */
+    private fun animateLimitMeterTo(targetPct: Int) {
+        val start = limitMeterBar.progress
+        android.animation.ValueAnimator.ofInt(start, targetPct).apply {
+            duration = 600
+            interpolator = android.view.animation.DecelerateInterpolator()
+            addUpdateListener { animator ->
+                limitMeterBar.progress = animator.animatedValue as Int
+            }
+            start()
+        }
+    }
+
     private fun updateLimitMeter(current: Int, limit: Long) {
         if (limit < 0L) {
             limitCurrentText.text = "--"
@@ -383,7 +445,7 @@ class MainMenuActivity : AppCompatActivity() {
         limitOfText.text = "/ $limit"
 
         val pct = if (limit <= 0L) 0 else ((current.toLong() * 100) / limit).toInt().coerceIn(0, 100)
-        limitMeterBar.progress = pct
+        animateLimitMeterTo(pct)
         limitPctText.text = "$pct% used"
 
         val fillDrawableRes = when {
