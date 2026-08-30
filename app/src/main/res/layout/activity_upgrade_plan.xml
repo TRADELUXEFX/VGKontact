@@ -130,6 +130,104 @@
                     android:lineSpacingMultiplier="1.4"
                     android:textColor="@color/text_muted" />
 
+                <!-- Limit breakdown - same 3-row pattern as the dashboard's
+                     limitBreakdownBlock (Free plan / Unlocked group /
+                     Referral bonus), populated by
+                     UpgradePlanActivity.loadCurrentLimit(). Hidden entirely
+                     when the values aren't known yet (-1) or there's no
+                     bonus to show, same rule as the dashboard. -->
+                <LinearLayout
+                    android:id="@+id/limitBreakdownBlock"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:layout_marginTop="14dp"
+                    android:paddingTop="12dp"
+                    android:background="@drawable/limit_breakdown_divider"
+                    android:visibility="gone"
+                    tools:visibility="visible">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:paddingTop="3dp"
+                        android:paddingBottom="3dp">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/label_free_plan"
+                            android:textSize="13sp"
+                            android:textColor="@color/text_secondary" />
+
+                        <TextView
+                            android:id="@+id/limitBaseText"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textSize="13sp"
+                            android:textColor="@color/vg_dark"
+                            tools:text="100" />
+
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:id="@+id/limitUnlockedRow"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:paddingTop="3dp"
+                        android:paddingBottom="3dp"
+                        android:visibility="gone"
+                        tools:visibility="visible">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/label_unlocked_group"
+                            android:textSize="13sp"
+                            android:textColor="@color/text_secondary" />
+
+                        <TextView
+                            android:id="@+id/limitUnlockedText"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textSize="13sp"
+                            android:textColor="@color/vg_dark"
+                            tools:text="+100" />
+
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:id="@+id/limitBonusRow"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:paddingTop="3dp"
+                        android:paddingBottom="3dp">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/label_referral_bonus"
+                            android:textSize="13sp"
+                            android:textColor="@color/text_secondary" />
+
+                        <TextView
+                            android:id="@+id/limitBonusText"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textSize="13sp"
+                            android:textColor="@color/vg_green_dark"
+                            tools:text="+20" />
+
+                    </LinearLayout>
+
+                </LinearLayout>
+
             </LinearLayout>
 
             <LinearLayout
