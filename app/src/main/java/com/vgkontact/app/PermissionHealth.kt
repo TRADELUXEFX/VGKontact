@@ -40,6 +40,30 @@ object PermissionHealth {
                 else -> Severity.NONE
             }
 
+        /**
+         * The live 0-3 setup stage, used for tracking/reporting only (not
+         * for gating any feature in the app itself):
+         *   0 = nothing on
+         *   1 = Contacts on (sync can work)
+         *   2 = Contacts + Notifications on
+         *   3 = all three on (Contacts + Notifications + Battery)
+         *
+         * This always reflects right now - it goes up AND down as
+         * permissions are toggled, unlike the separate permanent
+         * "first ever reached this stage" record kept in the database
+         * (see SheetSync.reportSetupStage). The admin panel is expected to
+         * use both: this live number to see where someone currently
+         * stands, and the permanent first-reached timestamps to decide
+         * anything reward-related, since those never move backwards.
+         */
+        val stage: Int
+            get() = when {
+                !contactsGranted -> 0
+                !notificationsGranted -> 1
+                !batteryExempted -> 2
+                else -> 3
+            }
+
         /** Short, user-facing summary of what's missing, worst issue first. */
         fun message(): String {
             if (!contactsGranted) {
