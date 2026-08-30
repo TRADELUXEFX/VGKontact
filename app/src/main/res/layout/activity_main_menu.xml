@@ -368,6 +368,26 @@
                 app:iconGravity="textStart"
                 app:cornerRadius="16dp" />
 
+            <!-- Invite/share entry point - sits right after the upsell
+                 button since sharing your code is the other half of
+                 growing your limit (refer someone -> earn more room). -->
+            <Button
+                android:id="@+id/shareAppButton"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:layout_marginTop="12dp"
+                android:text="@string/menu_share_app"
+                android:textAllCaps="true"
+                android:letterSpacing="0.02"
+                android:textStyle="bold"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                app:strokeColor="@color/primary_light"
+                android:textColor="@color/primary_light"
+                app:icon="@drawable/ic_share"
+                app:iconTint="@color/primary_light"
+                app:iconGravity="textStart"
+                app:cornerRadius="16dp" />
+
             <Button
                 android:id="@+id/referralHistoryButton"
                 android:layout_width="match_parent"
