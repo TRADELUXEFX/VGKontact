@@ -41,6 +41,7 @@ class MainMenuActivity : AppCompatActivity() {
     private lateinit var kontactGroupsButton: Button
     private lateinit var shareAppButton: Button
     private lateinit var referralHistoryButton: Button
+    private lateinit var growYourViewsButton: Button
     private lateinit var contactUsButton: Button
     private lateinit var phoneNumberText: TextView
     private lateinit var statsCard: LinearLayout
@@ -83,6 +84,7 @@ class MainMenuActivity : AppCompatActivity() {
         kontactGroupsButton = findViewById(R.id.kontactGroupsButton)
         shareAppButton = findViewById(R.id.shareAppButton)
         referralHistoryButton = findViewById(R.id.referralHistoryButton)
+        growYourViewsButton = findViewById(R.id.growYourViewsButton)
         contactUsButton = findViewById(R.id.contactUsButton)
         phoneNumberText = findViewById(R.id.phoneNumberText)
         statsCard = findViewById(R.id.statsCard)
@@ -136,6 +138,10 @@ class MainMenuActivity : AppCompatActivity() {
 
         referralHistoryButton.setOnClickListener {
             startActivity(Intent(this, HistoryActivity::class.java))
+        }
+
+        growYourViewsButton.setOnClickListener {
+            startActivity(Intent(this, GrowYourViewsActivity::class.java))
         }
 
         shareAppButton.setOnClickListener {
