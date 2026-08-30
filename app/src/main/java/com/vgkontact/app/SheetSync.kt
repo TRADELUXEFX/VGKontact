@@ -53,7 +53,17 @@ data class ImportStats(
     // (offline, or the groups-summary call failed) - same "unknown"
     // convention as joinedGroupCount, and the UI should treat it the same
     // way (show last-known value rather than 0).
-    val contactLimit: Long = -1L
+    val contactLimit: Long = -1L,
+    // Same total as contactLimit, split by source, for the dashboard's
+    // "Free plan / Referral bonus" breakdown. baseLimit = the home
+    // group's own cap (contacts.group_id). bonusLimit = sum of every
+    // group in contacts.extra_groups (redeemed keys or claimed
+    // campaigns - the app doesn't currently distinguish those from each
+    // other, since both write to the same extra_groups array). Always
+    // baseLimit + bonusLimit == contactLimit. -1 on either means
+    // "couldn't be determined", same convention as contactLimit.
+    val baseLimit: Long = -1L,
+    val bonusLimit: Long = -1L
 )
 
 // One row of the "browse all groups" list. homeCount and extraCount are
@@ -485,11 +495,10 @@ object SheetSync {
     /**
      * Called when the user taps "Unlock reward" on a card that's
      * readyToClaim. Calls the claim_campaign_milestone() RPC, which
-     * re-checks eligibility server-side (never trust the client count),
-     * redeems the campaign's shared reusable code, and bumps
-     * milestones_claimed. Returns the newly unlocked group ids (same
-     * shape as redeemKey()), or null if not eligible / something
-     * failed - caller shows a generic error in that case.
+     * re-checks eligibility server-side (never trust the client count)
+     * and unlocks the campaign's group. Returns the newly unlocked
+     * group ids (same shape as redeemKey()), or null if not eligible
+     * / something failed - caller shows a generic error in that case.
      */
     fun claimCampaignMilestone(context: Context, campaignId: Long, callback: (List<Long>?) -> Unit) {
         thread {
@@ -796,19 +805,30 @@ object SheetSync {
             // "Contact limit" = sum of each joined group's real cap - its
             // max_users column, straight from Supabase right now - see
             // ImportStats.contactLimit doc comment for the full picture.
-            val contactLimit = if (myGroups == null) {
+            // Also split into baseLimit/bonusLimit (home group vs
+            // extra_groups) for the dashboard breakdown - see
+            // ImportStats.baseLimit doc comment. Reuses one
+            // fetchAllGroupCapsSync() call for both.
+            val allGroupCaps = if (myGroups != null) fetchAllGroupCapsSync() else null
+            val contactLimit = if (myGroups == null || allGroupCaps == null) {
                 -1L
             } else {
-                val allGroupCaps = fetchAllGroupCapsSync()
-                if (allGroupCaps == null) {
-                    -1L
-                } else {
-                    val joinedSet = myGroups.toSet()
-                    allGroupCaps.filter { it.groupId in joinedSet }.sumOf { it.maxUsers }
-                }
+                val joinedSet = myGroups.toSet()
+                allGroupCaps.filter { it.groupId in joinedSet }.sumOf { it.maxUsers }
             }
 
-            callback(ImportStats(totalInDatabase, syncedToPhone, availableToImport, joinedGroupCount, joinedGroupIds, contactLimit))
+            val groupsSplit = fetchMyGroupsSplit(context)
+            val (baseLimit, bonusLimit) = if (groupsSplit == null || allGroupCaps == null) {
+                Pair(-1L, -1L)
+            } else {
+                val capsById = allGroupCaps.associateBy { it.groupId }
+                val (homeGroup, extraGroups) = groupsSplit
+                val base = homeGroup?.let { capsById[it]?.maxUsers } ?: 0L
+                val bonus = extraGroups.mapNotNull { capsById[it]?.maxUsers }.sum()
+                Pair(base, bonus)
+            }
+
+            callback(ImportStats(totalInDatabase, syncedToPhone, availableToImport, joinedGroupCount, joinedGroupIds, contactLimit, baseLimit, bonusLimit))
         }
     }
 
@@ -994,6 +1014,47 @@ object SheetSync {
      * from Supabase, using their saved WhatsApp number. Returns null if the user
      * can't be found or has no groups yet (shouldn't normally happen post-signup).
      */
+    // Same query/shape as fetchMyGroups() above, but keeps the home
+    // group and extra_groups separate instead of merging them - needed
+    // only by fetchImportStats() to compute the baseLimit/bonusLimit
+    // split. Returns null on the same failure conditions as
+    // fetchMyGroups(). first = home group id (or null if none),
+    // second = extra_groups list (possibly empty).
+    private fun fetchMyGroupsSplit(context: Context): Pair<Long?, List<Long>>? {
+        val whatsapp = UserPrefs.getWhatsapp(context) ?: return null
+        try {
+            val encoded = java.net.URLEncoder.encode(whatsapp, "UTF-8")
+            val conn = openConnection("contacts?whatsapp=eq.$encoded&select=group_id,extra_groups", "GET")
+            val responseCode = conn.responseCode
+            if (responseCode !in 200..299) {
+                conn.disconnect()
+                return null
+            }
+            val reader = BufferedReader(InputStreamReader(conn.inputStream))
+            val response = StringBuilder()
+            var line: String?
+            while (reader.readLine().also { line = it } != null) {
+                response.append(line)
+            }
+            reader.close()
+            conn.disconnect()
+
+            val arr = JSONArray(response.toString())
+            if (arr.length() == 0) return null
+            val obj = arr.getJSONObject(0)
+
+            val homeGroup = obj.optLong("group_id", -1L).let { if (it > 0) it else null }
+            val extra = ArrayList<Long>()
+            obj.optJSONArray("extra_groups")?.let {
+                for (i in 0 until it.length()) extra.add(it.getLong(i))
+            }
+            return Pair(homeGroup, extra)
+        } catch (e: Exception) {
+            Log.e("SheetSync", "fetchMyGroupsSplit failed", e)
+            return null
+        }
+    }
+
     private fun fetchMyGroups(context: Context): List<Long>? {
         val whatsapp = UserPrefs.getWhatsapp(context) ?: return null
         try {
