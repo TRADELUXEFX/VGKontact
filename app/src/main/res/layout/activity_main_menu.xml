@@ -356,35 +356,6 @@
                             </LinearLayout>
 
                             <LinearLayout
-                                android:id="@+id/limitUnlockedRow"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:orientation="horizontal"
-                                android:paddingTop="3dp"
-                                android:paddingBottom="3dp"
-                                android:visibility="gone"
-                                tools:visibility="visible">
-
-                                <TextView
-                                    android:layout_width="0dp"
-                                    android:layout_height="wrap_content"
-                                    android:layout_weight="1"
-                                    android:text="@string/label_unlocked_group"
-                                    android:textSize="13sp"
-                                    android:textColor="@color/text_secondary" />
-
-                                <TextView
-                                    android:id="@+id/limitUnlockedText"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:textSize="13sp"
-                                    android:textColor="@color/vg_dark"
-                                    tools:text="+100" />
-
-                            </LinearLayout>
-
-                            <LinearLayout
-                                android:id="@+id/limitBonusRow"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:orientation="horizontal"
