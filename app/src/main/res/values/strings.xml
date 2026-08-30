@@ -28,9 +28,9 @@
     <string name="menu_increase_contact_limit">Increase Contact Limit</string>
     <string name="menu_share_app">Share App</string>
     <string name="contact_limit_label">Contact Limit</string>
-    <string name="label_free_plan">Free plan</string>
+    <string name="label_free_plan">Contact limit</string>
     <string name="label_unlocked_group">Unlocked group</string>
-    <string name="label_referral_bonus">Referral bonus</string>
+    <string name="label_referral_bonus">Contacts gained by referral</string>
     <string name="limit_meter_unknown">Contact limit unavailable right now</string>
     <string name="current_limit_label">Your Current Limit</string>
     <string name="current_limit_sub">Redeem a key code below to raise your limit, or contact us if you don\'t have one yet.</string>
