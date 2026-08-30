@@ -22,15 +22,13 @@ import androidx.core.content.ContextCompat
  *      that's enabled once the next milestone is reached.
  *
  * FINAL DESIGN (agreed): campaigns are self-serve and repeating.
- * There is ONE plain reusable code per campaign (not locked to any
- * phone number). The app computes live progress itself from
- * qualifying_referrals vs nextTarget - no admin lookup per user.
- * Tapping "Unlock reward" calls SheetSync.claimCampaignMilestone(),
- * which re-checks eligibility server-side and redeems the shared
- * code. On success we show a simple inline success state (no code
- * text ever shown on screen, since the code is shared/reusable and
- * displaying it would just be something to screenshot and pass
- * around), then the card resets to count toward the next milestone.
+ * Each campaign unlocks one group directly (campaigns.group_id).
+ * The app computes live progress itself from qualifying_referrals
+ * vs nextTarget - no admin lookup per user. Tapping "Unlock reward"
+ * calls SheetSync.claimCampaignMilestone(), which re-checks
+ * eligibility server-side and unlocks the campaign's group. On
+ * success we show a simple inline success state, then the card
+ * resets to count toward the next milestone.
  */
 class GrowYourViewsActivity : AppCompatActivity() {
 
@@ -134,16 +132,19 @@ class GrowYourViewsActivity : AppCompatActivity() {
             val card = inflater.inflate(R.layout.item_campaign_card, campaignCardsContainer, false)
 
             val descriptionText = card.findViewById<TextView>(R.id.campaignDescriptionText)
+            val rewardBadge = card.findViewById<TextView>(R.id.campaignRewardBadge)
             val progressCountText = card.findViewById<TextView>(R.id.campaignProgressCountText)
+            val progressLabelText = card.findViewById<TextView>(R.id.campaignProgressLabelText)
             val progressBarView = card.findViewById<ProgressBar>(R.id.campaignProgressBar)
             val actionButton = card.findViewById<Button>(R.id.campaignClaimButton)
 
-            descriptionText.text = "Refer friends to unlock more WhatsApp status viewers"
-            progressCountText.visibility = View.VISIBLE
-            progressBarView.visibility = View.VISIBLE
-
+            val perMilestone = campaign.referralsPerMilestone
             val target = campaign.nextTarget
-            progressCountText.text = "${campaign.qualifyingReferrals} of $target friends"
+            descriptionText.text = "Refer $perMilestone friends"
+            rewardBadge.text = "+${campaign.slotsPerMilestone} viewers"
+
+            progressCountText.text = "${campaign.qualifyingReferrals}"
+            progressLabelText.text = "of $target friends registered"
             progressBarView.max = target
             progressBarView.progress = campaign.qualifyingReferrals.coerceAtMost(target)
 
@@ -174,10 +175,10 @@ class GrowYourViewsActivity : AppCompatActivity() {
 
     /**
      * Taps "Unlock reward" -> claimCampaignMilestone() re-checks
-     * eligibility and redeems the campaign's shared code server-side.
-     * On success: simple success toast (no code shown on screen - see
-     * class doc), then reload so the card resets toward the next
-     * milestone. On failure: generic error, nothing changes.
+     * eligibility server-side and unlocks the campaign's group.
+     * On success: simple success toast, then reload so the card
+     * resets toward the next milestone. On failure: generic error,
+     * nothing changes.
      */
     private fun claimMilestone(campaign: CampaignStatus, actionButton: Button) {
         if (!SheetSync.isOnline(this)) {
