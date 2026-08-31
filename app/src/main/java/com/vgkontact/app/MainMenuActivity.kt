@@ -38,9 +38,7 @@ import androidx.core.content.ContextCompat
 class MainMenuActivity : AppCompatActivity() {
 
     private lateinit var syncKontactButton: Button
-    private lateinit var kontactGroupsButton: Button
     private lateinit var shareAppButton: Button
-    private lateinit var referralHistoryButton: Button
     private lateinit var contactUsButton: Button
     private lateinit var phoneNumberText: TextView
     private lateinit var statsCard: LinearLayout
@@ -48,8 +46,9 @@ class MainMenuActivity : AppCompatActivity() {
     private lateinit var statsContent: LinearLayout
     private lateinit var statsTodayText: TextView
     private lateinit var notificationIcon: ImageView
-    private lateinit var profileIcon: ImageView
+    private lateinit var appLogoIcon: ImageView
     private lateinit var planPreviewText: TextView
+    private lateinit var bottomNavView: com.google.android.material.bottomnavigation.BottomNavigationView
     private lateinit var permissionWarningBanner: LinearLayout
     private lateinit var permissionWarningText: TextView
 
@@ -83,9 +82,7 @@ class MainMenuActivity : AppCompatActivity() {
         NotificationHelper.createNotificationChannel(this)
 
         syncKontactButton = findViewById(R.id.syncKontactButton)
-        kontactGroupsButton = findViewById(R.id.kontactGroupsButton)
         shareAppButton = findViewById(R.id.shareAppButton)
-        referralHistoryButton = findViewById(R.id.referralHistoryButton)
         contactUsButton = findViewById(R.id.contactUsButton)
         phoneNumberText = findViewById(R.id.phoneNumberText)
         statsCard = findViewById(R.id.statsCard)
@@ -93,8 +90,9 @@ class MainMenuActivity : AppCompatActivity() {
         statsContent = findViewById(R.id.statsContent)
         statsTodayText = findViewById(R.id.statsTodayText)
         notificationIcon = findViewById(R.id.notificationIcon)
-        profileIcon = findViewById(R.id.profileIcon)
+        appLogoIcon = findViewById(R.id.appLogoIcon)
         planPreviewText = findViewById(R.id.planPreviewText)
+        bottomNavView = findViewById(R.id.bottomNavView)
         permissionWarningBanner = findViewById(R.id.permissionWarningBanner)
         permissionWarningText = findViewById(R.id.permissionWarningText)
 
@@ -120,13 +118,31 @@ class MainMenuActivity : AppCompatActivity() {
         // is visible (see refreshPermissionHealth/onResume), so it can never
         // go stale whichever way the user flips a permission.
 
-        kontactGroupsButton.setOnClickListener {
-            // This button is labeled "Increase Contact Limit" (see
-            // activity_main_menu.xml, menu_increase_contact_limit) and
-            // opens the merged Referral rewards / Redeem a key screen -
-            // previously went straight to UpgradePlanActivity's
-            // redeem-a-code screen alone.
-            startActivity(Intent(this, IncreaseLimitActivity::class.java))
+        // Bottom nav - Jacob's Law layout (home far left, profile far
+        // right). Home is this screen itself, so only the other three
+        // items need a destination; Home just no-ops since we're already
+        // here. This replaces the old kontactGroupsButton/
+        // referralHistoryButton/profileIcon click destinations.
+        bottomNavView.setOnItemSelectedListener { item ->
+            when (item.itemId) {
+                R.id.nav_home -> true
+                R.id.nav_upgrade -> {
+                    startActivity(Intent(this, IncreaseLimitActivity::class.java))
+                    overridePendingTransition(0, 0)
+                    true
+                }
+                R.id.nav_history -> {
+                    startActivity(Intent(this, HistoryActivity::class.java))
+                    overridePendingTransition(0, 0)
+                    true
+                }
+                R.id.nav_profile -> {
+                    startActivity(Intent(this, ProfileActivity::class.java))
+                    overridePendingTransition(0, 0)
+                    true
+                }
+                else -> false
+            }
         }
 
         SheetCheckWorker.schedule(this)
@@ -141,10 +157,6 @@ class MainMenuActivity : AppCompatActivity() {
             }
         }
 
-        referralHistoryButton.setOnClickListener {
-            startActivity(Intent(this, HistoryActivity::class.java))
-        }
-
         shareAppButton.setOnClickListener {
             shareReferralLink()
         }
@@ -156,14 +168,11 @@ class MainMenuActivity : AppCompatActivity() {
         notificationIcon.setOnClickListener {
             startActivity(Intent(this, NotificationSettingsActivity::class.java))
         }
-
-        profileIcon.setOnClickListener {
-            startActivity(Intent(this, ProfileActivity::class.java))
-        }
     }
 
     override fun onResume() {
         super.onResume()
+        bottomNavView.menu.findItem(R.id.nav_home)?.isChecked = true
         // Covers the case where permission state changed elsewhere (e.g. the user
         // granted contacts access via system Settings after denying it during
         // setup) - stats should reflect the real on-device numbers.
