@@ -20,8 +20,9 @@ android {
         minSdk 24
         targetSdk 34
         def versionCodeEnv = System.getenv('VERSION_CODE')
-        versionCode versionCodeEnv != null ? versionCodeEnv.toInteger() : 1
-        versionName "1.0"
+        def resolvedVersionCode = versionCodeEnv != null ? versionCodeEnv.toInteger() : 1
+        versionCode resolvedVersionCode
+        versionName "1.0.${resolvedVersionCode}"
 
         buildConfigField "String", "SUPABASE_URL", "\"${supabaseUrl}\""
         buildConfigField "String", "SUPABASE_ANON_KEY", "\"${supabaseAnonKey}\""
