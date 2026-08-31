@@ -81,6 +81,23 @@
                 android:padding="20dp"
                 android:layout_marginBottom="20dp">
 
+                <!-- Same loading pattern as MainMenuActivity's statsCard:
+                     limitLoadingSpinner shows alone while data is in
+                     flight, limitContent (everything below) is fully
+                     GONE until it's ready, then they swap. -->
+                <ProgressBar
+                    android:id="@+id/limitLoadingSpinner"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center_horizontal"
+                    android:visibility="gone" />
+
+                <LinearLayout
+                    android:id="@+id/limitContent"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -100,48 +117,34 @@
                     android:background="@drawable/limit_block_background"
                     android:padding="18dp">
 
-                    <FrameLayout
+                    <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center"
                         android:layout_marginBottom="10dp">
 
-                        <LinearLayout
-                            android:id="@+id/limitCountRow"
+                        <TextView
+                            android:id="@+id/limitCurrentText"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_gravity="center"
-                            android:orientation="horizontal">
+                            android:textSize="34sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/vg_dark"
+                            android:fontFamily="@font/baloo2"
+                            tools:text="15" />
 
-                            <TextView
-                                android:id="@+id/limitCurrentText"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:textSize="34sp"
-                                android:textStyle="bold"
-                                android:textColor="@color/vg_dark"
-                                android:fontFamily="@font/baloo2"
-                                tools:text="15" />
+                        <TextView
+                            android:id="@+id/limitOfText"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="6dp"
+                            android:textSize="16sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/text_muted"
+                            tools:text="/ 250" />
 
-                            <TextView
-                                android:id="@+id/limitOfText"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_marginStart="6dp"
-                                android:textSize="16sp"
-                                android:textStyle="bold"
-                                android:textColor="@color/text_muted"
-                                tools:text="/ 250" />
-
-                        </LinearLayout>
-
-                        <ProgressBar
-                            android:id="@+id/limitMeterLoadingSpinner"
-                            android:layout_width="28dp"
-                            android:layout_height="28dp"
-                            android:layout_gravity="center"
-                            android:visibility="visible" />
-
-                    </FrameLayout>
+                    </LinearLayout>
 
                     <ProgressBar
                         android:id="@+id/limitMeterBar"
@@ -229,6 +232,8 @@
                             tools:text="+20" />
 
                     </LinearLayout>
+
+                </LinearLayout>
 
                 </LinearLayout>
 
