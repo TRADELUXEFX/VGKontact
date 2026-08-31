@@ -220,12 +220,16 @@
 
             </LinearLayout>
 
-            <!-- ============ TAB SWITCHER ============ -->
+            <!-- ============ TAB SWITCHER (segmented control) ============
+                 Track uses its own dedicated fill (tab_track_fill) rather
+                 than the card backgrounds used elsewhere, so the inactive
+                 tab (fully transparent) always shows real contrast against
+                 the track instead of blending into a white/near-white card. -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:background="@drawable/limit_block_background"
+                android:background="@drawable/tab_track_background"
                 android:padding="4dp"
                 android:layout_marginBottom="20dp">
 
@@ -238,9 +242,10 @@
                     android:textAllCaps="false"
                     android:textSize="13sp"
                     android:textStyle="bold"
-                    android:backgroundTint="@color/vg_green"
-                    android:textColor="@color/white"
+                    android:backgroundTint="@color/white"
+                    android:textColor="@color/vg_green"
                     app:cornerRadius="12dp"
+                    app:elevation="2dp"
                     android:insetTop="0dp"
                     android:insetBottom="0dp" />
 
@@ -254,9 +259,10 @@
                     android:textAllCaps="false"
                     android:textSize="13sp"
                     android:textStyle="bold"
-                    android:backgroundTint="@color/stats_card_fill"
+                    android:backgroundTint="@android:color/transparent"
                     android:textColor="@color/text_muted"
                     app:cornerRadius="12dp"
+                    app:elevation="0dp"
                     android:insetTop="0dp"
                     android:insetBottom="0dp" />
 
