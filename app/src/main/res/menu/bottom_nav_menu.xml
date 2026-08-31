@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Jacob's Law bottom nav: Home far left, Profile far right, the app's
+    other two core destinations (Upgrade, History) in between. Settings
+    intentionally has no tab here - it's reached from Profile instead.
+-->
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item
+        android:id="@+id/nav_home"
+        android:icon="@drawable/ic_home"
+        android:title="Home" />
+
+    <item
+        android:id="@+id/nav_upgrade"
+        android:icon="@drawable/ic_crown"
+        android:title="Upgrade" />
+
+    <item
+        android:id="@+id/nav_history"
+        android:icon="@drawable/ic_history"
+        android:title="History" />
+
+    <item
+        android:id="@+id/nav_profile"
+        android:icon="@drawable/ic_profile"
+        android:title="Profile" />
+
+</menu>
