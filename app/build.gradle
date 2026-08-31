@@ -19,7 +19,8 @@ android {
         applicationId "com.vgkontact.app"
         minSdk 24
         targetSdk 34
-        versionCode (System.getenv('VERSION_CODE') ?: '1').toInteger()
+        def versionCodeEnv = System.getenv('VERSION_CODE')
+        versionCode versionCodeEnv != null ? versionCodeEnv.toInteger() : 1
         versionName "1.0"
 
         buildConfigField "String", "SUPABASE_URL", "\"${supabaseUrl}\""
