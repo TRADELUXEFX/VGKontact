@@ -48,7 +48,17 @@
             android:name=".HistoryActivity"
             android:exported="false" />
 
-        <!-- Grow Your Views -->
+        <!-- Increase Contact Limit - merged screen (Referral rewards +
+             Redeem a key tabs). Replaces GrowYourViewsActivity and
+             UpgradePlanActivity as the entry point from the dashboard;
+             both are left registered below, unused, until confirmed
+             nothing else (deep links, notifications) targets them
+             directly. -->
+        <activity
+            android:name=".IncreaseLimitActivity"
+            android:exported="false" />
+
+        <!-- Grow Your Views (deprecated - superseded by IncreaseLimitActivity) -->
         <activity
             android:name=".GrowYourViewsActivity"
             android:exported="false" />
@@ -63,7 +73,7 @@
             android:name=".ProfileActivity"
             android:exported="false" />
 
-        <!-- Upgrade Plan -->
+        <!-- Upgrade Plan (deprecated - superseded by IncreaseLimitActivity) -->
         <activity
             android:name=".UpgradePlanActivity"
             android:exported="false" />
