@@ -10,25 +10,18 @@
     single "Kontact Groups" button as the entry point to that screen -
     see kontactGroupsButton below.
 -->
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/apk/res-android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
-
-<androidx.core.widget.NestedScrollView
-    android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:layout_above="@id/bottomNavView"
     android:background="@color/stats_card_fill"
-    android:fillViewport="true"
-    android:clipToPadding="false">
+    android:fillViewport="true">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:paddingBottom="72dp">
+        android:orientation="vertical">
 
         <!-- ================= HEADER (reference: .header) ================= -->
         <LinearLayout
@@ -43,14 +36,15 @@
             android:paddingEnd="20dp">
 
             <ImageView
-                android:id="@+id/appLogoIcon"
+                android:id="@+id/profileIcon"
                 android:layout_width="52dp"
                 android:layout_height="52dp"
-                android:padding="6dp"
-                android:src="@drawable/ic_launcher"
+                android:padding="13dp"
+                android:src="@drawable/ic_profile"
                 android:background="@drawable/avatar_circle_background"
-                android:scaleType="centerCrop"
-                android:clipToOutline="true" />
+                android:clickable="true"
+                android:focusable="true"
+                app:tint="@color/vg_green" />
 
             <LinearLayout
                 android:layout_width="0dp"
@@ -423,20 +417,54 @@
             android:paddingTop="8dp"
             android:paddingBottom="26dp">
 
-            <!-- kontactGroupsButton (Increase Contact Limit) and
-                 referralHistoryButton removed from the dashboard body -
-                 both destinations are now reachable directly via the
-                 bottom navigation bar (bottomNavView, Upgrade / History
-                 tabs) added below, per Jacob's Law: don't duplicate a
-                 tab's destination with an inline button on another
-                 screen. -->
+            <!-- Primary upsell action, replacing the old "Kontact Groups"
+                 label/entry point. Same button/id (kontactGroupsButton),
+                 now opens IncreaseLimitActivity - the merged referral
+                 rewards / key redemption screen. -->
+            <Button
+                android:id="@+id/kontactGroupsButton"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:text="@string/menu_increase_contact_limit"
+                android:letterSpacing="0.02"
+                android:backgroundTint="@color/vg_green"
+                android:textColor="@color/white"
+                android:textStyle="bold"
+                app:icon="@drawable/ic_contacts"
+                app:iconTint="@color/white"
+                app:iconGravity="textStart"
+                app:cornerRadius="16dp" />
 
-            <!-- Invite/share entry point - kept as an inline button since
-                 no bottom nav tab covers it. -->
+            <!-- growYourViewsButton removed - its content (referral
+                 campaigns + share invite) is now the "Referral rewards"
+                 tab inside IncreaseLimitActivity, opened via
+                 kontactGroupsButton above, so this no longer needs its
+                 own separate dashboard entry point. -->
+
+            <Button
+                android:id="@+id/referralHistoryButton"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:layout_marginTop="12dp"
+                android:text="@string/menu_referral_history"
+                android:textAllCaps="true"
+                android:letterSpacing="0.02"
+                android:textStyle="bold"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                app:strokeColor="@color/primary_light"
+                android:textColor="@color/primary_light"
+                app:icon="@drawable/ic_history"
+                app:iconTint="@color/primary_light"
+                app:iconGravity="textStart"
+                app:cornerRadius="16dp" />
+
+            <!-- Invite/share entry point - now sits after referral
+                 history so history is easier to reach first. -->
             <Button
                 android:id="@+id/shareAppButton"
                 android:layout_width="match_parent"
                 android:layout_height="56dp"
+                android:layout_marginTop="12dp"
                 android:text="@string/menu_share_app"
                 android:textAllCaps="true"
                 android:letterSpacing="0.02"
@@ -471,20 +499,3 @@
     </LinearLayout>
 
 </androidx.core.widget.NestedScrollView>
-
-    <!-- Bottom navigation - Jacob's Law layout: home far left, profile far
-         right, core destinations in between. Settings does not get its own
-         tab (see main_menu_title/"Settings" - that concept is now folded
-         into Profile instead). Menu defined in res/menu/bottom_nav_menu.xml. -->
-    <com.google.android.material.bottomnavigation.BottomNavigationView
-        android:id="@+id/bottomNavView"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_alignParentBottom="true"
-        android:background="@color/white"
-        app:itemIconTint="@color/bottom_nav_item_color"
-        app:itemTextColor="@color/bottom_nav_item_color"
-        app:menu="@menu/bottom_nav_menu"
-        app:elevation="8dp" />
-
-</RelativeLayout>
