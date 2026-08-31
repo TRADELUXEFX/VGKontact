@@ -160,6 +160,8 @@ class MainMenuActivity : AppCompatActivity() {
         profileIcon.setOnClickListener {
             startActivity(Intent(this, ProfileActivity::class.java))
         }
+
+        BottomNavHelper.setup(this, BottomNavHelper.Tab.HOME)
     }
 
     override fun onResume() {
