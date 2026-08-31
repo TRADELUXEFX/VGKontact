@@ -42,8 +42,8 @@ class IncreaseLimitActivity : AppCompatActivity() {
     private lateinit var limitBreakdownBlock: LinearLayout
     private lateinit var limitBaseText: TextView
     private lateinit var limitBonusText: TextView
-    private lateinit var limitCountRow: LinearLayout
-    private lateinit var limitMeterLoadingSpinner: ProgressBar
+    private lateinit var limitContent: LinearLayout
+    private lateinit var limitLoadingSpinner: ProgressBar
 
     // Tabs
     private lateinit var tabReferralButton: Button
@@ -85,8 +85,8 @@ class IncreaseLimitActivity : AppCompatActivity() {
         limitBreakdownBlock = findViewById(R.id.limitBreakdownBlock)
         limitBaseText = findViewById(R.id.limitBaseText)
         limitBonusText = findViewById(R.id.limitBonusText)
-        limitCountRow = findViewById(R.id.limitCountRow)
-        limitMeterLoadingSpinner = findViewById(R.id.limitMeterLoadingSpinner)
+        limitContent = findViewById(R.id.limitContent)
+        limitLoadingSpinner = findViewById(R.id.limitLoadingSpinner)
 
         tabReferralButton = findViewById(R.id.tabReferralButton)
         tabKeyButton = findViewById(R.id.tabKeyButton)
@@ -157,14 +157,12 @@ class IncreaseLimitActivity : AppCompatActivity() {
      * dashboard exactly, same convention as both original screens.
      */
     private fun loadLimitMeter() {
-        limitCurrentText.text = ""
-        limitOfText.text = ""
-        limitCountRow.visibility = View.GONE
-        limitMeterLoadingSpinner.visibility = View.VISIBLE
+        limitLoadingSpinner.visibility = View.VISIBLE
+        limitContent.visibility = View.GONE
         SheetSync.fetchImportStats(this) { stats ->
             runOnUiThread {
-                limitMeterLoadingSpinner.visibility = View.GONE
-                limitCountRow.visibility = View.VISIBLE
+                limitLoadingSpinner.visibility = View.GONE
+                limitContent.visibility = View.VISIBLE
                 if (stats == null || stats.contactLimit < 0L) {
                     limitCurrentText.text = "--"
                     limitOfText.text = "/ --"
