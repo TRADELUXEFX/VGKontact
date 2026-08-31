@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Elevation for the active tab in a segmented control (e.g. the
+         Referral rewards / Redeem a key switcher on IncreaseLimitActivity),
+         giving it a subtle raised look against the track. Kept here so the
+         XML default (app:elevation) and the Kotlin runtime toggle
+         (IncreaseLimitActivity.showReferralTab/showKeyTab) always match. -->
+    <dimen name="tab_active_elevation">2dp</dimen>
+
+</resources>
