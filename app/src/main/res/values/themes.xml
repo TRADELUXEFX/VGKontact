@@ -13,13 +13,22 @@
         <!-- Disable Force Dark Mode Engine -->
         <item name="android:forceDarkAllowed">false</item>
 
-        <!-- App-wide font: Baloo 2, downloaded at runtime via Google Play
-             Services font provider (see res/font/baloo2.xml). No font
-             files are bundled into the APK. If a device has no Google
-             Play Services, this falls back to the system default font
-             automatically - no crash. -->
-        <item name="android:fontFamily">@font/baloo2</item>
-        <item name="fontFamily">@font/baloo2</item>
+        <!-- App-wide font intentionally NOT set here.
+             Baloo 2 is a downloadable font (Google Play Services Fonts
+             provider - see res/font/baloo2.xml). Setting a downloadable
+             font directly as the theme's fontFamily makes font
+             resolution part of every single Activity's setContentView()
+             inflate path - on any environment where the Play Services
+             Fonts provider can't be reached synchronously (Secure
+             Folder / work-profile GMS sandboxing, restricted or
+             outdated Play Services, a slow/first-time provider query),
+             that inflate throws and crashes the app on launch, on every
+             screen. Not something "Clear cache" fixes, since the
+             failure is the provider being unreachable, not corrupted
+             local state.
+             Baloo 2 is loaded asynchronously at runtime instead (see
+             FontHelper.applyBaloo2Async), with the system default font
+             as a guaranteed fallback if the provider ever fails. -->
     </style>
 
     <!-- Missing Divider Style required by activity_history.xml -->
