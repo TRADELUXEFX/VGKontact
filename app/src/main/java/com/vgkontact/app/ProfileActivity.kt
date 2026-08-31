@@ -44,6 +44,7 @@ class ProfileActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_profile)
+        BottomNavHelper.setup(this, BottomNavHelper.Tab.PROFILE)
 
         window.statusBarColor = ContextCompat.getColor(this, R.color.vg_green)
 
