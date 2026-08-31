@@ -1,4 +1,9 @@
 <resources>
+    <!-- Bottom nav bar labels (bottom_nav_bar.xml / BottomNavHelper) -->
+    <string name="nav_home">Home</string>
+    <string name="nav_upgrade">Upgrade</string>
+    <string name="nav_history">History</string>
+    <string name="nav_profile">Profile</string>
     <string name="app_name">VG ADDUP</string>
     <string name="title_onboarding">JOIN VIEWGROW</string>
     <string name="hint_whatsapp">Your WhatsApp Number</string>
