@@ -245,7 +245,9 @@
                     android:backgroundTint="@color/white"
                     android:textColor="@color/vg_green"
                     app:cornerRadius="12dp"
-                    app:elevation="2dp"
+                    app:elevation="0dp"
+                    app:rippleColor="@color/vg_green_tint"
+                    android:stateListAnimator="@null"
                     android:insetTop="0dp"
                     android:insetBottom="0dp" />
 
@@ -263,6 +265,8 @@
                     android:textColor="@color/text_muted"
                     app:cornerRadius="12dp"
                     app:elevation="0dp"
+                    app:rippleColor="@color/vg_green_tint"
+                    android:stateListAnimator="@null"
                     android:insetTop="0dp"
                     android:insetBottom="0dp" />
 
