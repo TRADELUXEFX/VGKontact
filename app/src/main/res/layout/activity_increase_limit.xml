@@ -396,9 +396,7 @@
                         android:layout_height="wrap_content"
                         app:boxBackgroundMode="none"
                         app:hintTextColor="@color/text_muted"
-                        app:hintEnabled="false"
-                        android:paddingStart="12dp"
-                        android:paddingEnd="12dp">
+                        app:hintEnabled="false">
 
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/keyCodeInput"
@@ -407,6 +405,8 @@
                             android:hint="@string/hint_key_code"
                             android:textColorHint="@color/text_muted"
                             android:gravity="center"
+                            android:paddingStart="16dp"
+                            android:paddingEnd="16dp"
                             android:inputType="textCapCharacters"
                             android:textSize="22sp"
                             android:letterSpacing="0.1"
