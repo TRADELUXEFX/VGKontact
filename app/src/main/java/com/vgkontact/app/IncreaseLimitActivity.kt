@@ -112,7 +112,16 @@ class IncreaseLimitActivity : AppCompatActivity() {
         noCodeContactUsButton.setOnClickListener { openWhatsAppForUnlockCode() }
 
         loadLimitMeter()
-        loadCampaigns()
+
+        // XML no longer hardcodes which tab looks active/inactive - both
+        // buttons start visually neutral, and this call is what actually
+        // applies the "Referral rewards selected" styling on first render.
+        // Without this, the screen's initial look depended on whatever
+        // was left in the XML defaults, which could drift out of sync
+        // with what showReferralTab()/showKeyTab() consider "inactive".
+        // showReferralTab() also triggers the first loadCampaigns() call
+        // (guarded by campaignsLoaded), so it isn't called separately here.
+        showReferralTab()
     }
 
     private fun showReferralTab() {
