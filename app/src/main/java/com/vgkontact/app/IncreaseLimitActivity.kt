@@ -120,7 +120,7 @@ class IncreaseLimitActivity : AppCompatActivity() {
         keyPanel.visibility = View.GONE
         tabReferralButton.backgroundTintList = ContextCompat.getColorStateList(this, R.color.vg_green)
         tabReferralButton.setTextColor(ContextCompat.getColor(this, R.color.white))
-        tabKeyButton.backgroundTintList = ContextCompat.getColorStateList(this, android.R.color.transparent)
+        tabKeyButton.backgroundTintList = ContextCompat.getColorStateList(this, R.color.stats_card_fill)
         tabKeyButton.setTextColor(ContextCompat.getColor(this, R.color.text_muted))
 
         if (!campaignsLoaded) {
@@ -133,7 +133,7 @@ class IncreaseLimitActivity : AppCompatActivity() {
         keyPanel.visibility = View.VISIBLE
         tabKeyButton.backgroundTintList = ContextCompat.getColorStateList(this, R.color.vg_green)
         tabKeyButton.setTextColor(ContextCompat.getColor(this, R.color.white))
-        tabReferralButton.backgroundTintList = ContextCompat.getColorStateList(this, android.R.color.transparent)
+        tabReferralButton.backgroundTintList = ContextCompat.getColorStateList(this, R.color.stats_card_fill)
         tabReferralButton.setTextColor(ContextCompat.getColor(this, R.color.text_muted))
     }
 
