@@ -157,7 +157,9 @@ class IncreaseLimitActivity : AppCompatActivity() {
      * dashboard exactly, same convention as both original screens.
      */
     private fun loadLimitMeter() {
-        limitCountRow.visibility = View.INVISIBLE
+        limitCurrentText.text = ""
+        limitOfText.text = ""
+        limitCountRow.visibility = View.GONE
         limitMeterLoadingSpinner.visibility = View.VISIBLE
         SheetSync.fetchImportStats(this) { stats ->
             runOnUiThread {
