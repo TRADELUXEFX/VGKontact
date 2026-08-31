@@ -418,11 +418,9 @@
             android:paddingBottom="26dp">
 
             <!-- Primary upsell action, replacing the old "Kontact Groups"
-                 label/entry point. Same button/id (kontactGroupsButton) and
-                 same destination (GroupsActivity, which still lists every
-                 group + lets a user tap into UpgradePlanActivity per-group)
-                 - only the copy changed, from "group" language to "contact
-                 limit" language, matching the meter above it. -->
+                 label/entry point. Same button/id (kontactGroupsButton),
+                 now opens IncreaseLimitActivity - the merged referral
+                 rewards / key redemption screen. -->
             <Button
                 android:id="@+id/kontactGroupsButton"
                 android:layout_width="match_parent"
@@ -457,22 +455,11 @@
                 app:iconGravity="textStart"
                 app:cornerRadius="16dp" />
 
-            <Button
-                android:id="@+id/growYourViewsButton"
-                android:layout_width="match_parent"
-                android:layout_height="56dp"
-                android:layout_marginTop="12dp"
-                android:text="@string/menu_grow_your_views"
-                android:textAllCaps="true"
-                android:letterSpacing="0.02"
-                android:textStyle="bold"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                app:strokeColor="@color/primary_light"
-                android:textColor="@color/primary_light"
-                app:icon="@drawable/ic_history"
-                app:iconTint="@color/primary_light"
-                app:iconGravity="textStart"
-                app:cornerRadius="16dp" />
+            <!-- growYourViewsButton removed - its content (referral
+                 campaigns + share invite) is now the "Referral rewards"
+                 tab inside IncreaseLimitActivity, opened via
+                 kontactGroupsButton above, so this no longer needs its
+                 own separate dashboard entry point. -->
 
             <Button
                 android:id="@+id/referralHistoryButton"
