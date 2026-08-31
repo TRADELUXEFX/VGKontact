@@ -254,7 +254,7 @@
                     android:textAllCaps="false"
                     android:textSize="13sp"
                     android:textStyle="bold"
-                    android:backgroundTint="@android:color/transparent"
+                    android:backgroundTint="@color/stats_card_fill"
                     android:textColor="@color/text_muted"
                     app:cornerRadius="12dp"
                     android:insetTop="0dp"
