@@ -48,6 +48,7 @@ class HistoryActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_history)
+        BottomNavHelper.setup(this, BottomNavHelper.Tab.HISTORY)
 
         window.statusBarColor = ContextCompat.getColor(this, R.color.vg_green)
 
