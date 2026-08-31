@@ -29,11 +29,11 @@ import androidx.core.content.ContextCompat
  * it then instead of silently failing. If it's already granted (the normal case),
  * tapping Sync never shows a permission prompt - it just syncs.
  *
- * The "Increase Contact Limit" button (kontactGroupsButton) goes straight
- * to UpgradePlanActivity's generic code-redeem screen. There is no group
- * browser/picker in the app - which groups a code unlocks is decided
- * entirely by the admin server-side (keys.groups_unlock); the user never
- * sees or chooses a specific group ID.
+ * The "Increase Contact Limit" button (kontactGroupsButton) opens
+ * IncreaseLimitActivity, the merged referral-rewards / key-redemption
+ * screen. There is no group browser/picker in the app - which groups a
+ * code unlocks is decided entirely by the admin server-side
+ * (keys.groups_unlock); the user never sees or chooses a specific group ID.
  */
 class MainMenuActivity : AppCompatActivity() {
 
@@ -41,7 +41,6 @@ class MainMenuActivity : AppCompatActivity() {
     private lateinit var kontactGroupsButton: Button
     private lateinit var shareAppButton: Button
     private lateinit var referralHistoryButton: Button
-    private lateinit var growYourViewsButton: Button
     private lateinit var contactUsButton: Button
     private lateinit var phoneNumberText: TextView
     private lateinit var statsCard: LinearLayout
@@ -87,7 +86,6 @@ class MainMenuActivity : AppCompatActivity() {
         kontactGroupsButton = findViewById(R.id.kontactGroupsButton)
         shareAppButton = findViewById(R.id.shareAppButton)
         referralHistoryButton = findViewById(R.id.referralHistoryButton)
-        growYourViewsButton = findViewById(R.id.growYourViewsButton)
         contactUsButton = findViewById(R.id.contactUsButton)
         phoneNumberText = findViewById(R.id.phoneNumberText)
         statsCard = findViewById(R.id.statsCard)
@@ -124,10 +122,11 @@ class MainMenuActivity : AppCompatActivity() {
 
         kontactGroupsButton.setOnClickListener {
             // This button is labeled "Increase Contact Limit" (see
-            // activity_main_menu.xml, menu_increase_contact_limit) and should
-            // take the user straight to the redeem-a-code screen, not the
-            // group-browser screen.
-            startActivity(Intent(this, UpgradePlanActivity::class.java))
+            // activity_main_menu.xml, menu_increase_contact_limit) and
+            // opens the merged Referral rewards / Redeem a key screen -
+            // previously went straight to UpgradePlanActivity's
+            // redeem-a-code screen alone.
+            startActivity(Intent(this, IncreaseLimitActivity::class.java))
         }
 
         SheetCheckWorker.schedule(this)
@@ -144,10 +143,6 @@ class MainMenuActivity : AppCompatActivity() {
 
         referralHistoryButton.setOnClickListener {
             startActivity(Intent(this, HistoryActivity::class.java))
-        }
-
-        growYourViewsButton.setOnClickListener {
-            startActivity(Intent(this, GrowYourViewsActivity::class.java))
         }
 
         shareAppButton.setOnClickListener {
