@@ -8,6 +8,7 @@
 <color name="text_muted">#8A928C</color>
 <color name="text_secondary">#555555</color>
 <color name="stats_card_fill">#F5FAF6</color>
+    <color name="tab_track_fill">#E4EAE5</color>
 <color name="stats_card_border">#DCEEE1</color>
 <color name="warning_amber">#E8A93B</color>
 <color name="warning_red">#D9534F</color>
