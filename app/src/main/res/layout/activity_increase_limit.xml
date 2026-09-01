@@ -83,182 +83,6 @@
             android:paddingTop="20dp"
             android:paddingBottom="28dp">
 
-            <!-- ============ SHARED LIMIT CARD (fixed, both tabs) ============ -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:background="@drawable/card_background"
-                android:padding="20dp"
-                android:layout_marginBottom="20dp">
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/label_your_status_viewers"
-                    android:textSize="11sp"
-                    android:textStyle="bold"
-                    android:textAllCaps="true"
-                    android:letterSpacing="0.05"
-                    android:textColor="@color/text_muted"
-                    android:gravity="center"
-                    android:layout_marginBottom="14dp" />
-
-                <!-- "N synced today" row, same as the Home dashboard card
-                     (statsTodayText), so this card matches Home's contact
-                     limit card exactly aside from the missing Sync button. -->
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center"
-                    android:layout_marginBottom="18dp">
-
-                    <ImageView
-                        android:layout_width="16dp"
-                        android:layout_height="16dp"
-                        android:layout_marginEnd="8dp"
-                        android:src="@drawable/ic_sync"
-                        app:tint="@color/vg_green" />
-
-                    <TextView
-                        android:id="@+id/statsTodayText"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:textSize="13sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/vg_dark"
-                        tools:text="3 kontacts synced today" />
-
-                </LinearLayout>
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:background="@drawable/limit_block_background"
-                    android:padding="18dp">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center"
-                        android:layout_marginBottom="10dp">
-
-                        <TextView
-                            android:id="@+id/limitCurrentText"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:textSize="34sp"
-                            android:textStyle="bold"
-                            android:textColor="@color/vg_dark"
-                            android:fontFamily="@font/baloo2"
-                            tools:text="15" />
-
-                        <TextView
-                            android:id="@+id/limitOfText"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="6dp"
-                            android:textSize="16sp"
-                            android:textStyle="bold"
-                            android:textColor="@color/text_muted"
-                            tools:text="/ 250" />
-
-                    </LinearLayout>
-
-                    <ProgressBar
-                        android:id="@+id/limitMeterBar"
-                        style="?android:attr/progressBarStyleHorizontal"
-                        android:layout_width="match_parent"
-                        android:layout_height="14dp"
-                        android:max="100"
-                        android:progress="2"
-                        android:progressDrawable="@drawable/limit_meter_progress" />
-
-                    <TextView
-                        android:id="@+id/limitPctText"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:textSize="12sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/text_muted"
-                        android:gravity="center"
-                        tools:text="6% used" />
-
-                </LinearLayout>
-
-                <!-- Breakdown row (Free plan / Referral bonus) - same rule
-                     as the dashboard's limitBreakdownBlock: only shown once
-                     both halves are known and there's an actual bonus to
-                     show. See MainMenuActivity.updateLimitMeter(). -->
-                <LinearLayout
-                    android:id="@+id/limitBreakdownBlock"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:layout_marginTop="14dp"
-                    android:paddingTop="12dp"
-                    android:background="@drawable/limit_breakdown_divider"
-                    android:visibility="gone"
-                    tools:visibility="visible">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:paddingTop="3dp"
-                        android:paddingBottom="3dp">
-
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="@string/label_free_plan"
-                            android:textSize="13sp"
-                            android:textColor="@color/text_secondary" />
-
-                        <TextView
-                            android:id="@+id/limitBaseText"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:textSize="13sp"
-                            android:textColor="@color/vg_dark"
-                            tools:text="100" />
-
-                    </LinearLayout>
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:paddingTop="3dp"
-                        android:paddingBottom="3dp">
-
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="@string/label_referral_bonus"
-                            android:textSize="13sp"
-                            android:textColor="@color/text_secondary" />
-
-                        <TextView
-                            android:id="@+id/limitBonusText"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:textSize="13sp"
-                            android:textColor="@color/vg_green_dark"
-                            tools:text="+20" />
-
-                    </LinearLayout>
-
-                </LinearLayout>
-
-            </LinearLayout>
-
             <!-- ============ TAB SWITCHER (segmented control) ============
                  Track uses its own dedicated fill (tab_track_fill) rather
                  than the card backgrounds used elsewhere, so the inactive
@@ -318,6 +142,67 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:visibility="visible">
+
+                <!-- My Referral Code - same block/logic as ProfileActivity,
+                     the user's own WhatsApp number acts as their referral
+                     code, shown here too so people don't have to leave this
+                     screen to find it while referring friends. -->
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/profile_label_my_referral_code"
+                    android:textSize="11sp"
+                    android:textAllCaps="true"
+                    android:letterSpacing="0.05"
+                    android:textColor="@color/text_muted" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="@string/profile_referral_code_hint"
+                    android:textSize="12sp"
+                    android:textColor="@color/text_muted" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginTop="8dp"
+                    android:layout_marginBottom="20dp"
+                    android:background="@drawable/referral_code_background"
+                    android:padding="12dp">
+
+                    <TextView
+                        android:id="@+id/myReferralCodeText"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:textSize="15sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/vg_green"
+                        android:letterSpacing="0.03"
+                        tools:text="08018485545" />
+
+                    <Button
+                        android:id="@+id/copyReferralCodeButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="32dp"
+                        android:minWidth="0dp"
+                        android:minHeight="0dp"
+                        android:paddingStart="14dp"
+                        android:paddingEnd="14dp"
+                        android:text="@string/btn_copy"
+                        android:textSize="11sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/white"
+                        android:backgroundTint="@color/vg_green"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        app:cornerRadius="16dp" />
+
+                </LinearLayout>
 
                 <Button
                     android:id="@+id/shareInviteButton"
