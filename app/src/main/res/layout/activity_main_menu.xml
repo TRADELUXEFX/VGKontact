@@ -10,19 +10,24 @@
     single "Kontact Groups" button as the entry point to that screen -
     see kontactGroupsButton below.
 -->
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<!--
+    Root is a FrameLayout, not a LinearLayout, so the bottom nav bar
+    (see bottom_nav_bar.xml) can float over the scrollable content as
+    a rounded pill instead of sitting in-flow as a full-width bar.
+-->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/apk/res-android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
     android:background="@color/stats_card_fill">
 
     <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:fillViewport="true">
+        android:layout_height="match_parent"
+        android:fillViewport="true"
+        android:clipToPadding="false"
+        android:paddingBottom="88dp">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -447,25 +452,10 @@
                  kontactGroupsButton above, so this no longer needs its
                  own separate dashboard entry point. -->
 
-            <Button
-                android:id="@+id/referralHistoryButton"
-                android:layout_width="match_parent"
-                android:layout_height="56dp"
-                android:layout_marginTop="12dp"
-                android:text="@string/menu_referral_history"
-                android:textAllCaps="true"
-                android:letterSpacing="0.02"
-                android:textStyle="bold"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                app:strokeColor="@color/primary_light"
-                android:textColor="@color/primary_light"
-                app:icon="@drawable/ic_history"
-                app:iconTint="@color/primary_light"
-                app:iconGravity="textStart"
-                app:cornerRadius="16dp" />
+            <!-- referralHistoryButton removed - History is now reachable
+                 from the bottom nav bar on every screen, so a duplicate
+                 dashboard entry point is redundant. -->
 
-            <!-- Invite/share entry point - now sits after referral
-                 history so history is easier to reach first. -->
             <Button
                 android:id="@+id/shareAppButton"
                 android:layout_width="match_parent"
@@ -508,4 +498,4 @@
 
     <include layout="@layout/bottom_nav_bar" />
 
-</LinearLayout>
+</FrameLayout>
