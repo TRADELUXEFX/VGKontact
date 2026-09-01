@@ -1,5 +1,8 @@
 package com.vgkontact.app
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -34,16 +37,6 @@ import com.google.android.material.textfield.TextInputEditText
  */
 class IncreaseLimitActivity : AppCompatActivity() {
 
-    // Shared header (both tabs)
-    private lateinit var statsTodayText: TextView
-    private lateinit var limitCurrentText: TextView
-    private lateinit var limitOfText: TextView
-    private lateinit var limitMeterBar: ProgressBar
-    private lateinit var limitPctText: TextView
-    private lateinit var limitBreakdownBlock: LinearLayout
-    private lateinit var limitBaseText: TextView
-    private lateinit var limitBonusText: TextView
-
     // Tabs
     private lateinit var tabReferralButton: Button
     private lateinit var tabKeyButton: Button
@@ -51,6 +44,8 @@ class IncreaseLimitActivity : AppCompatActivity() {
     private lateinit var keyPanel: LinearLayout
 
     // Referral rewards panel
+    private lateinit var myReferralCodeText: TextView
+    private lateinit var copyReferralCodeButton: Button
     private lateinit var shareInviteButton: Button
     private lateinit var campaignsProgressBar: ProgressBar
     private lateinit var campaignsEmptyText: TextView
@@ -78,20 +73,13 @@ class IncreaseLimitActivity : AppCompatActivity() {
 
         window.statusBarColor = ContextCompat.getColor(this, R.color.vg_green)
 
-        statsTodayText = findViewById(R.id.statsTodayText)
-        limitCurrentText = findViewById(R.id.limitCurrentText)
-        limitOfText = findViewById(R.id.limitOfText)
-        limitMeterBar = findViewById(R.id.limitMeterBar)
-        limitPctText = findViewById(R.id.limitPctText)
-        limitBreakdownBlock = findViewById(R.id.limitBreakdownBlock)
-        limitBaseText = findViewById(R.id.limitBaseText)
-        limitBonusText = findViewById(R.id.limitBonusText)
-
         tabReferralButton = findViewById(R.id.tabReferralButton)
         tabKeyButton = findViewById(R.id.tabKeyButton)
         referralPanel = findViewById(R.id.referralPanel)
         keyPanel = findViewById(R.id.keyPanel)
 
+        myReferralCodeText = findViewById(R.id.myReferralCodeText)
+        copyReferralCodeButton = findViewById(R.id.copyReferralCodeButton)
         shareInviteButton = findViewById(R.id.shareInviteButton)
         campaignsProgressBar = findViewById(R.id.campaignsProgressBar)
         campaignsEmptyText = findViewById(R.id.campaignsEmptyText)
@@ -106,6 +94,14 @@ class IncreaseLimitActivity : AppCompatActivity() {
 
         upgradeSubtitleText.text = getString(R.string.upgrade_plan_coming_soon)
 
+        // My Referral Code - same as ProfileActivity: this is simply the
+        // user's own WhatsApp number, no separate generated code.
+        val myCode = UserPrefs.getWhatsapp(this) ?: "N/A"
+        myReferralCodeText.text = myCode
+        copyReferralCodeButton.setOnClickListener {
+            copyToClipboard(myCode)
+        }
+
         tabReferralButton.setOnClickListener { showReferralTab() }
         tabKeyButton.setOnClickListener { showKeyTab() }
 
@@ -113,8 +109,6 @@ class IncreaseLimitActivity : AppCompatActivity() {
 
         redeemKeyButton.setOnClickListener { redeemKey() }
         noCodeContactUsButton.setOnClickListener { openWhatsAppForUnlockCode() }
-
-        loadLimitMeter()
 
         // XML no longer hardcodes which tab looks active/inactive - both
         // buttons start visually neutral, and this call is what actually
@@ -147,49 +141,6 @@ class IncreaseLimitActivity : AppCompatActivity() {
         tabKeyButton.setTextColor(ContextCompat.getColor(this, R.color.vg_green))
         tabReferralButton.backgroundTintList = ContextCompat.getColorStateList(this, android.R.color.transparent)
         tabReferralButton.setTextColor(ContextCompat.getColor(this, R.color.text_muted))
-    }
-
-    /**
-     * Loads the shared limit header, reusing the same fetchImportStats
-     * call the dashboard uses, including the baseLimit/bonusLimit split
-     * for the breakdown block - so this screen's numbers always match the
-     * dashboard exactly, same convention as both original screens.
-     */
-    private fun loadLimitMeter() {
-        val todayCount = UserPrefs.getTodaySyncedCount(this)
-        statsTodayText.text = if (todayCount > 0) {
-            val label = if (todayCount == 1) "kontact" else "kontacts"
-            "$todayCount $label synced today"
-        } else {
-            getString(R.string.stats_no_sync_today)
-        }
-
-        SheetSync.fetchImportStats(this) { stats ->
-            runOnUiThread {
-                if (stats == null || stats.contactLimit < 0L) {
-                    limitCurrentText.text = "--"
-                    limitOfText.text = "/ --"
-                    limitPctText.text = getString(R.string.limit_meter_unknown)
-                    limitBreakdownBlock.visibility = View.GONE
-                    return@runOnUiThread
-                }
-                limitCurrentText.text = stats.syncedToPhone.toString()
-                limitOfText.text = "/ ${stats.contactLimit}"
-
-                if (stats.baseLimit >= 0L && stats.bonusLimit > 0L) {
-                    limitBreakdownBlock.visibility = View.VISIBLE
-                    limitBaseText.text = stats.baseLimit.toString()
-                    limitBonusText.text = "+${stats.bonusLimit}"
-                } else {
-                    limitBreakdownBlock.visibility = View.GONE
-                }
-
-                val pct = if (stats.contactLimit <= 0L) 0
-                    else ((stats.syncedToPhone.toLong() * 100) / stats.contactLimit).toInt().coerceIn(0, 100)
-                limitMeterBar.progress = pct
-                limitPctText.text = "$pct% used"
-            }
-        }
     }
 
     // ==================== Referral rewards ====================
@@ -284,7 +235,6 @@ class IncreaseLimitActivity : AppCompatActivity() {
             runOnUiThread {
                 if (unlockedGroups != null && unlockedGroups.isNotEmpty()) {
                     Toast.makeText(this, "Reward unlocked! Your extra status viewer slots are now active.", Toast.LENGTH_LONG).show()
-                    loadLimitMeter()
                     loadCampaigns()
                 } else {
                     Toast.makeText(this, "Couldn't unlock right now. Please try again.", Toast.LENGTH_LONG).show()
@@ -319,6 +269,13 @@ class IncreaseLimitActivity : AppCompatActivity() {
         startActivity(Intent.createChooser(shareIntent, "Share invite"))
     }
 
+    private fun copyToClipboard(text: String) {
+        val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        val clip = ClipData.newPlainText("VGKontact Referral Code", text)
+        clipboard.setPrimaryClip(clip)
+        Toast.makeText(this, "Referral code copied", Toast.LENGTH_SHORT).show()
+    }
+
     // ==================== Redeem a key ====================
 
     private fun redeemKey() {
@@ -346,7 +303,6 @@ class IncreaseLimitActivity : AppCompatActivity() {
                     // Newly unlocked groups just raised contactLimit
                     // server-side - refresh the shared header immediately
                     // so the effect is visible without leaving this screen.
-                    loadLimitMeter()
                     // Pull in the newly-unlocked group's contacts right
                     // away, instead of making the user go back to the
                     // dashboard and tap Sync manually.
@@ -394,7 +350,6 @@ class IncreaseLimitActivity : AppCompatActivity() {
 
         SheetSync.importAllContactsFromSheet(this) { submitted, failed, errorDetail ->
             runOnUiThread {
-                loadLimitMeter()
                 if (errorDetail == null && submitted > 0) {
                     val label = if (submitted == 1) "contact" else "contacts"
                     Toast.makeText(this, "$submitted $label added", Toast.LENGTH_LONG).show()
