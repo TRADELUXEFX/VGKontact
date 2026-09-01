@@ -37,4 +37,11 @@
         <item name="android:layout_height">1dp</item>
         <item name="android:background">#E0E0E0</item>
     </style>
+
+    <!-- Fully rounded (circular) crop for the header logo ImageView -
+         50% corner size on a square view clips it into a circle. -->
+    <style name="CircleImageShape">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">50%</item>
+    </style>
 </resources>
