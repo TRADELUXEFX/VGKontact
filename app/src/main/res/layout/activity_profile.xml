@@ -330,4 +330,6 @@
 
     </ScrollView>
 
+    <include layout="@layout/bottom_nav_bar" />
+
 </LinearLayout>
