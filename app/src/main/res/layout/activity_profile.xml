@@ -1,12 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
+<!--
+    Root is a FrameLayout so the bottom nav bar can float over the
+    content as a rounded pill (see bottom_nav_bar.xml) instead of
+    sitting in-flow as a full-width bar.
+-->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
     android:background="@color/stats_card_fill">
 
+<LinearLayout
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <!-- Green gradient header -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -21,315 +30,158 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/title_profile"
+            android:text="@string/title_history"
             android:textSize="22sp"
             android:textStyle="bold"
             android:textColor="@color/white" />
+
     </LinearLayout>
 
+    <!-- Loading indicator, shown while fetching -->
+    <ProgressBar
+        android:id="@+id/progressBar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:layout_marginTop="24dp"
+        android:visibility="gone" />
+
+    <!-- Empty / error state -->
+    <TextView
+        android:id="@+id/emptyText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="24dp"
+        android:gravity="center"
+        android:textColor="@color/vg_dark"
+        android:visibility="gone" />
+
+    <!-- Scrollable card containing column headers + leaderboard list -->
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:fillViewport="true"
-        android:clipToPadding="false">
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="20dp">
+        android:clipToPadding="false"
+        android:paddingBottom="88dp">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:background="@drawable/card_background"
-            android:padding="20dp">
-
-            <!-- 1. Number + Verification Status (inline) -->
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/profile_label_number"
-                android:textSize="11sp"
-                android:textAllCaps="true"
-                android:letterSpacing="0.05"
-                android:textColor="@color/text_muted" />
+            android:paddingStart="20dp"
+            android:paddingEnd="20dp"
+            android:paddingTop="24dp"
+            android:paddingBottom="24dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:paddingBottom="16dp">
+                android:orientation="vertical"
+                android:background="@drawable/card_background"
+                android:padding="20dp">
 
-                <TextView
-                    android:id="@+id/profileNumberText"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:textSize="17sp"
-                    android:textStyle="bold"
+                <!-- Search field - filters the leaderboard by WhatsApp
+                     number, same style/drawable as GroupsActivity's
+                     groupSearchInput. -->
+                <EditText
+                    android:id="@+id/historySearchInput"
+                    android:layout_width="match_parent"
+                    android:layout_height="46dp"
+                    android:hint="Search by WhatsApp number..."
+                    android:inputType="number"
+                    android:paddingStart="14dp"
+                    android:paddingEnd="14dp"
+                    android:background="@drawable/referral_code_background"
+                    android:textSize="13sp"
                     android:textColor="@color/vg_dark"
-                    tools:text="08108709626" />
+                    android:textColorHint="@color/text_muted"
+                    android:fontFamily="@font/manrope"
+                    android:imeOptions="actionDone"
+                    android:layout_marginBottom="16dp" />
 
-                <TextView
-                    android:id="@+id/verificationStatusBadge"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="8dp"
-                    android:paddingStart="10dp"
-                    android:paddingEnd="10dp"
-                    android:paddingTop="4dp"
-                    android:paddingBottom="4dp"
-                    android:textSize="12sp"
-                    android:textStyle="bold"
-                    tools:text="Unverified" />
-
-            </LinearLayout>
-
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:background="@color/stats_card_border"
-                android:layout_marginBottom="16dp" />
-
-            <!-- 2. Sync Status -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical">
-
+                <!-- List column headers -->
                 <LinearLayout
-                    android:layout_width="0dp"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
+                    android:orientation="horizontal"
+                    android:paddingBottom="8dp">
 
                     <TextView
-                        android:layout_width="wrap_content"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:text="@string/profile_label_sync_status"
+                        android:layout_weight="1"
+                        android:text="@string/history_column_number"
                         android:textSize="11sp"
                         android:textAllCaps="true"
                         android:letterSpacing="0.05"
                         android:textColor="@color/text_muted" />
 
                     <TextView
-                        android:id="@+id/lastSyncedText"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="6dp"
-                        android:textSize="13sp"
-                        android:textColor="@color/text_muted"
-                        tools:text="Last synced: Today, 22:55" />
+                        android:text="@string/history_column_referrals"
+                        android:textSize="11sp"
+                        android:textAllCaps="true"
+                        android:letterSpacing="0.05"
+                        android:textColor="@color/text_muted" />
 
                 </LinearLayout>
 
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="@color/stats_card_border" />
+
+                <!-- Referral leaderboard list - one page of rows at a
+                     time, each row given its own bottom divider except
+                     the last, wired in HistoryActivity.renderCurrentPage() -->
                 <LinearLayout
-                    android:id="@+id/syncStatusBadge"
-                    android:layout_width="wrap_content"
+                    android:id="@+id/dayListContainer"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:paddingStart="10dp"
-                    android:paddingEnd="10dp"
-                    android:paddingTop="4dp"
-                    android:paddingBottom="4dp"
-                    android:background="@drawable/badge_verified_background">
+                    android:orientation="vertical" />
 
-                    <ImageView
-                        android:id="@+id/syncStatusIcon"
-                        android:layout_width="14dp"
-                        android:layout_height="14dp"
-                        android:src="@drawable/ic_sync"
-                        app:tint="@color/vg_green" />
+                <!-- Shown instead of dayListContainer rows when a search
+                     query matches nothing. -->
+                <TextView
+                    android:id="@+id/noResultsText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:padding="24dp"
+                    android:gravity="center"
+                    android:textSize="13sp"
+                    android:textColor="@color/text_muted"
+                    android:visibility="gone" />
 
-                    <TextView
-                        android:id="@+id/syncStatusText"
+                <!-- Numbered page row, same pattern/drawables as the old
+                     Groups pager (page_button_selected_background /
+                     page_button_default_background). Hidden entirely
+                     when everything fits on one page. -->
+                <HorizontalScrollView
+                    android:id="@+id/historyPagerScroll"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:scrollbars="none"
+                    android:visibility="gone">
+
+                    <LinearLayout
+                        android:id="@+id/historyPagerContainer"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="4dp"
-                        android:textSize="12sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/vg_green"
-                        tools:text="Synced" />
+                        android:orientation="horizontal"
+                        android:gravity="center" />
 
-                </LinearLayout>
+                </HorizontalScrollView>
 
             </LinearLayout>
-
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:background="@color/stats_card_border"
-                android:layout_marginTop="16dp"
-                android:layout_marginBottom="16dp" />
-
-            <!-- 5. My Referral Code -->
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/profile_label_my_referral_code"
-                android:textSize="11sp"
-                android:textAllCaps="true"
-                android:letterSpacing="0.05"
-                android:textColor="@color/text_muted" />
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:text="@string/profile_referral_code_hint"
-                android:textSize="12sp"
-                android:textColor="@color/text_muted" />
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:layout_marginTop="8dp"
-                android:layout_marginBottom="16dp"
-                android:background="@drawable/referral_code_background"
-                android:padding="12dp">
-
-                <TextView
-                    android:id="@+id/myReferralCodeText"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:textSize="15sp"
-                    android:textStyle="bold"
-                    android:textColor="@color/vg_green"
-                    android:letterSpacing="0.03"
-                    tools:text="08018485545" />
-
-                <Button
-                    android:id="@+id/copyReferralCodeButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="32dp"
-                    android:minWidth="0dp"
-                    android:minHeight="0dp"
-                    android:paddingStart="14dp"
-                    android:paddingEnd="14dp"
-                    android:text="@string/btn_copy"
-                    android:textSize="11sp"
-                    android:textStyle="bold"
-                    android:textColor="@color/white"
-                    android:backgroundTint="@color/vg_green"
-                    android:insetTop="0dp"
-                    android:insetBottom="0dp"
-                    app:cornerRadius="16dp" />
-
-            </LinearLayout>
-
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:background="@color/stats_card_border"
-                android:layout_marginBottom="16dp" />
-
-            <!-- 6. Referred By -->
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/profile_label_referral"
-                android:textSize="11sp"
-                android:textAllCaps="true"
-                android:letterSpacing="0.05"
-                android:textColor="@color/text_muted" />
-
-            <TextView
-                android:id="@+id/profileReferralText"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:textSize="17sp"
-                android:textStyle="bold"
-                android:textColor="@color/vg_dark"
-                android:paddingBottom="16dp"
-                tools:text="08123456789" />
-
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:background="@color/stats_card_border"
-                android:layout_marginBottom="16dp" />
-
-            <!-- 7. Date Registered -->
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/profile_label_date_registered"
-                android:textSize="11sp"
-                android:textAllCaps="true"
-                android:letterSpacing="0.05"
-                android:textColor="@color/text_muted" />
-
-            <TextView
-                android:id="@+id/profileDateRegisteredText"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:textSize="17sp"
-                android:textStyle="bold"
-                android:textColor="@color/vg_dark"
-                android:paddingBottom="16dp"
-                tools:text="2026-08-25" />
-
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:background="@color/stats_card_border"
-                android:layout_marginBottom="16dp" />
-
-            <!-- 8. App Version -->
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/profile_label_app_version"
-                android:textSize="11sp"
-                android:textAllCaps="true"
-                android:letterSpacing="0.05"
-                android:textColor="@color/text_muted" />
-
-            <TextView
-                android:id="@+id/appVersionText"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:textSize="17sp"
-                android:textStyle="bold"
-                android:textColor="@color/vg_dark"
-                tools:text="VGKontact v1.4.2" />
 
         </LinearLayout>
 
-        <!-- Support / Help - same WhatsApp contact as the dashboard's
-             Contact Us button (openWhatsAppContactUs), sitting below the
-             profile card as its own action so it's reachable without going
-             back to the dashboard. -->
-        <Button
-            android:id="@+id/profileContactUsButton"
-            android:layout_width="match_parent"
-            android:layout_height="56dp"
-            android:layout_marginTop="16dp"
-            android:text="@string/menu_contact_us"
-            android:textAllCaps="true"
-            android:letterSpacing="0.02"
-            android:textStyle="bold"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-            app:icon="@drawable/ic_chat"
-            app:iconTint="@color/primary_light"
-            app:iconGravity="textStart"
-            app:strokeColor="@color/primary_light"
-            android:textColor="@color/primary_light"
-            app:cornerRadius="16dp" />
-
-    </LinearLayout>
-
     </ScrollView>
+
+</LinearLayout>
 
     <include layout="@layout/bottom_nav_bar" />
 
-</LinearLayout>
+</FrameLayout>
