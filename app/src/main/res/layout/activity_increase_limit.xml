@@ -302,6 +302,7 @@
                         android:layout_height="wrap_content"
                         app:boxBackgroundMode="none"
                         app:hintTextColor="@color/vg_green"
+                        app:hintEnabled="false"
                         android:paddingStart="12dp"
                         android:paddingEnd="12dp">
 
@@ -312,7 +313,8 @@
                             android:hint="@string/hint_key_code"
                             android:gravity="center"
                             android:inputType="textCapCharacters"
-                            android:textSize="15sp"
+                            android:textSize="20sp"
+                            android:textStyle="bold"
                             android:letterSpacing="0.05"
                             android:maxLength="13"
                             android:maxLines="1" />
