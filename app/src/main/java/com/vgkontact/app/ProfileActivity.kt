@@ -32,8 +32,6 @@ class ProfileActivity : AppCompatActivity() {
 
     private lateinit var appVersionText: TextView
 
-    private lateinit var myReferralCodeText: TextView
-    private lateinit var copyReferralCodeButton: Button
     private lateinit var profileContactUsButton: Button
 
     // Same WhatsApp support number the dashboard's Contact Us button uses
@@ -61,8 +59,6 @@ class ProfileActivity : AppCompatActivity() {
 
         appVersionText = findViewById(R.id.appVersionText)
 
-        myReferralCodeText = findViewById(R.id.myReferralCodeText)
-        copyReferralCodeButton = findViewById(R.id.copyReferralCodeButton)
         profileContactUsButton = findViewById(R.id.profileContactUsButton)
 
         val whatsapp = UserPrefs.getWhatsapp(this)
@@ -92,15 +88,6 @@ class ProfileActivity : AppCompatActivity() {
         // App Version - pulled from BuildConfig so it can never go stale;
         // no manual string to remember to bump on release.
         appVersionText.text = "VGKontact v${BuildConfig.VERSION_NAME}"
-
-        // My Referral Code - this is simply the user's own WhatsApp number.
-        // Other people type this in during their own signup to credit this
-        // user as the referrer. There is no separate generated code.
-        val myCode = whatsapp ?: "N/A"
-        myReferralCodeText.text = myCode
-        copyReferralCodeButton.setOnClickListener {
-            copyToClipboard(myCode)
-        }
 
         profileContactUsButton.setOnClickListener {
             openWhatsAppContactUs()
