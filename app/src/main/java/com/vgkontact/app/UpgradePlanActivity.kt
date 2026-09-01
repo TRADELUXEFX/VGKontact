@@ -10,7 +10,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
-import com.google.android.material.textfield.TextInputEditText
+import android.widget.EditText
 
 /**
  * Key redemption / "unlock" screen. User types in a code (given to them by
@@ -28,7 +28,7 @@ class UpgradePlanActivity : AppCompatActivity() {
 
     private lateinit var upgradeTitleText: TextView
     private lateinit var upgradeSubtitleText: TextView
-    private lateinit var keyCodeInput: TextInputEditText
+    private lateinit var keyCodeInput: EditText
     private lateinit var redeemKeyButton: Button
     private lateinit var noCodeContactUsButton: Button
     private lateinit var redeemProgressBar: ProgressBar
