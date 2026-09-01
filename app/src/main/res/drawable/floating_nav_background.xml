@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- White rounded pill for the floating bottom nav, with a subtle
+     stroke since elevation/shadow alone reads too flat on light
+     backgrounds like stats_card_fill. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/white" />
+    <corners android:radius="26dp" />
+    <stroke
+        android:width="0.5dp"
+        android:color="@color/stats_card_border" />
+</shape>
+
