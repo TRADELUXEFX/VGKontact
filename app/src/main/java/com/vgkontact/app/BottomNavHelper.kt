@@ -24,29 +24,50 @@ object BottomNavHelper {
         val activeColor = ContextCompat.getColor(activity, R.color.vg_green)
         val inactiveColor = ContextCompat.getColor(activity, R.color.text_muted)
 
+        val homeTab = activity.findViewById<android.widget.LinearLayout>(R.id.navHomeTab)
+        val upgradeTab = activity.findViewById<android.widget.LinearLayout>(R.id.navUpgradeTab)
+        val historyTab = activity.findViewById<android.widget.LinearLayout>(R.id.navHistoryTab)
+        val profileTab = activity.findViewById<android.widget.LinearLayout>(R.id.navProfileTab)
+
+        val activeTabBackground = ContextCompat.getDrawable(activity, R.drawable.nav_active_tab_background)
+
         val pairs = listOf(
-            Tab.HOME to (homeIcon to homeLabel),
-            Tab.UPGRADE to (upgradeIcon to upgradeLabel),
-            Tab.HISTORY to (historyIcon to historyLabel),
-            Tab.PROFILE to (profileIcon to profileLabel)
+            Tab.HOME to Triple(homeIcon, homeLabel, homeTab),
+            Tab.UPGRADE to Triple(upgradeIcon, upgradeLabel, upgradeTab),
+            Tab.HISTORY to Triple(historyIcon, historyLabel, historyTab),
+            Tab.PROFILE to Triple(profileIcon, profileLabel, profileTab)
         )
         for ((tab, views) in pairs) {
-            val (icon, label) = views
-            val color = if (tab == current) activeColor else inactiveColor
+            val (icon, label, tabContainer) = views
+            val isActive = tab == current
+            val color = if (isActive) activeColor else inactiveColor
             icon.setColorFilter(color)
             label.setTextColor(color)
+
+            // Active tab gets the soft green capsule (from the floating
+            // pill nav concept); inactive tabs keep the plain borderless
+            // ripple so taps still show touch feedback.
+            if (isActive) {
+                tabContainer?.background = activeTabBackground
+            } else {
+                val outValue = android.util.TypedValue()
+                activity.theme.resolveAttribute(
+                    android.R.attr.selectableItemBackgroundBorderless, outValue, true
+                )
+                tabContainer?.setBackgroundResource(outValue.resourceId)
+            }
         }
 
-        activity.findViewById<android.widget.LinearLayout>(R.id.navHomeTab)?.setOnClickListener {
+        homeTab?.setOnClickListener {
             navigateTo(activity, current, Tab.HOME, MainMenuActivity::class.java)
         }
-        activity.findViewById<android.widget.LinearLayout>(R.id.navUpgradeTab)?.setOnClickListener {
+        upgradeTab?.setOnClickListener {
             navigateTo(activity, current, Tab.UPGRADE, IncreaseLimitActivity::class.java)
         }
-        activity.findViewById<android.widget.LinearLayout>(R.id.navHistoryTab)?.setOnClickListener {
+        historyTab?.setOnClickListener {
             navigateTo(activity, current, Tab.HISTORY, HistoryActivity::class.java)
         }
-        activity.findViewById<android.widget.LinearLayout>(R.id.navProfileTab)?.setOnClickListener {
+        profileTab?.setOnClickListener {
             navigateTo(activity, current, Tab.PROFILE, ProfileActivity::class.java)
         }
     }
