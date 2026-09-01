@@ -249,8 +249,9 @@
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/keyCodeInput"
                         android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
+                        android:layout_height="64dp"
                         android:hint="@string/hint_key_code"
+                        android:gravity="center"
                         android:inputType="textCapCharacters"
                         android:textSize="15sp"
                         android:letterSpacing="0.05"
