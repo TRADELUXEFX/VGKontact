@@ -15,7 +15,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
-import com.google.android.material.textfield.TextInputEditText
+import android.widget.EditText
 
 /**
  * Increase Contact Limit - merged entry point that replaces both
@@ -54,7 +54,7 @@ class IncreaseLimitActivity : AppCompatActivity() {
 
     // Redeem a key panel
     private lateinit var upgradeSubtitleText: TextView
-    private lateinit var keyCodeInput: TextInputEditText
+    private lateinit var keyCodeInput: EditText
     private lateinit var redeemKeyButton: Button
     private lateinit var noCodeContactUsButton: Button
     private lateinit var redeemProgressBar: ProgressBar
