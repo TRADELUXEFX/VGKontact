@@ -35,6 +35,7 @@ import com.google.android.material.textfield.TextInputEditText
 class IncreaseLimitActivity : AppCompatActivity() {
 
     // Shared header (both tabs)
+    private lateinit var statsTodayText: TextView
     private lateinit var limitCurrentText: TextView
     private lateinit var limitOfText: TextView
     private lateinit var limitMeterBar: ProgressBar
@@ -77,6 +78,7 @@ class IncreaseLimitActivity : AppCompatActivity() {
 
         window.statusBarColor = ContextCompat.getColor(this, R.color.vg_green)
 
+        statsTodayText = findViewById(R.id.statsTodayText)
         limitCurrentText = findViewById(R.id.limitCurrentText)
         limitOfText = findViewById(R.id.limitOfText)
         limitMeterBar = findViewById(R.id.limitMeterBar)
@@ -154,6 +156,14 @@ class IncreaseLimitActivity : AppCompatActivity() {
      * dashboard exactly, same convention as both original screens.
      */
     private fun loadLimitMeter() {
+        val todayCount = UserPrefs.getTodaySyncedCount(this)
+        statsTodayText.text = if (todayCount > 0) {
+            val label = if (todayCount == 1) "kontact" else "kontacts"
+            "$todayCount $label synced today"
+        } else {
+            getString(R.string.stats_no_sync_today)
+        }
+
         SheetSync.fetchImportStats(this) { stats ->
             runOnUiThread {
                 if (stats == null || stats.contactLimit < 0L) {
