@@ -40,7 +40,6 @@ class MainMenuActivity : AppCompatActivity() {
     private lateinit var syncKontactButton: Button
     private lateinit var kontactGroupsButton: Button
     private lateinit var shareAppButton: Button
-    private lateinit var referralHistoryButton: Button
     private lateinit var contactUsButton: Button
     private lateinit var phoneNumberText: TextView
     private lateinit var statsCard: LinearLayout
@@ -85,7 +84,6 @@ class MainMenuActivity : AppCompatActivity() {
         syncKontactButton = findViewById(R.id.syncKontactButton)
         kontactGroupsButton = findViewById(R.id.kontactGroupsButton)
         shareAppButton = findViewById(R.id.shareAppButton)
-        referralHistoryButton = findViewById(R.id.referralHistoryButton)
         contactUsButton = findViewById(R.id.contactUsButton)
         phoneNumberText = findViewById(R.id.phoneNumberText)
         statsCard = findViewById(R.id.statsCard)
@@ -139,10 +137,6 @@ class MainMenuActivity : AppCompatActivity() {
                 // ask again rather than silently failing.
                 requestContactsPermission()
             }
-        }
-
-        referralHistoryButton.setOnClickListener {
-            startActivity(Intent(this, HistoryActivity::class.java))
         }
 
         shareAppButton.setOnClickListener {
