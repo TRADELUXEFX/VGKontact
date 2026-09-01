@@ -151,10 +151,6 @@ class MainMenuActivity : AppCompatActivity() {
             startActivity(Intent(this, NotificationSettingsActivity::class.java))
         }
 
-        profileIcon.setOnClickListener {
-            startActivity(Intent(this, ProfileActivity::class.java))
-        }
-
         BottomNavHelper.setup(this, BottomNavHelper.Tab.HOME)
     }
 
