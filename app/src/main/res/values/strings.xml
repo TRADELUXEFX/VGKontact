@@ -75,6 +75,7 @@
     <string name="profile_label_app_version">App Version</string>
     <string name="profile_label_my_referral_code">My Referral Code</string>
     <string name="profile_referral_code_hint">Share this so others can enter it when they sign up</string>
+    <string name="get_viewers_referral_code_hint">Share your phone number to others so they can input it as referral on the app</string>
     <string name="btn_copy">COPY</string>
 
     <string name="title_grow_your_views">Grow your views</string>
