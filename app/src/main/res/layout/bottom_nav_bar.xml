@@ -1,14 +1,26 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    Floating pill nav bar. Meant to be the last child of a FrameLayout
+    (see nav_screen_wrapper.xml), positioned bottom|center with side/
+    bottom margins so it floats above the content edge-to-edge with a
+    gap, instead of the old flat full-width in-flow bar.
+-->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/bottomNavBar"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:layout_gravity="bottom"
+    android:layout_marginStart="14dp"
+    android:layout_marginEnd="14dp"
+    android:layout_marginBottom="14dp"
     android:orientation="horizontal"
-    android:background="@color/white"
-    android:elevation="8dp"
-    android:paddingTop="8dp"
-    android:paddingBottom="8dp">
+    android:background="@drawable/floating_nav_background"
+    android:elevation="10dp"
+    android:paddingTop="6dp"
+    android:paddingBottom="6dp"
+    android:paddingStart="6dp"
+    android:paddingEnd="6dp">
 
     <LinearLayout
         android:id="@+id/navHomeTab"
@@ -20,13 +32,13 @@
         android:clickable="true"
         android:focusable="true"
         android:background="?android:attr/selectableItemBackgroundBorderless"
-        android:paddingTop="4dp"
-        android:paddingBottom="4dp">
+        android:paddingTop="6dp"
+        android:paddingBottom="6dp">
 
         <ImageView
             android:id="@+id/navHomeIcon"
-            android:layout_width="22dp"
-            android:layout_height="22dp"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
             android:src="@drawable/ic_home"
             app:tint="@color/text_muted" />
 
@@ -36,7 +48,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="3dp"
             android:text="@string/nav_home"
-            android:textSize="11sp"
+            android:textSize="10sp"
             android:textStyle="bold"
             android:textColor="@color/text_muted" />
 
@@ -52,13 +64,13 @@
         android:clickable="true"
         android:focusable="true"
         android:background="?android:attr/selectableItemBackgroundBorderless"
-        android:paddingTop="4dp"
-        android:paddingBottom="4dp">
+        android:paddingTop="6dp"
+        android:paddingBottom="6dp">
 
         <ImageView
             android:id="@+id/navUpgradeIcon"
-            android:layout_width="22dp"
-            android:layout_height="22dp"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
             android:src="@drawable/ic_crown"
             app:tint="@color/text_muted" />
 
@@ -68,7 +80,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="3dp"
             android:text="@string/nav_upgrade"
-            android:textSize="11sp"
+            android:textSize="10sp"
             android:textStyle="bold"
             android:textColor="@color/text_muted" />
 
@@ -84,13 +96,13 @@
         android:clickable="true"
         android:focusable="true"
         android:background="?android:attr/selectableItemBackgroundBorderless"
-        android:paddingTop="4dp"
-        android:paddingBottom="4dp">
+        android:paddingTop="6dp"
+        android:paddingBottom="6dp">
 
         <ImageView
             android:id="@+id/navHistoryIcon"
-            android:layout_width="22dp"
-            android:layout_height="22dp"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
             android:src="@drawable/ic_history"
             app:tint="@color/text_muted" />
 
@@ -100,7 +112,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="3dp"
             android:text="@string/nav_history"
-            android:textSize="11sp"
+            android:textSize="10sp"
             android:textStyle="bold"
             android:textColor="@color/text_muted" />
 
@@ -116,13 +128,13 @@
         android:clickable="true"
         android:focusable="true"
         android:background="?android:attr/selectableItemBackgroundBorderless"
-        android:paddingTop="4dp"
-        android:paddingBottom="4dp">
+        android:paddingTop="6dp"
+        android:paddingBottom="6dp">
 
         <ImageView
             android:id="@+id/navProfileIcon"
-            android:layout_width="22dp"
-            android:layout_height="22dp"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
             android:src="@drawable/ic_profile"
             app:tint="@color/text_muted" />
 
@@ -132,7 +144,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="3dp"
             android:text="@string/nav_profile"
-            android:textSize="11sp"
+            android:textSize="10sp"
             android:textStyle="bold"
             android:textColor="@color/text_muted" />
 
