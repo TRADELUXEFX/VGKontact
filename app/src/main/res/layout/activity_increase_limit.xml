@@ -104,6 +104,34 @@
                     android:gravity="center"
                     android:layout_marginBottom="14dp" />
 
+                <!-- "N synced today" row, same as the Home dashboard card
+                     (statsTodayText), so this card matches Home's contact
+                     limit card exactly aside from the missing Sync button. -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center"
+                    android:layout_marginBottom="18dp">
+
+                    <ImageView
+                        android:layout_width="16dp"
+                        android:layout_height="16dp"
+                        android:layout_marginEnd="8dp"
+                        android:src="@drawable/ic_sync"
+                        app:tint="@color/vg_green" />
+
+                    <TextView
+                        android:id="@+id/statsTodayText"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textSize="13sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/vg_dark"
+                        tools:text="3 kontacts synced today" />
+
+                </LinearLayout>
+
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
