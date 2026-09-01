@@ -5,3 +5,7 @@
     <solid android:color="@color/white" />
 
 </shape>
+
+<!-- ShapeableImageView circular crop style for profileIcon. Defined
+     here (not in styles.xml) so both the shape and its 50% corner
+     radius live next to the background shape they replace. -->
