@@ -11,14 +11,19 @@ import android.util.Log
 import androidx.core.content.ContextCompat
 import org.json.JSONArray
 import org.json.JSONObject
-import java.io.BufferedReader
-import java.io.InputStreamReader
-import java.io.OutputStreamWriter
-import java.net.HttpURLConnection
-import java.net.URL
-import kotlin.concurrent.thread
+import java.net.URLEncoder
+import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.Response
 
 data class DayCount(val date: String, val count: Int)
 
@@ -28,63 +33,19 @@ data class ImportStats(
     val totalInDatabase: Int,
     val syncedToPhone: Int,
     val availableToImport: Int,
-    // How many groups (home group + redeemed extra_groups) the current user
-    // belongs to. Surfaced for the dashboard's stats tile - this reflects
-    // real data, not a placeholder. -1 means "couldn't be determined" (e.g.
-    // offline), which the UI treats the same as "unknown".
     val joinedGroupCount: Int = -1,
-    // The actual group IDs from joinedGroupCount above, sorted ascending,
-    // so screens can show "Group 3" instead of just "1 Group". Empty when
-    // joinedGroupCount is 0 or -1 (unknown).
     val joinedGroupIds: List<Long> = emptyList(),
-    // "Contact limit" = the sum of each joined group's real cap - its
-    // max_users column on the groups table (NOT home_count from
-    // get_all_groups_summary, which is a live headcount of contacts
-    // currently in the group, not its capacity) - across every group this
-    // user belongs to (home group + redeemed extra_groups). This is NOT a
-    // hardcoded number anywhere in the app - it's always whatever is
-    // actually seeded per-group on Supabase right now, summed live. If
-    // group caps change server-side, this number changes automatically
-    // with them.
-    //
-    // e.g. joined Group 1 (5) + Group 4 (5) + Group 7 (5) -> contactLimit = 15
-    //
-    // 0 means "no groups joined yet". -1 means "couldn't be determined"
-    // (offline, or the groups-summary call failed) - same "unknown"
-    // convention as joinedGroupCount, and the UI should treat it the same
-    // way (show last-known value rather than 0).
     val contactLimit: Long = -1L,
-    // Same total as contactLimit, split by source, for the dashboard's
-    // "Free plan / Referral bonus" breakdown. baseLimit = the home
-    // group's own cap (contacts.group_id). bonusLimit = sum of every
-    // group in contacts.extra_groups (redeemed keys or claimed
-    // campaigns - the app doesn't currently distinguish those from each
-    // other, since both write to the same extra_groups array). Always
-    // baseLimit + bonusLimit == contactLimit. -1 on either means
-    // "couldn't be determined", same convention as contactLimit.
     val baseLimit: Long = -1L,
     val bonusLimit: Long = -1L
 )
 
-// One row of the "browse all groups" list. homeCount and extraCount are
-// kept separate (not summed) per product decision: homeCount = contacts
-// whose group_id is this group; extraCount = contacts who unlocked this
-// group via a redeemed key (present in their extra_groups array).
 data class GroupSummary(
     val groupId: Long,
     val homeCount: Long,
     val extraCount: Long
 )
 
-// One row of the real per-group cap, straight from groups.max_users on
-// Supabase - this is the group's actual capacity, NOT a headcount. Used
-// only to compute ImportStats.contactLimit (see its doc comment).
-// One row of the campaign_progress_live view, for the current user.
-// This is a REPEATING milestone design: every `referralsPerMilestone`
-// qualifying referrals unlocks one milestone's worth of slots. After
-// a claim, milestonesClaimed goes up and the target moves to the next
-// multiple (e.g. 5 -> 10 -> 15...), unless repeats is false, in which
-// case the campaign is done after one claim.
 data class CampaignStatus(
     val campaignId: Long,
     val campaignName: String,
@@ -95,17 +56,11 @@ data class CampaignStatus(
     val milestonesClaimed: Int,
     val qualifyingReferrals: Int
 ) {
-    // How many qualifying referrals are needed to trigger the NEXT
-    // claim. e.g. milestonesClaimed=1, referralsPerMilestone=5 -> 10.
     val nextTarget: Int get() = (milestonesClaimed + 1) * referralsPerMilestone
 
-    // True once the user has enough qualifying referrals to claim the
-    // next milestone (and, for non-repeating campaigns, they haven't
-    // already claimed their one reward).
     val readyToClaim: Boolean get() =
         (repeats || milestonesClaimed == 0) && qualifyingReferrals >= nextTarget
 
-    // True only for a non-repeating campaign that's already been claimed.
     val fullyClaimed: Boolean get() = !repeats && milestonesClaimed >= 1
 }
 
@@ -121,6 +76,20 @@ object SheetSync {
 
     private const val MAX_RETRIES = 3
     private const val BASE_DELAY_MS = 1000L
+    private const val JSON = "application/json"
+
+    // Single shared OkHttpClient for the whole app process. OkHttp pools
+    // and reuses its underlying connections automatically across calls
+    // made through the same client instance - unlike the old code, which
+    // opened (and never reused) a brand new HttpURLConnection for every
+    // single request. Creating this once as an object-level val, instead
+    // of per-call, is what makes that reuse actually happen.
+    private val httpClient: OkHttpClient by lazy {
+        OkHttpClient.Builder()
+            .connectTimeout(15, TimeUnit.SECONDS)
+            .readTimeout(15, TimeUnit.SECONDS)
+            .build()
+    }
 
     fun isOnline(context: Context): Boolean {
         val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
@@ -129,61 +98,59 @@ object SheetSync {
         return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
     }
 
-    private fun openConnection(path: String, method: String): HttpURLConnection {
-        val url = URL("$SUPABASE_URL/rest/v1/$path")
-        val conn = url.openConnection() as HttpURLConnection
-        conn.requestMethod = method
-        conn.setRequestProperty("apikey", SUPABASE_ANON_KEY)
-        conn.setRequestProperty("Authorization", "Bearer $SUPABASE_ANON_KEY")
-        conn.setRequestProperty("Content-Type", "application/json")
-        conn.connectTimeout = 15000
-        conn.readTimeout = 15000
-        return conn
+    /**
+     * Builds a Request against Supabase's REST endpoint. jsonBody == null
+     * means a GET (no body); otherwise the given method is used with that
+     * JSON string as the body. Same headers (apikey, Authorization,
+     * Content-Type, and an optional Prefer) on every call, same as
+     * openConnection() used to set on every HttpURLConnection before.
+     */
+    private fun buildRequest(path: String, method: String, jsonBody: String? = null, preferHeader: String? = null): Request {
+        val builder = Request.Builder()
+            .url("$SUPABASE_URL/rest/v1/$path")
+            .header("apikey", SUPABASE_ANON_KEY)
+            .header("Authorization", "Bearer $SUPABASE_ANON_KEY")
+            .header("Content-Type", "application/json")
+        if (preferHeader != null) {
+            builder.header("Prefer", preferHeader)
+        }
+        if (jsonBody != null) {
+            builder.method(method, jsonBody.toRequestBody(JSON.toMediaType()))
+        } else {
+            builder.method(method, null)
+        }
+        return builder.build()
     }
 
     private fun isRetryable(responseCode: Int?): Boolean {
         return responseCode == null || responseCode >= 500 || responseCode == 429
     }
 
-    private fun sleepBeforeRetry(attempt: Int) {
-        try {
-            Thread.sleep(BASE_DELAY_MS * (attempt + 1))
-        } catch (e: InterruptedException) {
-            Thread.currentThread().interrupt()
-        }
-    }
-
     /**
-     * Reads a successful (2xx) response body as a String. This same
-     * read-loop (BufferedReader -> StringBuilder -> readLine loop) used to
-     * be copy-pasted into every function that reads a server response.
-     * Pulling it out here means there's exactly one place to fix if the
-     * reading logic ever needs to change, instead of ~14.
+     * Coroutine-friendly replacement for the old sleepBeforeRetry(), which
+     * used Thread.sleep() and therefore blocked (parked) a whole OS thread
+     * while waiting. delay() instead suspends only this coroutine, freeing
+     * its thread to do other work in the meantime - same exponential
+     * backoff timing as before (BASE_DELAY_MS * attempt number).
      */
-    private fun readResponseBody(conn: HttpURLConnection): String {
-        val reader = BufferedReader(InputStreamReader(conn.inputStream))
-        val response = StringBuilder()
-        var line: String?
-        while (reader.readLine().also { line = it } != null) {
-            response.append(line)
-        }
-        reader.close()
-        return response.toString()
+    private suspend fun delayBeforeRetry(attempt: Int) {
+        delay(BASE_DELAY_MS * (attempt + 1))
     }
 
     private const val GENERIC_ERROR = "Something went wrong. Please try again."
 
-    private fun readErrorBody(conn: HttpURLConnection): String {
+    /**
+     * Reads a Response's body as a String, once, safely. OkHttp's response
+     * body can only be read a single time and must be closed - this keeps
+     * that rule in exactly one place instead of every call site.
+     */
+    private fun bodyString(response: Response): String {
+        return response.body?.string() ?: ""
+    }
+
+    private fun readErrorBody(response: Response): String {
         val raw = try {
-            val stream = conn.errorStream ?: return GENERIC_ERROR
-            val reader = BufferedReader(InputStreamReader(stream))
-            val response = StringBuilder()
-            var line: String?
-            while (reader.readLine().also { line = it } != null) {
-                response.append(line)
-            }
-            reader.close()
-            val body = response.toString()
+            val body = bodyString(response)
             if (body.isEmpty()) return GENERIC_ERROR
 
             // Supabase/PostgREST errors come back as JSON with a "message" field
@@ -225,25 +192,14 @@ object SheetSync {
 
     /**
      * Signs up a new contact AND assigns them a group in a single network
-     * call, via the signup_and_assign_group() Postgres function. This
-     * replaces the old two-call flow (POST /contacts, then a separate
-     * POST /rpc/assign_group_to_contact with a manual 400ms wait in
-     * between to dodge replication lag) - both steps now happen inside
-     * one database transaction, so there's nothing to wait on and no
-     * extra round trip.
+     * call, via the signup_and_assign_group() Postgres function. Both
+     * steps happen inside one database transaction, so there's nothing to
+     * wait on and no extra round trip.
      */
     fun submit(whatsapp: String, referral: String = "", context: Context? = null, callback: ((Boolean, String?) -> Unit)? = null) {
-        thread {
+        runOnIoThread {
             for (attempt in 0 until MAX_RETRIES) {
                 try {
-                    val conn = openConnection("rpc/signup_and_assign_group", "POST")
-                    conn.doOutput = true
-
-                    // At signup time, permission setup hasn't happened yet (it's the
-                    // very next screen), so this will always be false here. That's
-                    // correct: nobody should be marked VERIFIED before they've
-                    // actually granted contacts access. PermissionSetupActivity
-                    // flips this to VERIFIED afterward via updateVerificationStatus().
                     val hasContactsPermission = context?.let {
                         ContextCompat.checkSelfPermission(it, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED &&
                             ContextCompat.checkSelfPermission(it, Manifest.permission.WRITE_CONTACTS) == PackageManager.PERMISSION_GRANTED
@@ -254,54 +210,47 @@ object SheetSync {
                     json.put("p_referral", referral)
                     json.put("p_plan", if (hasContactsPermission) "VERIFIED" else "UNVERIFIED")
 
-                    val writer = OutputStreamWriter(conn.outputStream)
-                    writer.write(json.toString())
-                    writer.flush()
-                    writer.close()
+                    val request = buildRequest("rpc/signup_and_assign_group", "POST", json.toString())
+                    httpClient.newCall(request).execute().use { response ->
+                        val responseCode = response.code
 
-                    val responseCode = conn.responseCode
+                        if (responseCode in 200..299) {
+                            val body = bodyString(response)
 
-                    if (responseCode in 200..299) {
-                        val response = readResponseBody(conn)
-                        conn.disconnect()
-
-                        // signup_and_assign_group returns a table (id, group_id) -
-                        // PostgREST wraps this as a JSON array with one row.
-                        val (contactId, groupId) = try {
-                            val arr = JSONArray(response.toString())
-                            if (arr.length() > 0) {
-                                val row = arr.getJSONObject(0)
-                                Pair(row.optLong("id", -1L), row.optLong("group_id", -1L))
-                            } else {
+                            val (contactId, groupId) = try {
+                                val arr = JSONArray(body)
+                                if (arr.length() > 0) {
+                                    val row = arr.getJSONObject(0)
+                                    Pair(row.optLong("id", -1L), row.optLong("group_id", -1L))
+                                } else {
+                                    Pair(-1L, -1L)
+                                }
+                            } catch (e: Exception) {
+                                Log.e("SheetSync", "submit: failed to parse signup_and_assign_group response: $body", e)
                                 Pair(-1L, -1L)
                             }
-                        } catch (e: Exception) {
-                            Log.e("SheetSync", "submit: failed to parse signup_and_assign_group response: $response", e)
-                            Pair(-1L, -1L)
-                        }
 
-                        if (contactId <= 0 || groupId <= 0) {
-                            val debugInfo = "id=$contactId group=$groupId resp=${response.toString().take(150)}"
-                            callback?.invoke(false, "Signed up, but couldn't join a group. [$debugInfo]")
-                            return@thread
-                        }
+                            if (contactId <= 0 || groupId <= 0) {
+                                val debugInfo = "id=$contactId group=$groupId resp=${body.take(150)}"
+                                callback?.invoke(false, "Signed up, but couldn't join a group. [$debugInfo]")
+                                return@runOnIoThread
+                            }
 
-                        callback?.invoke(true, null)
-                        return@thread
-                    } else if (!isRetryable(responseCode)) {
-                        val errorText = readErrorBody(conn)
-                        conn.disconnect()
-                        callback?.invoke(false, errorText)
-                        return@thread
+                            callback?.invoke(true, null)
+                            return@runOnIoThread
+                        } else if (!isRetryable(responseCode)) {
+                            val errorText = readErrorBody(response)
+                            callback?.invoke(false, errorText)
+                            return@runOnIoThread
+                        }
+                        Log.w("SheetSync", "submit attempt ${attempt + 1} failed with code $responseCode, retrying...")
                     }
-                    conn.disconnect()
-                    Log.w("SheetSync", "submit attempt ${attempt + 1} failed with code $responseCode, retrying...")
                 } catch (e: Exception) {
                     Log.w("SheetSync", "submit attempt ${attempt + 1} threw exception, retrying...", e)
                 }
 
                 if (attempt < MAX_RETRIES - 1) {
-                    sleepBeforeRetry(attempt)
+                    delayBeforeRetry(attempt)
                 }
             }
             callback?.invoke(false, "Failed after $MAX_RETRIES attempts")
@@ -309,20 +258,18 @@ object SheetSync {
     }
 
     fun fetchHistory(context: Context? = null, callback: ((List<DayCount>?, String?) -> Unit)? = null) {
-        thread {
+        runOnIoThread {
             try {
-                val conn = openConnection("contacts?select=created_at", "GET")
-                val responseCode = conn.responseCode
-                if (responseCode in 200..299) {
-                    val response = readResponseBody(conn)
-                    conn.disconnect()
-
-                    val arr = JSONArray(response.toString())
-                    callback?.invoke(listOf(DayCount("all", arr.length())), null)
-                } else {
-                    val errorText = readErrorBody(conn)
-                    conn.disconnect()
-                    callback?.invoke(null, errorText)
+                val request = buildRequest("contacts?select=created_at", "GET")
+                httpClient.newCall(request).execute().use { response ->
+                    if (response.code in 200..299) {
+                        val body = bodyString(response)
+                        val arr = JSONArray(body)
+                        callback?.invoke(listOf(DayCount("all", arr.length())), null)
+                    } else {
+                        val errorText = readErrorBody(response)
+                        callback?.invoke(null, errorText)
+                    }
                 }
             } catch (e: java.io.IOException) {
                 Log.w("SheetSync", "fetchHistory failed - network error", e)
@@ -341,29 +288,27 @@ object SheetSync {
      * referrals. Sorted descending so the top referrer appears first.
      */
     fun fetchReferralLeaderboard(context: Context? = null, callback: ((List<ReferralEntry>?, String?) -> Unit)? = null) {
-        thread {
+        runOnIoThread {
             try {
-                val conn = openConnection("contacts?select=referral&referral=not.is.null", "GET")
-                val responseCode = conn.responseCode
-                if (responseCode in 200..299) {
-                    val response = readResponseBody(conn)
-                    conn.disconnect()
-
-                    val arr = JSONArray(response.toString())
-                    val counts = LinkedHashMap<String, Int>()
-                    for (i in 0 until arr.length()) {
-                        val referral = arr.getJSONObject(i).optString("referral").trim()
-                        if (referral.isEmpty()) continue
-                        counts[referral] = (counts[referral] ?: 0) + 1
+                val request = buildRequest("contacts?select=referral&referral=not.is.null", "GET")
+                httpClient.newCall(request).execute().use { response ->
+                    if (response.code in 200..299) {
+                        val body = bodyString(response)
+                        val arr = JSONArray(body)
+                        val counts = LinkedHashMap<String, Int>()
+                        for (i in 0 until arr.length()) {
+                            val referral = arr.getJSONObject(i).optString("referral").trim()
+                            if (referral.isEmpty()) continue
+                            counts[referral] = (counts[referral] ?: 0) + 1
+                        }
+                        val leaderboard = counts.entries
+                            .map { ReferralEntry(it.key, it.value) }
+                            .sortedByDescending { it.referralCount }
+                        callback?.invoke(leaderboard, null)
+                    } else {
+                        val errorText = readErrorBody(response)
+                        callback?.invoke(null, errorText)
                     }
-                    val leaderboard = counts.entries
-                        .map { ReferralEntry(it.key, it.value) }
-                        .sortedByDescending { it.referralCount }
-                    callback?.invoke(leaderboard, null)
-                } else {
-                    val errorText = readErrorBody(conn)
-                    conn.disconnect()
-                    callback?.invoke(null, errorText)
                 }
             } catch (e: java.io.IOException) {
                 Log.w("SheetSync", "fetchReferralLeaderboard failed - network error", e)
@@ -378,55 +323,49 @@ object SheetSync {
     /**
      * Fetches this user's live progress on every active campaign from
      * campaign_progress_live, filtered to rows where referrer_whatsapp
-     * is this user. Each row already has qualifying_referrals (a live
-     * count of their referred contacts that reached trigger_stage) and
-     * milestones_claimed (how many times they've claimed so far), so
-     * CampaignStatus can compute the next target and readiness
-     * entirely client-side - no separate "am I ready" call needed.
+     * is this user.
      */
     fun fetchMyCampaignStatus(context: Context, callback: (List<CampaignStatus>?, String?) -> Unit) {
-        thread {
+        runOnIoThread {
             try {
                 val whatsapp = UserPrefs.getWhatsapp(context)
                 if (whatsapp.isNullOrEmpty()) {
                     callback(null, "No user registered yet")
-                    return@thread
+                    return@runOnIoThread
                 }
 
-                val encoded = java.net.URLEncoder.encode(whatsapp, "UTF-8")
-                val conn = openConnection(
+                val encoded = URLEncoder.encode(whatsapp, "UTF-8")
+                val request = buildRequest(
                     "campaign_progress_live?referrer_whatsapp=eq.$encoded" +
                         "&select=campaign_id,campaign_name,referrals_per_milestone,slots_per_milestone,trigger_stage,repeats,milestones_claimed,qualifying_referrals",
                     "GET"
                 )
-                val code = conn.responseCode
-                if (code !in 200..299) {
-                    val errorText = readErrorBody(conn)
-                    conn.disconnect()
-                    callback(null, errorText)
-                    return@thread
-                }
-                val response = readResponseBody(conn)
-                conn.disconnect()
-
-                val arr = JSONArray(response.toString())
-                val results = mutableListOf<CampaignStatus>()
-                for (i in 0 until arr.length()) {
-                    val obj = arr.getJSONObject(i)
-                    results.add(
-                        CampaignStatus(
-                            campaignId = obj.optLong("campaign_id"),
-                            campaignName = obj.optString("campaign_name"),
-                            referralsPerMilestone = obj.optInt("referrals_per_milestone"),
-                            slotsPerMilestone = obj.optInt("slots_per_milestone"),
-                            triggerStage = obj.optInt("trigger_stage"),
-                            repeats = obj.optBoolean("repeats"),
-                            milestonesClaimed = obj.optInt("milestones_claimed"),
-                            qualifyingReferrals = obj.optInt("qualifying_referrals")
+                httpClient.newCall(request).execute().use { response ->
+                    if (response.code !in 200..299) {
+                        val errorText = readErrorBody(response)
+                        callback(null, errorText)
+                        return@runOnIoThread
+                    }
+                    val body = bodyString(response)
+                    val arr = JSONArray(body)
+                    val results = mutableListOf<CampaignStatus>()
+                    for (i in 0 until arr.length()) {
+                        val obj = arr.getJSONObject(i)
+                        results.add(
+                            CampaignStatus(
+                                campaignId = obj.optLong("campaign_id"),
+                                campaignName = obj.optString("campaign_name"),
+                                referralsPerMilestone = obj.optInt("referrals_per_milestone"),
+                                slotsPerMilestone = obj.optInt("slots_per_milestone"),
+                                triggerStage = obj.optInt("trigger_stage"),
+                                repeats = obj.optBoolean("repeats"),
+                                milestonesClaimed = obj.optInt("milestones_claimed"),
+                                qualifyingReferrals = obj.optInt("qualifying_referrals")
+                            )
                         )
-                    )
+                    }
+                    callback(results, null)
                 }
-                callback(results, null)
             } catch (e: java.io.IOException) {
                 Log.w("SheetSync", "fetchMyCampaignStatus failed - network error", e)
                 callback(null, "NO_INTERNET")
@@ -439,51 +378,40 @@ object SheetSync {
 
     /**
      * Called when the user taps "Unlock reward" on a card that's
-     * readyToClaim. Calls the claim_campaign_milestone() RPC, which
-     * re-checks eligibility server-side (never trust the client count)
-     * and unlocks the campaign's group. Returns the newly unlocked
-     * group ids (same shape as redeemKey()), or null if not eligible
-     * / something failed - caller shows a generic error in that case.
+     * readyToClaim. Calls the claim_campaign_milestone() RPC.
      */
     fun claimCampaignMilestone(context: Context, campaignId: Long, callback: (List<Long>?) -> Unit) {
-        thread {
+        runOnIoThread {
             try {
                 val whatsapp = UserPrefs.getWhatsapp(context)
                 if (whatsapp.isNullOrEmpty()) {
                     callback(null)
-                    return@thread
+                    return@runOnIoThread
                 }
 
-                val rpcConn = openConnection("rpc/claim_campaign_milestone", "POST")
-                rpcConn.doOutput = true
                 val body = JSONObject()
                 body.put("p_campaign_id", campaignId)
                 body.put("p_whatsapp", whatsapp)
-                val writer = OutputStreamWriter(rpcConn.outputStream)
-                writer.write(body.toString())
-                writer.flush()
-                writer.close()
+                val request = buildRequest("rpc/claim_campaign_milestone", "POST", body.toString())
 
-                if (rpcConn.responseCode !in 200..299) {
-                    rpcConn.disconnect()
-                    callback(null)
-                    return@thread
-                }
+                httpClient.newCall(request).execute().use { response ->
+                    if (response.code !in 200..299) {
+                        callback(null)
+                        return@runOnIoThread
+                    }
 
-                val response = readResponseBody(rpcConn)
-                rpcConn.disconnect()
-
-                val trimmed = response.toString().trim()
-                if (trimmed == "null" || trimmed.isEmpty()) {
-                    callback(null)
-                    return@thread
+                    val trimmed = bodyString(response).trim()
+                    if (trimmed == "null" || trimmed.isEmpty()) {
+                        callback(null)
+                        return@runOnIoThread
+                    }
+                    val arr = JSONArray(trimmed)
+                    val unlocked = ArrayList<Long>()
+                    for (i in 0 until arr.length()) {
+                        unlocked.add(arr.getLong(i))
+                    }
+                    callback(unlocked)
                 }
-                val arr = JSONArray(trimmed)
-                val unlocked = ArrayList<Long>()
-                for (i in 0 until arr.length()) {
-                    unlocked.add(arr.getLong(i))
-                }
-                callback(unlocked)
             } catch (e: Exception) {
                 Log.e("SheetSync", "claimCampaignMilestone failed", e)
                 callback(null)
@@ -492,30 +420,28 @@ object SheetSync {
     }
 
     fun fetchPlan(context: Context, callback: (String?) -> Unit) {
-        thread {
+        runOnIoThread {
             try {
                 val whatsapp = UserPrefs.getWhatsapp(context)
                 if (whatsapp.isNullOrEmpty()) {
                     callback(null)
-                    return@thread
+                    return@runOnIoThread
                 }
-                val encoded = java.net.URLEncoder.encode(whatsapp, "UTF-8")
-                val conn = openConnection("contacts?whatsapp=eq.$encoded&select=plan", "GET")
-                val responseCode = conn.responseCode
-                if (responseCode in 200..299) {
-                    val response = readResponseBody(conn)
-                    conn.disconnect()
-
-                    val arr = JSONArray(response.toString())
-                    if (arr.length() > 0) {
-                        val plan = arr.getJSONObject(0).optString("plan", "FREE")
-                        callback(if (plan.isEmpty()) "FREE" else plan)
+                val encoded = URLEncoder.encode(whatsapp, "UTF-8")
+                val request = buildRequest("contacts?whatsapp=eq.$encoded&select=plan", "GET")
+                httpClient.newCall(request).execute().use { response ->
+                    if (response.code in 200..299) {
+                        val body = bodyString(response)
+                        val arr = JSONArray(body)
+                        if (arr.length() > 0) {
+                            val plan = arr.getJSONObject(0).optString("plan", "FREE")
+                            callback(if (plan.isEmpty()) "FREE" else plan)
+                        } else {
+                            callback(null)
+                        }
                     } else {
                         callback(null)
                     }
-                } else {
-                    conn.disconnect()
-                    callback(null)
                 }
             } catch (e: Exception) {
                 Log.w("SheetSync", "fetchPlan failed", e)
@@ -526,60 +452,41 @@ object SheetSync {
 
     /**
      * Updates the current user's `plan` column to reflect whether they actually
-     * granted contacts permission during PermissionSetupActivity. Called once,
-     * right after that flow's contacts step resolves (granted or denied) - not
-     * gating dashboard access, just recording the outcome so it can be tracked
-     * and shown as a VERIFIED / UNVERIFIED badge on the dashboard.
-     *
-     * Silently does nothing on failure (no whatsapp saved yet, offline, etc.) -
-     * this is a best-effort status update, not a blocking step in onboarding.
+     * granted contacts permission during PermissionSetupActivity.
      */
     fun updateVerificationStatus(context: Context, verified: Boolean, callback: ((Boolean) -> Unit)? = null) {
-        thread {
+        runOnIoThread {
             try {
                 val whatsapp = UserPrefs.getWhatsapp(context)
                 if (whatsapp.isNullOrEmpty()) {
                     callback?.invoke(false)
-                    return@thread
+                    return@runOnIoThread
                 }
-                val encoded = java.net.URLEncoder.encode(whatsapp, "UTF-8")
-                val conn = openConnection("contacts?whatsapp=eq.$encoded", "PATCH")
-                // return=representation so we get back the rows that were actually
-                // updated. Without this, a silently-blocked update (e.g. missing
-                // RLS policy for UPDATE on the anon role) still reports HTTP 204
-                // success even though zero rows changed - this lets us tell the
-                // difference and log it instead of reporting a false success.
-                conn.setRequestProperty("Prefer", "return=representation")
-                conn.doOutput = true
+                val encoded = URLEncoder.encode(whatsapp, "UTF-8")
 
                 val json = JSONObject()
                 json.put("plan", if (verified) "VERIFIED" else "UNVERIFIED")
 
-                val writer = OutputStreamWriter(conn.outputStream)
-                writer.write(json.toString())
-                writer.flush()
-                writer.close()
+                val request = buildRequest(
+                    "contacts?whatsapp=eq.$encoded", "PATCH", json.toString(),
+                    preferHeader = "return=representation"
+                )
 
-                val responseCode = conn.responseCode
-                if (responseCode in 200..299) {
-                    val response = readResponseBody(conn)
-                    conn.disconnect()
-
-                    val arr = JSONArray(response.toString())
-                    if (arr.length() == 0) {
-                        // Request "succeeded" but matched/updated zero rows - almost
-                        // always means RLS is blocking the UPDATE for the anon role,
-                        // or the whatsapp value doesn't match any row exactly.
-                        Log.w("SheetSync", "updateVerificationStatus: 0 rows updated for whatsapp=$whatsapp - check RLS UPDATE policy on contacts table")
-                        callback?.invoke(false)
+                httpClient.newCall(request).execute().use { response ->
+                    if (response.code in 200..299) {
+                        val body = bodyString(response)
+                        val arr = JSONArray(body)
+                        if (arr.length() == 0) {
+                            Log.w("SheetSync", "updateVerificationStatus: 0 rows updated for whatsapp=$whatsapp - check RLS UPDATE policy on contacts table")
+                            callback?.invoke(false)
+                        } else {
+                            callback?.invoke(true)
+                        }
                     } else {
-                        callback?.invoke(true)
+                        val errorBody = readErrorBody(response)
+                        Log.w("SheetSync", "updateVerificationStatus failed with code ${response.code}: $errorBody")
+                        callback?.invoke(false)
                     }
-                } else {
-                    val errorBody = readErrorBody(conn)
-                    Log.w("SheetSync", "updateVerificationStatus failed with code $responseCode: $errorBody")
-                    conn.disconnect()
-                    callback?.invoke(false)
                 }
             } catch (e: Exception) {
                 Log.w("SheetSync", "updateVerificationStatus failed", e)
@@ -589,62 +496,33 @@ object SheetSync {
     }
 
     /**
-     * Reports this user's live 0-3 setup stage (see PermissionHealth.Status.stage)
-     * to the database every time it's checked, and separately stamps the
-     * *first ever* time each stage was reached with a permanent timestamp
-     * that never moves backwards - even as the live stage number itself
-     * goes up and down over time.
-     *
-     * Two different things are written here, for two different jobs:
-     *  - setup_stage: live, overwritten every call, always reflects right
-     *    now. This is what shows "where is this person currently at."
-     *  - first_reached_stage_1_at / _2_at / _3_at: each stamped exactly
-     *    once, the first time that stage is ever hit, and never touched
-     *    again after that. These are what the admin panel is expected to
-     *    use for anything reward-related, since they can't un-happen.
-     *
-     * This function does not decide or apply any reward - it only reports
-     * the raw facts. Reward rules live entirely in the admin panel.
+     * Reports this user's live 0-3 setup stage and stamps the first-reached
+     * timestamp columns as needed. See PermissionHealth.Status.stage.
      */
     fun reportSetupStage(context: Context, stage: Int, callback: ((Boolean) -> Unit)? = null) {
-        thread {
+        runOnIoThread {
             try {
                 val whatsapp = UserPrefs.getWhatsapp(context)
                 if (whatsapp.isNullOrEmpty()) {
                     callback?.invoke(false)
-                    return@thread
+                    return@runOnIoThread
                 }
-                val encoded = java.net.URLEncoder.encode(whatsapp, "UTF-8")
+                val encoded = URLEncoder.encode(whatsapp, "UTF-8")
 
-                // Always update the live stage number, regardless of
-                // whether it went up or down since last time.
                 val json = JSONObject()
                 json.put("setup_stage", stage)
 
-                // Also stamp whichever "first reached stage N" columns this
-                // stage number qualifies for. Each one is only written if it
-                // is still empty (see stampFirstReachedIfNull below), so a
-                // milestone already reached in the past is never overwritten.
                 val nowIso = java.time.Instant.now().toString()
 
-                val conn = openConnection("contacts?whatsapp=eq.$encoded", "PATCH")
-                conn.doOutput = true
-                val writer = OutputStreamWriter(conn.outputStream)
-                writer.write(json.toString())
-                writer.flush()
-                writer.close()
-                val responseCode = conn.responseCode
-                conn.disconnect()
+                val request = buildRequest("contacts?whatsapp=eq.$encoded", "PATCH", json.toString())
+                val responseCode = httpClient.newCall(request).execute().use { it.code }
 
                 if (responseCode !in 200..299) {
                     Log.w("SheetSync", "reportSetupStage: live stage update failed with code $responseCode")
                     callback?.invoke(false)
-                    return@thread
+                    return@runOnIoThread
                 }
 
-                // Now stamp any newly-reached milestones - each PATCH only
-                // targets its own column while that column is still null,
-                // so a milestone already reached in the past is left alone.
                 if (stage >= 1) stampFirstReachedIfNull(encoded, "first_reached_stage_1_at", nowIso)
                 if (stage >= 2) stampFirstReachedIfNull(encoded, "first_reached_stage_2_at", nowIso)
                 if (stage >= 3) stampFirstReachedIfNull(encoded, "first_reached_stage_3_at", nowIso)
@@ -659,56 +537,37 @@ object SheetSync {
 
     /**
      * Stamps a single "first reached stage N" column with the given
-     * timestamp, but only for rows where that column is still null - so
-     * this is safe to call every time the stage is checked without ever
-     * overwriting a milestone that was already reached in the past.
+     * timestamp, but only for rows where that column is still null.
      */
     private fun stampFirstReachedIfNull(encodedWhatsapp: String, column: String, nowIso: String) {
         try {
-            val conn = openConnection("contacts?whatsapp=eq.$encodedWhatsapp&$column=is.null", "PATCH")
-            conn.doOutput = true
             val json = JSONObject()
             json.put(column, nowIso)
-            val writer = OutputStreamWriter(conn.outputStream)
-            writer.write(json.toString())
-            writer.flush()
-            writer.close()
-            val responseCode = conn.responseCode
-            if (responseCode !in 200..299) {
-                val errorBody = readErrorBody(conn)
-                Log.w("SheetSync", "stampFirstReachedIfNull($column) failed with code $responseCode: $errorBody")
+            val request = buildRequest("contacts?whatsapp=eq.$encodedWhatsapp&$column=is.null", "PATCH", json.toString())
+            httpClient.newCall(request).execute().use { response ->
+                if (response.code !in 200..299) {
+                    val errorBody = readErrorBody(response)
+                    Log.w("SheetSync", "stampFirstReachedIfNull($column) failed with code ${response.code}: $errorBody")
+                }
             }
-            conn.disconnect()
         } catch (e: Exception) {
             Log.w("SheetSync", "stampFirstReachedIfNull($column) failed", e)
         }
     }
 
     /**
-     * Returns the breakdown shown on the main dashboard:
-     * - totalInDatabase: every whatsapp row in Supabase (the full pool for everyone)
-     * - syncedToPhone: how many of those this specific user already has saved locally
-     * - availableToImport: totalInDatabase - syncedToPhone
-     * - contactLimit: the user's real contact limit - sum of each joined
-     *   group's live cap on Supabase right now (see ImportStats doc comment)
-     *
-     * NOTE: sync itself is still uncapped - availableToImport keeps meaning
-     * "everything left in the whole database", not "everything left under
-     * my limit". contactLimit is surfaced purely for the dashboard meter /
-     * upgrade-limit screen; it doesn't change what Sync actually pulls.
+     * Returns the breakdown shown on the main dashboard (see ImportStats
+     * doc comment for field meanings).
      */
     fun fetchImportStats(context: Context, callback: (ImportStats?) -> Unit) {
-        thread {
+        runOnIoThread {
             val contacts = fetchAllContacts(context)
             if (contacts == null) {
                 callback(null)
-                return@thread
+                return@runOnIoThread
             }
             val totalInDatabase = contacts.count { it.first.isNotEmpty() }
 
-            // Cross-check against numbers actually saved on the device (not just our
-            // own sync history), so contacts added outside the app - or lost via an
-            // app reinstall/data clear - still count as already-synced.
             val knownSynced = UserPrefs.getSyncedNumbers(context).map { normalizePhone(it) }.toSet()
             val onDevice = if (checkContactsPermission(context))
                 getDevicePhoneNumbers(context).map { normalizePhone(it) }.toSet()
@@ -720,39 +579,18 @@ object SheetSync {
 
             val availableToImport = (totalInDatabase - syncedToPhone).coerceAtLeast(0)
 
-            // Single source of truth for this user's joined groups: home
-            // group + extra_groups from one fetchMyGroupsSplit() call.
-            // Previously this also called fetchMyGroups() separately to
-            // compute contactLimit, which meant two independent network
-            // calls to the same contacts row and two independent sums
-            // that could disagree (e.g. if a group cap lookup silently
-            // dropped a group in one path but not the other) - that
-            // divergence is what was hiding the Free plan / Referral
-            // bonus breakdown even when contactLimit displayed fine.
             val groupsSplit = fetchMyGroupsSplit(context)
             val joinedGroupIds = groupsSplit?.let { (home, extra) ->
                 (listOfNotNull(home) + extra).sorted()
             } ?: emptyList()
             val joinedGroupCount = if (groupsSplit != null) joinedGroupIds.size else -1
 
-            // "Contact limit" = sum of each joined group's real cap - its
-            // max_users column, straight from Supabase right now - see
-            // ImportStats.contactLimit doc comment for the full picture.
-            // Also split into baseLimit/bonusLimit (home group vs
-            // extra_groups) for the dashboard breakdown - see
-            // ImportStats.baseLimit doc comment. Both totals are derived
-            // from the same joinedGroupIds/capsById below so they can
-            // never disagree.
             val allGroupCaps = if (groupsSplit != null) fetchAllGroupCapsSync() else null
             val (baseLimit, bonusLimit) = if (groupsSplit == null || allGroupCaps == null) {
                 Pair(-1L, -1L)
             } else {
                 val capsById = allGroupCaps.associateBy { it.groupId }
                 val (homeGroup, extraGroups) = groupsSplit
-                // Log (rather than silently drop) any joined group whose
-                // cap is missing from allGroupCaps, so a stale/deleted
-                // group_id shows up in logs instead of just quietly
-                // shrinking the bonus to 0.
                 val base = homeGroup?.let {
                     capsById[it]?.maxUsers ?: run {
                         Log.w("SheetSync", "home group $it has no matching cap in allGroupCaps")
@@ -775,59 +613,41 @@ object SheetSync {
 
     /**
      * Fetches every group that exists (not just the current user's own),
-     * with home-group and extra-key contact counts kept separate, via the
-     * get_all_groups_summary() Postgres function. Read-only aggregate data;
-     * safe under the anon key (see grant in the function's own definition).
-     * Returns null on any network/parse failure - callers should treat
-     * that the same as "couldn't be determined" (same convention as the
-     * rest of this file, e.g. fetchMyGroups()).
+     * via the get_all_groups_summary() Postgres function.
      */
     fun fetchAllGroupsSummary(callback: (List<GroupSummary>?) -> Unit) {
-        thread {
+        runOnIoThread {
             callback(fetchAllGroupsSummarySync())
         }
     }
 
     /**
-     * Synchronous core of fetchAllGroupsSummary() above - runs the actual
-     * network call and returns the result directly instead of via
-     * callback. Exists so other already-backgrounded code in this file
-     * (e.g. fetchImportStats(), which needs each joined group's real cap
-     * to compute contactLimit) can call it inline without nesting another
-     * thread{}. The public fetchAllGroupsSummary() is just this wrapped in
-     * thread{} for external callers (GroupsActivity etc). Same null-on-
-     * failure convention as the rest of this file.
+     * Synchronous core of fetchAllGroupsSummary() above - callable inline
+     * from other already-backgrounded code in this file (e.g.
+     * fetchImportStats()) without nesting another background dispatch.
      */
     private fun fetchAllGroupsSummarySync(): List<GroupSummary>? {
         try {
-            val conn = openConnection("rpc/get_all_groups_summary", "POST")
-            conn.doOutput = true
-            val writer = OutputStreamWriter(conn.outputStream)
-            writer.write("{}")
-            writer.flush()
-            writer.close()
-
-            if (conn.responseCode !in 200..299) {
-                conn.disconnect()
-                return null
-            }
-
-            val response = readResponseBody(conn)
-            conn.disconnect()
-
-            val arr = JSONArray(response.toString())
-            val result = ArrayList<GroupSummary>()
-            for (i in 0 until arr.length()) {
-                val obj = arr.getJSONObject(i)
-                result.add(
-                    GroupSummary(
-                        groupId = obj.getLong("group_id"),
-                        homeCount = obj.optLong("home_count", 0L),
-                        extraCount = obj.optLong("extra_count", 0L)
+            val request = buildRequest("rpc/get_all_groups_summary", "POST", "{}")
+            httpClient.newCall(request).execute().use { response ->
+                if (response.code !in 200..299) {
+                    return null
+                }
+                val body = bodyString(response)
+                val arr = JSONArray(body)
+                val result = ArrayList<GroupSummary>()
+                for (i in 0 until arr.length()) {
+                    val obj = arr.getJSONObject(i)
+                    result.add(
+                        GroupSummary(
+                            groupId = obj.getLong("group_id"),
+                            homeCount = obj.optLong("home_count", 0L),
+                            extraCount = obj.optLong("extra_count", 0L)
+                        )
                     )
-                )
+                }
+                return result.sortedBy { it.groupId }
             }
-            return result.sortedBy { it.groupId }
         } catch (e: Exception) {
             Log.e("SheetSync", "fetchAllGroupsSummarySync failed", e)
             return null
@@ -836,35 +656,29 @@ object SheetSync {
 
     /**
      * Fetches every group's real capacity (groups.max_users) directly from
-     * the groups table on Supabase - NOT a headcount, the actual seeded
-     * cap. This is what ImportStats.contactLimit should be summed from.
-     * Returns null on any network/parse failure, same convention as the
-     * rest of this file.
+     * the groups table on Supabase.
      */
     private fun fetchAllGroupCapsSync(): List<GroupCap>? {
         try {
-            val conn = openConnection("groups?select=group_id,max_users", "GET")
-
-            if (conn.responseCode !in 200..299) {
-                conn.disconnect()
-                return null
-            }
-
-            val response = readResponseBody(conn)
-            conn.disconnect()
-
-            val arr = JSONArray(response.toString())
-            val result = ArrayList<GroupCap>()
-            for (i in 0 until arr.length()) {
-                val obj = arr.getJSONObject(i)
-                result.add(
-                    GroupCap(
-                        groupId = obj.getLong("group_id"),
-                        maxUsers = obj.optLong("max_users", 0L)
+            val request = buildRequest("groups?select=group_id,max_users", "GET")
+            httpClient.newCall(request).execute().use { response ->
+                if (response.code !in 200..299) {
+                    return null
+                }
+                val body = bodyString(response)
+                val arr = JSONArray(body)
+                val result = ArrayList<GroupCap>()
+                for (i in 0 until arr.length()) {
+                    val obj = arr.getJSONObject(i)
+                    result.add(
+                        GroupCap(
+                            groupId = obj.getLong("group_id"),
+                            maxUsers = obj.optLong("max_users", 0L)
+                        )
                     )
-                )
+                }
+                return result
             }
-            return result
         } catch (e: Exception) {
             Log.e("SheetSync", "fetchAllGroupCapsSync failed", e)
             return null
@@ -872,12 +686,7 @@ object SheetSync {
     }
 
     /**
-     * Normalizes a Nigerian phone number for comparison purposes only (not for
-     * storage/display). Strips spaces/dashes and collapses +234 / 234 / 0 prefixes
-     * down to the bare 10-digit subscriber number, e.g.:
-     *   "+2348012345678" -> "8012345678"
-     *   "08012345678"     -> "8012345678"
-     *   "2348012345678"   -> "8012345678"
+     * Normalizes a Nigerian phone number for comparison purposes only.
      */
     private fun normalizePhone(raw: String): String {
         var digits = raw.filter { it.isDigit() }
@@ -896,82 +705,59 @@ object SheetSync {
 
     /**
      * Phone numbers belonging ONLY to contacts this app itself created (i.e. named
-     * "VG KONTACT <number>"). We deliberately do NOT scan the user's whole address
-     * book here - a stranger's pre-existing contact could coincidentally share a
-     * number with a row in our database, which would wrongly count as "already
-     * synced" for a brand new user who never synced anything. Scoping to our own
-     * naming pattern avoids that false match.
+     * "VG KONTACT <number>").
      */
     private fun getDevicePhoneNumbers(context: Context): Set<String> {
         val numbers = HashSet<String>()
         val pattern = Regex("^VG KONTACT (\\d+)$")
 
         val cursor = context.contentResolver.query(
-            ContactsContract.Contacts.CONTENT_URI,
-            arrayOf(ContactsContract.Contacts._ID, ContactsContract.Contacts.DISPLAY_NAME),
+            ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+            arrayOf(
+                ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME_PRIMARY,
+                ContactsContract.CommonDataKinds.Phone.NUMBER
+            ),
             null, null, null
         )
         cursor?.use {
-            val idIndex = it.getColumnIndex(ContactsContract.Contacts._ID)
-            val nameIndex = it.getColumnIndex(ContactsContract.Contacts.DISPLAY_NAME)
+            val nameIndex = it.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME_PRIMARY)
+            val numIndex = it.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)
             while (it.moveToNext()) {
-                val name = it.getString(nameIndex) ?: continue
-                if (!pattern.matches(name.trim())) continue
+                val name = it.getString(nameIndex)?.trim() ?: continue
+                if (!pattern.matches(name)) continue
 
-                val contactId = it.getString(idIndex)
-                val phoneCursor = context.contentResolver.query(
-                    ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
-                    arrayOf(ContactsContract.CommonDataKinds.Phone.NUMBER),
-                    "${ContactsContract.CommonDataKinds.Phone.CONTACT_ID} = ?",
-                    arrayOf(contactId),
-                    null
-                )
-                phoneCursor?.use { pc ->
-                    val numIndex = pc.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)
-                    while (pc.moveToNext()) {
-                        val num = pc.getString(numIndex)
-                        if (!num.isNullOrEmpty()) numbers.add(num)
-                    }
-                }
+                val num = it.getString(numIndex)
+                if (!num.isNullOrEmpty()) numbers.add(num)
             }
         }
         return numbers
     }
 
     /**
-     * Looks up the current user's own group_id + extra_groups (unlocked via keys)
-     * from Supabase, using their saved WhatsApp number. Returns null if the user
-     * can't be found or has no groups yet (shouldn't normally happen post-signup).
+     * Looks up the current user's own group_id + extra_groups, keeping
+     * them separate (needed by fetchImportStats() for baseLimit/bonusLimit).
      */
-    // Same query/shape as fetchMyGroups() above, but keeps the home
-    // group and extra_groups separate instead of merging them - needed
-    // only by fetchImportStats() to compute the baseLimit/bonusLimit
-    // split. Returns null on the same failure conditions as
-    // fetchMyGroups(). first = home group id (or null if none),
-    // second = extra_groups list (possibly empty).
     private fun fetchMyGroupsSplit(context: Context): Pair<Long?, List<Long>>? {
         val whatsapp = UserPrefs.getWhatsapp(context) ?: return null
         try {
-            val encoded = java.net.URLEncoder.encode(whatsapp, "UTF-8")
-            val conn = openConnection("contacts?whatsapp=eq.$encoded&select=group_id,extra_groups", "GET")
-            val responseCode = conn.responseCode
-            if (responseCode !in 200..299) {
-                conn.disconnect()
-                return null
-            }
-            val response = readResponseBody(conn)
-            conn.disconnect()
+            val encoded = URLEncoder.encode(whatsapp, "UTF-8")
+            val request = buildRequest("contacts?whatsapp=eq.$encoded&select=group_id,extra_groups", "GET")
+            httpClient.newCall(request).execute().use { response ->
+                if (response.code !in 200..299) {
+                    return null
+                }
+                val body = bodyString(response)
+                val arr = JSONArray(body)
+                if (arr.length() == 0) return null
+                val obj = arr.getJSONObject(0)
 
-            val arr = JSONArray(response.toString())
-            if (arr.length() == 0) return null
-            val obj = arr.getJSONObject(0)
-
-            val homeGroup = obj.optLong("group_id", -1L).let { if (it > 0) it else null }
-            val extra = ArrayList<Long>()
-            obj.optJSONArray("extra_groups")?.let {
-                for (i in 0 until it.length()) extra.add(it.getLong(i))
+                val homeGroup = obj.optLong("group_id", -1L).let { if (it > 0) it else null }
+                val extra = ArrayList<Long>()
+                obj.optJSONArray("extra_groups")?.let {
+                    for (i in 0 until it.length()) extra.add(it.getLong(i))
+                }
+                return Pair(homeGroup, extra)
             }
-            return Pair(homeGroup, extra)
         } catch (e: Exception) {
             Log.e("SheetSync", "fetchMyGroupsSplit failed", e)
             return null
@@ -981,31 +767,29 @@ object SheetSync {
     private fun fetchMyGroups(context: Context): List<Long>? {
         val whatsapp = UserPrefs.getWhatsapp(context) ?: return null
         try {
-            val encoded = java.net.URLEncoder.encode(whatsapp, "UTF-8")
-            val conn = openConnection("contacts?whatsapp=eq.$encoded&select=group_id,extra_groups", "GET")
-            val responseCode = conn.responseCode
-            if (responseCode !in 200..299) {
-                conn.disconnect()
-                return null
-            }
-            val response = readResponseBody(conn)
-            conn.disconnect()
-
-            val arr = JSONArray(response.toString())
-            if (arr.length() == 0) return null
-            val obj = arr.getJSONObject(0)
-
-            val groups = ArrayList<Long>()
-            val homeGroup = obj.optLong("group_id", -1L)
-            if (homeGroup > 0) groups.add(homeGroup)
-
-            val extra = obj.optJSONArray("extra_groups")
-            if (extra != null) {
-                for (i in 0 until extra.length()) {
-                    groups.add(extra.getLong(i))
+            val encoded = URLEncoder.encode(whatsapp, "UTF-8")
+            val request = buildRequest("contacts?whatsapp=eq.$encoded&select=group_id,extra_groups", "GET")
+            httpClient.newCall(request).execute().use { response ->
+                if (response.code !in 200..299) {
+                    return null
                 }
+                val body = bodyString(response)
+                val arr = JSONArray(body)
+                if (arr.length() == 0) return null
+                val obj = arr.getJSONObject(0)
+
+                val groups = ArrayList<Long>()
+                val homeGroup = obj.optLong("group_id", -1L)
+                if (homeGroup > 0) groups.add(homeGroup)
+
+                val extra = obj.optJSONArray("extra_groups")
+                if (extra != null) {
+                    for (i in 0 until extra.length()) {
+                        groups.add(extra.getLong(i))
+                    }
+                }
+                return if (groups.isEmpty()) null else groups
             }
-            return if (groups.isEmpty()) null else groups
         } catch (e: Exception) {
             Log.e("SheetSync", "fetchMyGroups failed", e)
             return null
@@ -1013,82 +797,53 @@ object SheetSync {
     }
 
     /**
-     * Redeems a key code for the current user. On success, the key's
-     * groups_unlock get merged into the user's extra_groups server-side
-     * (see redeem_key() Postgres function) and this returns the list of
-     * newly unlocked group ids. Returns null on any failure (invalid,
-     * expired, already used, or network error) - caller shows a generic
-     * "invalid or expired key" message in that case.
+     * Redeems a key code for the current user via the redeem_key() RPC.
      */
     fun redeemKey(context: Context, code: String, callback: (List<Long>?) -> Unit) {
-        thread {
+        runOnIoThread {
             try {
                 val whatsapp = UserPrefs.getWhatsapp(context)
                 if (whatsapp.isNullOrEmpty()) {
                     callback(null)
-                    return@thread
+                    return@runOnIoThread
                 }
 
-                // Need this contact's row id for the redeem_key() RPC call.
-                val encoded = java.net.URLEncoder.encode(whatsapp, "UTF-8")
-                val idConn = openConnection("contacts?whatsapp=eq.$encoded&select=id", "GET")
-                if (idConn.responseCode !in 200..299) {
-                    idConn.disconnect()
-                    callback(null)
-                    return@thread
+                val encoded = URLEncoder.encode(whatsapp, "UTF-8")
+                val idRequest = buildRequest("contacts?whatsapp=eq.$encoded&select=id", "GET")
+                val contactId = httpClient.newCall(idRequest).execute().use { idResponse ->
+                    if (idResponse.code !in 200..299) return@use -1L
+                    val idArr = JSONArray(bodyString(idResponse))
+                    if (idArr.length() == 0) return@use -1L
+                    idArr.getJSONObject(0).optLong("id", -1L)
                 }
-                val idReader = BufferedReader(InputStreamReader(idConn.inputStream))
-                val idResponse = StringBuilder()
-                var idLine: String?
-                while (idReader.readLine().also { idLine = it } != null) {
-                    idResponse.append(idLine)
-                }
-                idReader.close()
-                idConn.disconnect()
-
-                val idArr = JSONArray(idResponse.toString())
-                if (idArr.length() == 0) {
-                    callback(null)
-                    return@thread
-                }
-                val contactId = idArr.getJSONObject(0).optLong("id", -1L)
                 if (contactId <= 0) {
                     callback(null)
-                    return@thread
+                    return@runOnIoThread
                 }
 
-                // Call redeem_key(p_code, p_contact_id) RPC
-                val rpcConn = openConnection("rpc/redeem_key", "POST")
-                rpcConn.doOutput = true
                 val body = JSONObject()
                 body.put("p_code", code)
                 body.put("p_contact_id", contactId)
-                val writer = OutputStreamWriter(rpcConn.outputStream)
-                writer.write(body.toString())
-                writer.flush()
-                writer.close()
+                val rpcRequest = buildRequest("rpc/redeem_key", "POST", body.toString())
 
-                if (rpcConn.responseCode !in 200..299) {
-                    rpcConn.disconnect()
-                    callback(null)
-                    return@thread
-                }
+                httpClient.newCall(rpcRequest).execute().use { response ->
+                    if (response.code !in 200..299) {
+                        callback(null)
+                        return@runOnIoThread
+                    }
 
-                val response = readResponseBody(rpcConn)
-                rpcConn.disconnect()
-
-                // redeem_key() returns an int8[] as JSON array, or null if invalid/expired/used
-                val trimmed = response.toString().trim()
-                if (trimmed == "null" || trimmed.isEmpty()) {
-                    callback(null)
-                    return@thread
+                    val trimmed = bodyString(response).trim()
+                    if (trimmed == "null" || trimmed.isEmpty()) {
+                        callback(null)
+                        return@runOnIoThread
+                    }
+                    val arr = JSONArray(trimmed)
+                    val unlocked = ArrayList<Long>()
+                    for (i in 0 until arr.length()) {
+                        unlocked.add(arr.getLong(i))
+                    }
+                    callback(unlocked)
                 }
-                val arr = JSONArray(trimmed)
-                val unlocked = ArrayList<Long>()
-                for (i in 0 until arr.length()) {
-                    unlocked.add(arr.getLong(i))
-                }
-                callback(unlocked)
             } catch (e: Exception) {
                 Log.e("SheetSync", "redeemKey failed", e)
                 callback(null)
@@ -1100,8 +855,6 @@ object SheetSync {
         val groupFilter = if (context != null) {
             val groups = fetchMyGroups(context)
             if (groups.isNullOrEmpty()) {
-                // No group assigned yet - nothing to sync rather than falling back
-                // to "everyone", which would defeat the whole point of grouping.
                 return emptyList()
             }
             "&group_id=in.(${groups.joinToString(",")})"
@@ -1111,32 +864,35 @@ object SheetSync {
 
         for (attempt in 0 until MAX_RETRIES) {
             try {
-                val conn = openConnection("contacts?select=whatsapp,referral$groupFilter", "GET")
-                val responseCode = conn.responseCode
-                if (responseCode in 200..299) {
-                    val response = readResponseBody(conn)
-                    conn.disconnect()
-
-                    val arr = JSONArray(response.toString())
-                    val result = ArrayList<Pair<String, String>>()
-                    for (i in 0 until arr.length()) {
-                        val obj = arr.getJSONObject(i)
-                        result.add(Pair(obj.optString("whatsapp"), obj.optString("referral")))
+                val request = buildRequest("contacts?select=whatsapp,referral$groupFilter", "GET")
+                httpClient.newCall(request).execute().use { response ->
+                    val responseCode = response.code
+                    if (responseCode in 200..299) {
+                        val body = bodyString(response)
+                        val arr = JSONArray(body)
+                        val result = ArrayList<Pair<String, String>>()
+                        for (i in 0 until arr.length()) {
+                            val obj = arr.getJSONObject(i)
+                            result.add(Pair(obj.optString("whatsapp"), obj.optString("referral")))
+                        }
+                        return result
+                    } else {
+                        if (!isRetryable(responseCode)) {
+                            return null
+                        }
+                        Log.w("SheetSync", "fetchAllContacts attempt ${attempt + 1} failed with code $responseCode, retrying...")
                     }
-                    return result
-                } else {
-                    conn.disconnect()
-                    if (!isRetryable(responseCode)) {
-                        return null
-                    }
-                    Log.w("SheetSync", "fetchAllContacts attempt ${attempt + 1} failed with code $responseCode, retrying...")
                 }
             } catch (e: Exception) {
                 Log.w("SheetSync", "fetchAllContacts attempt ${attempt + 1} threw exception, retrying...", e)
             }
 
             if (attempt < MAX_RETRIES - 1) {
-                sleepBeforeRetry(attempt)
+                // fetchAllContacts is called both from coroutine contexts
+                // (importAllContactsFromSheetSuspend) and from plain
+                // runOnIoThread contexts. runBlocking here lets the same
+                // suspend-based delay be reused from either caller.
+                runBlocking { delayBeforeRetry(attempt) }
             }
         }
         Log.e("SheetSync", "fetchAllContacts failed after $MAX_RETRIES attempts")
@@ -1156,11 +912,9 @@ object SheetSync {
     }
 
     /**
-     * Single query against the Phone table (which already includes each
-     * contact's display name via DISPLAY_NAME_PRIMARY) instead of one
-     * query to list contacts plus a second phone-lookup query per
-     * matching contact. Same result, but O(1) queries instead of O(n)
-     * for a user with n "VG KONTACT ###" contacts already saved.
+     * Single query against the Phone table (already includes each
+     * contact's display name), instead of one query to list contacts
+     * plus a second phone-lookup query per matching contact.
      */
     private fun reconcileFromExistingContacts(context: Context) {
         var maxFound = UserPrefs.getContactCounter(context)
@@ -1234,11 +988,6 @@ object SheetSync {
                     val (ok, fail) = addContactsBatched(context, toAdd)
                     submitted = ok
                     failed = fail
-                    // Only the phones that actually succeeded count as synced.
-                    // Since addContactsBatched only reports counts (not which
-                    // ones failed within a batch), treat the first `ok` as
-                    // synced - matches prior behavior on the happy path where
-                    // fail == 0.
                     if (fail == 0) {
                         newlySynced.addAll(toAdd.map { it.second })
                     } else {
@@ -1260,14 +1009,14 @@ object SheetSync {
     }
 
     fun importAllContactsFromSheet(context: Context, callback: ((Int, Int, String?) -> Unit)? = null) {
-        thread {
+        runOnIoThread {
             var submitted = 0
             var failed = 0
             var errorDetail: String? = null
 
             if (!isOnline(context)) {
                 callback?.invoke(0, 0, "NO_INTERNET")
-                return@thread
+                return@runOnIoThread
             }
 
             reconcileFromExistingContacts(context)
@@ -1278,7 +1027,7 @@ object SheetSync {
                 val contacts = fetchAllContacts(context)
                 if (contacts == null) {
                     callback?.invoke(0, 1, "Failed to fetch contacts from server")
-                    return@thread
+                    return@runOnIoThread
                 }
 
                 val alreadySynced = UserPrefs.getSyncedNumbers(context).map { normalizePhone(it) }.toSet()
@@ -1318,9 +1067,7 @@ object SheetSync {
     /**
      * Builds the ContentProviderOperations for ONE contact (insert + name +
      * phone), to be combined with other contacts' ops into a single
-     * applyBatch() call. Each contact needs its own "insert raw contact"
-     * op at a given offset within the batch, so withValueBackReference
-     * must point at that contact's own insert, not always index 0.
+     * applyBatch() call.
      */
     private fun buildContactOps(name: String, phone: String, insertIndex: Int): List<ContentProviderOperation> {
         return listOf(
@@ -1344,12 +1091,7 @@ object SheetSync {
 
     /**
      * Writes many contacts to the phone's contact list in batches of 50,
-     * instead of one applyBatch() call per contact. applyBatch() has fixed
-     * overhead per call (crossing into the ContactsProvider process), so
-     * grouping contacts together cuts that overhead by roughly 50x versus
-     * the old one-contact-per-call approach. If a batch fails, that whole
-     * batch is retried one-by-one so a single bad contact doesn't cause
-     * the other 49 in its batch to be reported as failed too.
+     * instead of one applyBatch() call per contact.
      */
     private fun addContactsBatched(context: Context, contactsToAdd: List<Pair<String, String>>): Pair<Int, Int> {
         var submitted = 0
@@ -1367,8 +1109,6 @@ object SheetSync {
                 submitted += chunk.size
             } catch (e: Exception) {
                 Log.w("SheetSync", "addContactsBatched: batch of ${chunk.size} failed, retrying individually", e)
-                // Fall back to one-at-a-time only for this chunk, so one bad
-                // contact doesn't sink the other 49 that would've worked fine.
                 for ((name, phone) in chunk) {
                     val (ok, _) = addSingleContactDetailed(context, name, phone)
                     if (ok) submitted++ else failed++
@@ -1385,6 +1125,24 @@ object SheetSync {
             Pair(true, null)
         } catch (e: Exception) {
             Pair(false, e.message ?: e.javaClass.simpleName)
+        }
+    }
+
+    /**
+     * Runs [block] on a coroutine dispatched to Dispatchers.IO's shared
+     * thread pool. This replaces the old kotlin.concurrent.thread { }
+     * pattern, which spun up a brand new OS thread from scratch on every
+     * single call with no reuse. Dispatchers.IO maintains a shared,
+     * reusable pool sized for blocking I/O work, so repeated calls (e.g.
+     * several screens fetching data close together) share threads instead
+     * of each paying full thread-creation cost. Every public function in
+     * this file still has the exact same callback-based shape as before -
+     * only what runs the work in the background changed, so no calling
+     * Activity needs to change.
+     */
+    private fun runOnIoThread(block: suspend () -> Unit) {
+        CoroutineScope(Dispatchers.IO).launch {
+            block()
         }
     }
 }
