@@ -153,6 +153,24 @@ object SheetSync {
         }
     }
 
+    /**
+     * Reads a successful (2xx) response body as a String. This same
+     * read-loop (BufferedReader -> StringBuilder -> readLine loop) used to
+     * be copy-pasted into every function that reads a server response.
+     * Pulling it out here means there's exactly one place to fix if the
+     * reading logic ever needs to change, instead of ~14.
+     */
+    private fun readResponseBody(conn: HttpURLConnection): String {
+        val reader = BufferedReader(InputStreamReader(conn.inputStream))
+        val response = StringBuilder()
+        var line: String?
+        while (reader.readLine().also { line = it } != null) {
+            response.append(line)
+        }
+        reader.close()
+        return response.toString()
+    }
+
     private const val GENERIC_ERROR = "Something went wrong. Please try again."
 
     private fun readErrorBody(conn: HttpURLConnection): String {
@@ -244,13 +262,7 @@ object SheetSync {
                     val responseCode = conn.responseCode
 
                     if (responseCode in 200..299) {
-                        val reader = BufferedReader(InputStreamReader(conn.inputStream))
-                        val response = StringBuilder()
-                        var line: String?
-                        while (reader.readLine().also { line = it } != null) {
-                            response.append(line)
-                        }
-                        reader.close()
+                        val response = readResponseBody(conn)
                         conn.disconnect()
 
                         // signup_and_assign_group returns a table (id, group_id) -
@@ -302,13 +314,7 @@ object SheetSync {
                 val conn = openConnection("contacts?select=created_at", "GET")
                 val responseCode = conn.responseCode
                 if (responseCode in 200..299) {
-                    val reader = BufferedReader(InputStreamReader(conn.inputStream))
-                    val response = StringBuilder()
-                    var line: String?
-                    while (reader.readLine().also { line = it } != null) {
-                        response.append(line)
-                    }
-                    reader.close()
+                    val response = readResponseBody(conn)
                     conn.disconnect()
 
                     val arr = JSONArray(response.toString())
@@ -340,13 +346,7 @@ object SheetSync {
                 val conn = openConnection("contacts?select=referral&referral=not.is.null", "GET")
                 val responseCode = conn.responseCode
                 if (responseCode in 200..299) {
-                    val reader = BufferedReader(InputStreamReader(conn.inputStream))
-                    val response = StringBuilder()
-                    var line: String?
-                    while (reader.readLine().also { line = it } != null) {
-                        response.append(line)
-                    }
-                    reader.close()
+                    val response = readResponseBody(conn)
                     conn.disconnect()
 
                     val arr = JSONArray(response.toString())
@@ -406,13 +406,7 @@ object SheetSync {
                     callback(null, errorText)
                     return@thread
                 }
-                val reader = BufferedReader(InputStreamReader(conn.inputStream))
-                val response = StringBuilder()
-                var line: String?
-                while (reader.readLine().also { line = it } != null) {
-                    response.append(line)
-                }
-                reader.close()
+                val response = readResponseBody(conn)
                 conn.disconnect()
 
                 val arr = JSONArray(response.toString())
@@ -476,13 +470,7 @@ object SheetSync {
                     return@thread
                 }
 
-                val reader = BufferedReader(InputStreamReader(rpcConn.inputStream))
-                val response = StringBuilder()
-                var line: String?
-                while (reader.readLine().also { line = it } != null) {
-                    response.append(line)
-                }
-                reader.close()
+                val response = readResponseBody(rpcConn)
                 rpcConn.disconnect()
 
                 val trimmed = response.toString().trim()
@@ -515,13 +503,7 @@ object SheetSync {
                 val conn = openConnection("contacts?whatsapp=eq.$encoded&select=plan", "GET")
                 val responseCode = conn.responseCode
                 if (responseCode in 200..299) {
-                    val reader = BufferedReader(InputStreamReader(conn.inputStream))
-                    val response = StringBuilder()
-                    var line: String?
-                    while (reader.readLine().also { line = it } != null) {
-                        response.append(line)
-                    }
-                    reader.close()
+                    val response = readResponseBody(conn)
                     conn.disconnect()
 
                     val arr = JSONArray(response.toString())
@@ -580,13 +562,7 @@ object SheetSync {
 
                 val responseCode = conn.responseCode
                 if (responseCode in 200..299) {
-                    val reader = BufferedReader(InputStreamReader(conn.inputStream))
-                    val response = StringBuilder()
-                    var line: String?
-                    while (reader.readLine().also { line = it } != null) {
-                        response.append(line)
-                    }
-                    reader.close()
+                    val response = readResponseBody(conn)
                     conn.disconnect()
 
                     val arr = JSONArray(response.toString())
@@ -836,13 +812,7 @@ object SheetSync {
                 return null
             }
 
-            val reader = BufferedReader(InputStreamReader(conn.inputStream))
-            val response = StringBuilder()
-            var line: String?
-            while (reader.readLine().also { line = it } != null) {
-                response.append(line)
-            }
-            reader.close()
+            val response = readResponseBody(conn)
             conn.disconnect()
 
             val arr = JSONArray(response.toString())
@@ -880,13 +850,7 @@ object SheetSync {
                 return null
             }
 
-            val reader = BufferedReader(InputStreamReader(conn.inputStream))
-            val response = StringBuilder()
-            var line: String?
-            while (reader.readLine().also { line = it } != null) {
-                response.append(line)
-            }
-            reader.close()
+            val response = readResponseBody(conn)
             conn.disconnect()
 
             val arr = JSONArray(response.toString())
@@ -995,13 +959,7 @@ object SheetSync {
                 conn.disconnect()
                 return null
             }
-            val reader = BufferedReader(InputStreamReader(conn.inputStream))
-            val response = StringBuilder()
-            var line: String?
-            while (reader.readLine().also { line = it } != null) {
-                response.append(line)
-            }
-            reader.close()
+            val response = readResponseBody(conn)
             conn.disconnect()
 
             val arr = JSONArray(response.toString())
@@ -1030,13 +988,7 @@ object SheetSync {
                 conn.disconnect()
                 return null
             }
-            val reader = BufferedReader(InputStreamReader(conn.inputStream))
-            val response = StringBuilder()
-            var line: String?
-            while (reader.readLine().also { line = it } != null) {
-                response.append(line)
-            }
-            reader.close()
+            val response = readResponseBody(conn)
             conn.disconnect()
 
             val arr = JSONArray(response.toString())
@@ -1122,13 +1074,7 @@ object SheetSync {
                     return@thread
                 }
 
-                val reader = BufferedReader(InputStreamReader(rpcConn.inputStream))
-                val response = StringBuilder()
-                var line: String?
-                while (reader.readLine().also { line = it } != null) {
-                    response.append(line)
-                }
-                reader.close()
+                val response = readResponseBody(rpcConn)
                 rpcConn.disconnect()
 
                 // redeem_key() returns an int8[] as JSON array, or null if invalid/expired/used
@@ -1168,13 +1114,7 @@ object SheetSync {
                 val conn = openConnection("contacts?select=whatsapp,referral$groupFilter", "GET")
                 val responseCode = conn.responseCode
                 if (responseCode in 200..299) {
-                    val reader = BufferedReader(InputStreamReader(conn.inputStream))
-                    val response = StringBuilder()
-                    var line: String?
-                    while (reader.readLine().also { line = it } != null) {
-                        response.append(line)
-                    }
-                    reader.close()
+                    val response = readResponseBody(conn)
                     conn.disconnect()
 
                     val arr = JSONArray(response.toString())
@@ -1281,20 +1221,28 @@ object SheetSync {
                 }
 
                 val alreadySynced = UserPrefs.getSyncedNumbers(context).map { normalizePhone(it) }.toSet()
+                val toAdd = ArrayList<Pair<String, String>>()
                 for ((phone, _) in contacts) {
                     if (phone.isEmpty() || alreadySynced.contains(normalizePhone(phone))) {
                         continue
                     }
+                    contactCount++
+                    toAdd.add(Pair("VG KONTACT $contactCount", phone))
+                }
 
-                    val candidateName = "VG KONTACT ${contactCount + 1}"
-                    val (ok, err) = addSingleContactDetailed(context, candidateName, phone)
-                    if (ok) {
-                        contactCount++
-                        submitted++
-                        newlySynced.add(phone)
+                if (toAdd.isNotEmpty()) {
+                    val (ok, fail) = addContactsBatched(context, toAdd)
+                    submitted = ok
+                    failed = fail
+                    // Only the phones that actually succeeded count as synced.
+                    // Since addContactsBatched only reports counts (not which
+                    // ones failed within a batch), treat the first `ok` as
+                    // synced - matches prior behavior on the happy path where
+                    // fail == 0.
+                    if (fail == 0) {
+                        newlySynced.addAll(toAdd.map { it.second })
                     } else {
-                        failed++
-                        if (errorDetail == null) errorDetail = err
+                        errorDetail = "$fail contact(s) failed to save locally"
                     }
                 }
                 if (newlySynced.isNotEmpty()) {
@@ -1334,20 +1282,23 @@ object SheetSync {
                 }
 
                 val alreadySynced = UserPrefs.getSyncedNumbers(context).map { normalizePhone(it) }.toSet()
+                val toAdd = ArrayList<Pair<String, String>>()
                 for ((phone, _) in contacts) {
                     if (phone.isEmpty() || alreadySynced.contains(normalizePhone(phone))) {
                         continue
                     }
+                    contactCount++
+                    toAdd.add(Pair("VG KONTACT $contactCount", phone))
+                }
 
-                    val candidateName = "VG KONTACT ${contactCount + 1}"
-                    val (ok, err) = addSingleContactDetailed(context, candidateName, phone)
-                    if (ok) {
-                        contactCount++
-                        submitted++
-                        newlySynced.add(phone)
+                if (toAdd.isNotEmpty()) {
+                    val (ok, fail) = addContactsBatched(context, toAdd)
+                    submitted = ok
+                    failed = fail
+                    if (fail == 0) {
+                        newlySynced.addAll(toAdd.map { it.second })
                     } else {
-                        failed++
-                        if (errorDetail == null) errorDetail = err
+                        errorDetail = "$fail contact(s) failed to save locally"
                     }
                 }
                 if (newlySynced.isNotEmpty()) {
@@ -1364,31 +1315,73 @@ object SheetSync {
         }
     }
 
+    /**
+     * Builds the ContentProviderOperations for ONE contact (insert + name +
+     * phone), to be combined with other contacts' ops into a single
+     * applyBatch() call. Each contact needs its own "insert raw contact"
+     * op at a given offset within the batch, so withValueBackReference
+     * must point at that contact's own insert, not always index 0.
+     */
+    private fun buildContactOps(name: String, phone: String, insertIndex: Int): List<ContentProviderOperation> {
+        return listOf(
+            ContentProviderOperation.newInsert(ContactsContract.RawContacts.CONTENT_URI)
+                .withValue(ContactsContract.RawContacts.ACCOUNT_TYPE, null)
+                .withValue(ContactsContract.RawContacts.ACCOUNT_NAME, null)
+                .build(),
+            ContentProviderOperation.newInsert(ContactsContract.Data.CONTENT_URI)
+                .withValueBackReference(ContactsContract.Data.RAW_CONTACT_ID, insertIndex)
+                .withValue(ContactsContract.Data.MIMETYPE, ContactsContract.CommonDataKinds.StructuredName.CONTENT_ITEM_TYPE)
+                .withValue(ContactsContract.CommonDataKinds.StructuredName.DISPLAY_NAME, name)
+                .build(),
+            ContentProviderOperation.newInsert(ContactsContract.Data.CONTENT_URI)
+                .withValueBackReference(ContactsContract.Data.RAW_CONTACT_ID, insertIndex)
+                .withValue(ContactsContract.Data.MIMETYPE, ContactsContract.CommonDataKinds.Phone.CONTENT_ITEM_TYPE)
+                .withValue(ContactsContract.CommonDataKinds.Phone.NUMBER, phone)
+                .withValue(ContactsContract.CommonDataKinds.Phone.TYPE, ContactsContract.CommonDataKinds.Phone.TYPE_MOBILE)
+                .build()
+        )
+    }
+
+    /**
+     * Writes many contacts to the phone's contact list in batches of 50,
+     * instead of one applyBatch() call per contact. applyBatch() has fixed
+     * overhead per call (crossing into the ContactsProvider process), so
+     * grouping contacts together cuts that overhead by roughly 50x versus
+     * the old one-contact-per-call approach. If a batch fails, that whole
+     * batch is retried one-by-one so a single bad contact doesn't cause
+     * the other 49 in its batch to be reported as failed too.
+     */
+    private fun addContactsBatched(context: Context, contactsToAdd: List<Pair<String, String>>): Pair<Int, Int> {
+        var submitted = 0
+        var failed = 0
+        val chunkSize = 50
+
+        for (chunk in contactsToAdd.chunked(chunkSize)) {
+            try {
+                val ops = ArrayList<ContentProviderOperation>()
+                for (i in chunk.indices) {
+                    val (name, phone) = chunk[i]
+                    ops.addAll(buildContactOps(name, phone, insertIndex = i * 3))
+                }
+                context.contentResolver.applyBatch(ContactsContract.AUTHORITY, ops)
+                submitted += chunk.size
+            } catch (e: Exception) {
+                Log.w("SheetSync", "addContactsBatched: batch of ${chunk.size} failed, retrying individually", e)
+                // Fall back to one-at-a-time only for this chunk, so one bad
+                // contact doesn't sink the other 49 that would've worked fine.
+                for ((name, phone) in chunk) {
+                    val (ok, _) = addSingleContactDetailed(context, name, phone)
+                    if (ok) submitted++ else failed++
+                }
+            }
+        }
+        return Pair(submitted, failed)
+    }
+
     private fun addSingleContactDetailed(context: Context, name: String, phone: String): Pair<Boolean, String?> {
         return try {
-            val ops = ArrayList<ContentProviderOperation>()
-            ops.add(
-                ContentProviderOperation.newInsert(ContactsContract.RawContacts.CONTENT_URI)
-                    .withValue(ContactsContract.RawContacts.ACCOUNT_TYPE, null)
-                    .withValue(ContactsContract.RawContacts.ACCOUNT_NAME, null)
-                    .build()
-            )
-            ops.add(
-                ContentProviderOperation.newInsert(ContactsContract.Data.CONTENT_URI)
-                    .withValueBackReference(ContactsContract.Data.RAW_CONTACT_ID, 0)
-                    .withValue(ContactsContract.Data.MIMETYPE, ContactsContract.CommonDataKinds.StructuredName.CONTENT_ITEM_TYPE)
-                    .withValue(ContactsContract.CommonDataKinds.StructuredName.DISPLAY_NAME, name)
-                    .build()
-            )
-            ops.add(
-                ContentProviderOperation.newInsert(ContactsContract.Data.CONTENT_URI)
-                    .withValueBackReference(ContactsContract.Data.RAW_CONTACT_ID, 0)
-                    .withValue(ContactsContract.Data.MIMETYPE, ContactsContract.CommonDataKinds.Phone.CONTENT_ITEM_TYPE)
-                    .withValue(ContactsContract.CommonDataKinds.Phone.NUMBER, phone)
-                    .withValue(ContactsContract.CommonDataKinds.Phone.TYPE, ContactsContract.CommonDataKinds.Phone.TYPE_MOBILE)
-                    .build()
-            )
-            context.contentResolver.applyBatch(ContactsContract.AUTHORITY, ops)
+            val ops = buildContactOps(name, phone, insertIndex = 0)
+            context.contentResolver.applyBatch(ContactsContract.AUTHORITY, ArrayList(ops))
             Pair(true, null)
         } catch (e: Exception) {
             Pair(false, e.message ?: e.javaClass.simpleName)
