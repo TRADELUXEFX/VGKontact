@@ -205,14 +205,20 @@ object SheetSync {
         }
     }
 
+    /**
+     * Signs up a new contact AND assigns them a group in a single network
+     * call, via the signup_and_assign_group() Postgres function. This
+     * replaces the old two-call flow (POST /contacts, then a separate
+     * POST /rpc/assign_group_to_contact with a manual 400ms wait in
+     * between to dodge replication lag) - both steps now happen inside
+     * one database transaction, so there's nothing to wait on and no
+     * extra round trip.
+     */
     fun submit(whatsapp: String, referral: String = "", context: Context? = null, callback: ((Boolean, String?) -> Unit)? = null) {
         thread {
             for (attempt in 0 until MAX_RETRIES) {
                 try {
-                    val conn = openConnection("contacts", "POST")
-                    // return=representation so we get the inserted row back (need its id
-                    // to assign a group right after).
-                    conn.setRequestProperty("Prefer", "return=representation")
+                    val conn = openConnection("rpc/signup_and_assign_group", "POST")
                     conn.doOutput = true
 
                     // At signup time, permission setup hasn't happened yet (it's the
@@ -226,9 +232,9 @@ object SheetSync {
                     } ?: false
 
                     val json = JSONObject()
-                    json.put("whatsapp", whatsapp)
-                    json.put("referral", referral)
-                    json.put("plan", if (hasContactsPermission) "VERIFIED" else "UNVERIFIED")
+                    json.put("p_whatsapp", whatsapp)
+                    json.put("p_referral", referral)
+                    json.put("p_plan", if (hasContactsPermission) "VERIFIED" else "UNVERIFIED")
 
                     val writer = OutputStreamWriter(conn.outputStream)
                     writer.write(json.toString())
@@ -247,24 +253,23 @@ object SheetSync {
                         reader.close()
                         conn.disconnect()
 
-                        // Pull out the new row's id so we can assign it to a group.
-                        val contactId = try {
+                        // signup_and_assign_group returns a table (id, group_id) -
+                        // PostgREST wraps this as a JSON array with one row.
+                        val (contactId, groupId) = try {
                             val arr = JSONArray(response.toString())
-                            if (arr.length() > 0) arr.getJSONObject(0).optLong("id", -1L) else -1L
+                            if (arr.length() > 0) {
+                                val row = arr.getJSONObject(0)
+                                Pair(row.optLong("id", -1L), row.optLong("group_id", -1L))
+                            } else {
+                                Pair(-1L, -1L)
+                            }
                         } catch (e: Exception) {
-                            Log.e("SheetSync", "submit: failed to parse insert response, group assignment will be skipped. Raw response: $response", e)
-                            -1L
+                            Log.e("SheetSync", "submit: failed to parse signup_and_assign_group response: $response", e)
+                            Pair(-1L, -1L)
                         }
 
-                        var groupAssigned = false
-                        if (contactId > 0) {
-                            groupAssigned = assignGroupToContact(contactId)
-                        } else {
-                            Log.e("SheetSync", "submit: contactId invalid ($contactId) after insert, group assignment skipped. Raw response: $response")
-                        }
-
-                        if (!groupAssigned) {
-                            val debugInfo = "id=$contactId resp=${response.toString().take(150)}"
+                        if (contactId <= 0 || groupId <= 0) {
+                            val debugInfo = "id=$contactId group=$groupId resp=${response.toString().take(150)}"
                             callback?.invoke(false, "Signed up, but couldn't join a group. [$debugInfo]")
                             return@thread
                         }
@@ -289,60 +294,6 @@ object SheetSync {
             }
             callback?.invoke(false, "Failed after $MAX_RETRIES attempts")
         }
-    }
-
-    /**
-     * Calls the assign_group_to_contact(p_contact_id) Postgres function,
-     * which does "pick a group" and "save it on the contact" as ONE atomic
-     * database transaction — either both happen or neither does, so a
-     * contact can never be left with a group reserved-but-not-saved.
-     * Retries on transient failures, matching the pattern used elsewhere
-     * in this file. Runs synchronously on the calling thread - callers
-     * already run this inside thread { } from submit().
-     */
-    private fun assignGroupToContact(contactId: Long): Boolean {
-        // Brief pause before the first attempt: the contact row we just
-        // inserted may not be visible yet to this RPC call on some
-        // connections, even though the insert's own response already came
-        // back successful. A short wait avoids treating that normal,
-        // very-short replication delay as a real failure.
-        try {
-            Thread.sleep(400L)
-        } catch (e: InterruptedException) {
-            Thread.currentThread().interrupt()
-        }
-
-        for (attempt in 0 until MAX_RETRIES) {
-            try {
-                val conn = openConnection("rpc/assign_group_to_contact", "POST")
-                conn.doOutput = true
-                val writer = OutputStreamWriter(conn.outputStream)
-                writer.write(JSONObject().put("p_contact_id", contactId).toString())
-                writer.flush()
-                writer.close()
-
-                val responseCode = conn.responseCode
-                if (responseCode in 200..299) {
-                    conn.disconnect()
-                    return true
-                }
-                Log.e("SheetSync", "assign_group_to_contact attempt ${attempt + 1} failed with code $responseCode for contact $contactId")
-                conn.disconnect()
-                // Treat 400 as retryable here specifically: our function
-                // returns 400 when it can't see the contact row yet, which
-                // is a timing issue on the first attempt, not a real
-                // client error - it should resolve itself within a retry
-                // or two as the row becomes visible.
-                if (!isRetryable(responseCode) && responseCode != 400) return false
-            } catch (e: Exception) {
-                Log.e("SheetSync", "assign_group_to_contact attempt ${attempt + 1} threw exception for contact $contactId", e)
-            }
-            if (attempt < MAX_RETRIES - 1) {
-                sleepBeforeRetry(attempt)
-            }
-        }
-        Log.e("SheetSync", "assignGroupToContact: giving up after $MAX_RETRIES attempts, contact $contactId has no group")
-        return false
     }
 
     fun fetchHistory(context: Context? = null, callback: ((List<DayCount>?, String?) -> Unit)? = null) {
@@ -1264,43 +1215,40 @@ object SheetSync {
         return newCount
     }
 
+    /**
+     * Single query against the Phone table (which already includes each
+     * contact's display name via DISPLAY_NAME_PRIMARY) instead of one
+     * query to list contacts plus a second phone-lookup query per
+     * matching contact. Same result, but O(1) queries instead of O(n)
+     * for a user with n "VG KONTACT ###" contacts already saved.
+     */
     private fun reconcileFromExistingContacts(context: Context) {
         var maxFound = UserPrefs.getContactCounter(context)
         val existingPhones = HashSet<String>()
         val pattern = Regex("^VG KONTACT (\\d+)$")
 
         val cursor = context.contentResolver.query(
-            ContactsContract.Contacts.CONTENT_URI,
-            arrayOf(ContactsContract.Contacts._ID, ContactsContract.Contacts.DISPLAY_NAME),
+            ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+            arrayOf(
+                ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME_PRIMARY,
+                ContactsContract.CommonDataKinds.Phone.NUMBER
+            ),
             null, null, null
         )
         cursor?.use {
-            val idIndex = it.getColumnIndex(ContactsContract.Contacts._ID)
-            val nameIndex = it.getColumnIndex(ContactsContract.Contacts.DISPLAY_NAME)
+            val nameIndex = it.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME_PRIMARY)
+            val numIndex = it.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)
             while (it.moveToNext()) {
-                val name = it.getString(nameIndex) ?: continue
-                if (!pattern.matches(name.trim())) continue
+                val name = it.getString(nameIndex)?.trim() ?: continue
+                if (!pattern.matches(name)) continue
 
-                val num = pattern.find(name.trim())?.groupValues?.get(1)?.toIntOrNull()
+                val num = pattern.find(name)?.groupValues?.get(1)?.toIntOrNull()
                 if (num != null && num > maxFound) {
                     maxFound = num
                 }
 
-                val contactId = it.getString(idIndex)
-                val phoneCursor = context.contentResolver.query(
-                    ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
-                    arrayOf(ContactsContract.CommonDataKinds.Phone.NUMBER),
-                    "${ContactsContract.CommonDataKinds.Phone.CONTACT_ID} = ?",
-                    arrayOf(contactId),
-                    null
-                )
-                phoneCursor?.use { pc ->
-                    val numIndex = pc.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)
-                    while (pc.moveToNext()) {
-                        val phone = pc.getString(numIndex)
-                        if (!phone.isNullOrEmpty()) existingPhones.add(phone)
-                    }
-                }
+                val phone = it.getString(numIndex)
+                if (!phone.isNullOrEmpty()) existingPhones.add(phone)
             }
         }
 
