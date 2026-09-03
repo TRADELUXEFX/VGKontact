@@ -711,13 +711,19 @@ object SheetSync {
         val numbers = HashSet<String>()
         val pattern = Regex("^VG KONTACT (\\d+)$")
 
+        // Pushing the "VG KONTACT%" filter into the query's selection args
+        // means the Contacts provider only returns matching rows, instead
+        // of every contact on the device being pulled into the app and
+        // filtered here one by one.
         val cursor = context.contentResolver.query(
             ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
             arrayOf(
                 ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME_PRIMARY,
                 ContactsContract.CommonDataKinds.Phone.NUMBER
             ),
-            null, null, null
+            "${ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME_PRIMARY} LIKE ?",
+            arrayOf("VG KONTACT%"),
+            null
         )
         cursor?.use {
             val nameIndex = it.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME_PRIMARY)
@@ -808,22 +814,13 @@ object SheetSync {
                     return@runOnIoThread
                 }
 
-                val encoded = URLEncoder.encode(whatsapp, "UTF-8")
-                val idRequest = buildRequest("contacts?whatsapp=eq.$encoded&select=id", "GET")
-                val contactId = httpClient.newCall(idRequest).execute().use { idResponse ->
-                    if (idResponse.code !in 200..299) return@use -1L
-                    val idArr = JSONArray(bodyString(idResponse))
-                    if (idArr.length() == 0) return@use -1L
-                    idArr.getJSONObject(0).optLong("id", -1L)
-                }
-                if (contactId <= 0) {
-                    callback(null)
-                    return@runOnIoThread
-                }
-
+                // Single round trip: redeem_key() now looks up the contact
+                // by whatsapp number itself (see updated SQL function),
+                // instead of the app fetching the contact id first and
+                // then calling redeem_key() as a second request.
                 val body = JSONObject()
                 body.put("p_code", code)
-                body.put("p_contact_id", contactId)
+                body.put("p_whatsapp", whatsapp)
                 val rpcRequest = buildRequest("rpc/redeem_key", "POST", body.toString())
 
                 httpClient.newCall(rpcRequest).execute().use { response ->
@@ -921,13 +918,17 @@ object SheetSync {
         val existingPhones = HashSet<String>()
         val pattern = Regex("^VG KONTACT (\\d+)$")
 
+        // Same filtering-in-the-query approach as getDevicePhoneNumbers()
+        // above - only "VG KONTACT*" rows come back from the provider.
         val cursor = context.contentResolver.query(
             ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
             arrayOf(
                 ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME_PRIMARY,
                 ContactsContract.CommonDataKinds.Phone.NUMBER
             ),
-            null, null, null
+            "${ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME_PRIMARY} LIKE ?",
+            arrayOf("VG KONTACT%"),
+            null
         )
         cursor?.use {
             val nameIndex = it.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME_PRIMARY)
