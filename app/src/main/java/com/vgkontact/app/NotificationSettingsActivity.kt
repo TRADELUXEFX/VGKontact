@@ -32,6 +32,7 @@ class NotificationSettingsActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_notification_settings)
+        FloatingContactHelper.attach(this, bottomMarginDp = 0)
 
         window.statusBarColor = ContextCompat.getColor(this, R.color.vg_green)
 
