@@ -419,6 +419,41 @@ object SheetSync {
         }
     }
 
+    /**
+     * Cheap check: asks the server for a single number (total contacts
+     * across this user's groups) via get_my_group_contact_count(), instead
+     * of downloading the full contact list. Used to decide whether a full
+     * sync is actually worth running - see MainMenuActivity.autoSyncQuietly.
+     */
+    fun fetchGroupContactCount(context: Context, callback: (Long?) -> Unit) {
+        runOnIoThread {
+            try {
+                val whatsapp = UserPrefs.getWhatsapp(context)
+                if (whatsapp.isNullOrEmpty()) {
+                    callback(null)
+                    return@runOnIoThread
+                }
+
+                val body = JSONObject()
+                body.put("p_whatsapp", whatsapp)
+                val request = buildRequest("rpc/get_my_group_contact_count", "POST", body.toString())
+
+                httpClient.newCall(request).execute().use { response ->
+                    if (response.code !in 200..299) {
+                        callback(null)
+                        return@runOnIoThread
+                    }
+                    val trimmed = bodyString(response).trim()
+                    val count = trimmed.toLongOrNull()
+                    callback(count)
+                }
+            } catch (e: Exception) {
+                Log.w("SheetSync", "fetchGroupContactCount failed", e)
+                callback(null)
+            }
+        }
+    }
+
     fun fetchPlan(context: Context, callback: (String?) -> Unit) {
         runOnIoThread {
             try {
