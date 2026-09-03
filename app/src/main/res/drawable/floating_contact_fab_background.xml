@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Circular filled background for the app-wide floating Contact Us
+     button (FloatingContactHelper). Same green as the rest of the
+     brand (vg_green) with a slightly darker ripple, matching the
+     WhatsApp-style hovering chat bubble this button is modeled on. -->
+<ripple xmlns:android="http://schemas.android.com/apk/res/android"
+    android:color="@color/vg_green_dark">
+    <item>
+        <shape android:shape="oval">
+            <solid android:color="@color/vg_green" />
+        </shape>
+    </item>
+</ripple>
