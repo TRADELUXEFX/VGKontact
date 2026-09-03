@@ -69,6 +69,7 @@ class IncreaseLimitActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_increase_limit)
+        FloatingContactHelper.attach(this)
         BottomNavHelper.setup(this, BottomNavHelper.Tab.UPGRADE)
 
         window.statusBarColor = ContextCompat.getColor(this, R.color.vg_green)
