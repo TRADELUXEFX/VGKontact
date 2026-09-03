@@ -37,7 +37,7 @@ object FloatingContactHelper {
      * above screens that have their own floating bottom nav bar, so it
      * doesn't overlap it. Pass 0 for screens without a bottom nav bar.
      */
-    fun attach(activity: Activity, bottomMarginDp: Int = 88) {
+    fun attach(activity: Activity, bottomMarginDp: Int = 110) {
         val contentRoot = activity.findViewById<ViewGroup>(android.R.id.content) ?: return
 
         // Avoid adding a second bubble if attach() is somehow called twice
@@ -45,10 +45,10 @@ object FloatingContactHelper {
         if (contentRoot.findViewWithTag<View>(FAB_TAG) != null) return
 
         val density = activity.resources.displayMetrics.density
-        val sizePx = (56 * density).toInt()
-        val marginPx = (16 * density).toInt()
+        val sizePx = (60 * density).toInt()
+        val marginPx = (18 * density).toInt()
         val bottomMarginPx = (bottomMarginDp * density).toInt()
-        val iconPaddingPx = (14 * density).toInt()
+        val iconPaddingPx = (16 * density).toInt()
 
         val fab = ImageView(activity).apply {
             tag = FAB_TAG
