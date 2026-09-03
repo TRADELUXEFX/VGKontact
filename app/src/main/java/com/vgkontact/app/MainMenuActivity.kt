@@ -568,6 +568,30 @@ class MainMenuActivity : AppCompatActivity() {
             return
         }
         if (isSyncing) return
+
+        // Cheap check first: ask the server for just a count of contacts
+        // across this user's groups, instead of downloading the full list
+        // on every single resume. Only run the real sync if that count has
+        // actually changed since last time - otherwise there's nothing new
+        // to pull in, so skip the expensive fetch + contacts write entirely.
+        SheetSync.fetchGroupContactCount(this) { serverCount ->
+            if (serverCount == null) {
+                // Couldn't reach the server for the cheap check - fall back
+                // to just not syncing this time rather than guessing. The
+                // next resume, or a manual Sync tap, will try again.
+                return@fetchGroupContactCount
+            }
+            val lastKnown = UserPrefs.getLastKnownGroupCount(this)
+            if (serverCount == lastKnown) {
+                // Nothing new - skip the full sync.
+                return@fetchGroupContactCount
+            }
+            UserPrefs.setLastKnownGroupCount(this, serverCount)
+            runAutoSync()
+        }
+    }
+
+    private fun runAutoSync() {
         isSyncing = true
         SheetSync.importAllContactsFromSheet(this) { submitted, failed, errorDetail ->
             runOnUiThread {
