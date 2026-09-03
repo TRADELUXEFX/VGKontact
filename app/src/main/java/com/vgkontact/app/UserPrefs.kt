@@ -116,6 +116,22 @@ object UserPrefs {
         getPrefs(context).edit().putInt(KEY_CONTACT_COUNTER, value).apply()
     }
 
+    private const val KEY_LAST_KNOWN_GROUP_COUNT = "last_known_group_count"
+
+    /**
+     * The server-side total contact count across this user's groups, as of
+     * the last time we checked. Used to decide whether a full sync is
+     * actually worth running (see MainMenuActivity.autoSyncQuietly) -
+     * -1 means "never checked yet", so the first check always proceeds.
+     */
+    fun getLastKnownGroupCount(context: Context): Long {
+        return getPrefs(context).getLong(KEY_LAST_KNOWN_GROUP_COUNT, -1L)
+    }
+
+    fun setLastKnownGroupCount(context: Context, value: Long) {
+        getPrefs(context).edit().putLong(KEY_LAST_KNOWN_GROUP_COUNT, value).apply()
+    }
+
     private const val KEY_LAST_SYNC_DATE = "last_sync_date"
     private const val KEY_TODAY_SYNCED_COUNT = "today_synced_count"
     private const val KEY_LAST_SYNC_TIMESTAMP = "last_sync_timestamp"
