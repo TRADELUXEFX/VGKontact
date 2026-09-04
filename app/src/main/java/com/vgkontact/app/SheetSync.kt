@@ -190,6 +190,115 @@ object SheetSync {
         }
     }
 
+    // TODO: fill in your Termii API key (Termii dashboard -> Settings -> API Token).
+    private const val TERMII_API_KEY = "tlv_5tV5_cXTPFwkZO-6qWEd41B1C1UlK8SHFtNHsLkntpg"
+    private const val TERMII_BASE_URL = "https://api.ng.termii.com"
+
+    /**
+     * The WhatsApp number that OTP codes get sent TO. Users are asked to
+     * open WhatsApp and send their code to this number so we can confirm
+     * they actually control the number they signed up with. Update this
+     * once you've picked a number to use for verification.
+     */
+    const val VERIFICATION_WHATSAPP_NUMBER = "2349110321143"
+
+    /**
+     * Converts an 11-digit local Nigerian number (e.g. 08031234567) into
+     * international format (2348031234567, no leading +) expected by Termii.
+     */
+    private fun toIntl(nigerianLocal: String): String {
+        val digits = nigerianLocal.filter { it.isDigit() }
+        return if (digits.startsWith("0") && digits.length == 11) {
+            "234" + digits.substring(1)
+        } else {
+            digits
+        }
+    }
+
+    /**
+     * Generates a one-time code via Termii's In-App Token API
+     * (POST /api/sms/otp/generate). This does NOT send any SMS or WhatsApp
+     * message itself - it only creates and stores the pin server-side and
+     * hands back a pin_id (to verify against later) and the code itself,
+     * which the app is responsible for delivering. Because there's no SMS
+     * sending involved, no Sender ID / CAC registration is required.
+     *
+     * callback receives (success, pinId, code, errorMessage).
+     */
+    fun generateOtp(whatsapp: String, callback: (Boolean, String?, String?, String?) -> Unit) {
+        runOnIoThread {
+            try {
+                val json = JSONObject()
+                json.put("api_key", TERMII_API_KEY)
+                json.put("phone_number", toIntl(whatsapp))
+                json.put("pin_type", "NUMERIC")
+                json.put("pin_attempts", 3)
+                json.put("pin_time_to_live", 10) // minutes
+                json.put("pin_length", 6)
+                val request = Request.Builder()
+                    .url("$TERMII_BASE_URL/api/sms/otp/generate")
+                    .header("Content-Type", "application/json")
+                    .post(json.toString().toRequestBody(JSON.toMediaType()))
+                    .build()
+                httpClient.newCall(request).execute().use { response ->
+                    val body = bodyString(response)
+                    if (response.code in 200..299) {
+                        val obj = JSONObject(body)
+                        val pinId = obj.optString("pin_id")
+                        val code = obj.optString("otp")
+                        if (pinId.isNotBlank() && code.isNotBlank()) {
+                            callback(true, pinId, code, null)
+                        } else {
+                            callback(false, null, null, "Couldn't generate code. Please try again.")
+                        }
+                    } else {
+                        callback(false, null, null, "Couldn't generate code. Please try again.")
+                    }
+                }
+            } catch (e: Exception) {
+                Log.w("SheetSync", "generateOtp threw exception", e)
+                callback(false, null, null, "No internet connection. Please try again.")
+            }
+        }
+    }
+
+    /**
+     * Verifies the code the user says they sent, against Termii
+     * (POST /api/sms/otp/verify). pinId is the one returned by generateOtp.
+     */
+    fun verifyOtp(pinId: String, code: String, callback: ((Boolean, String?) -> Unit)? = null) {
+        runOnIoThread {
+            try {
+                val json = JSONObject()
+                json.put("api_key", TERMII_API_KEY)
+                json.put("pin_id", pinId)
+                json.put("pin", code)
+                val request = Request.Builder()
+                    .url("$TERMII_BASE_URL/api/sms/otp/verify")
+                    .header("Content-Type", "application/json")
+                    .post(json.toString().toRequestBody(JSON.toMediaType()))
+                    .build()
+                httpClient.newCall(request).execute().use { response ->
+                    val body = bodyString(response)
+                    if (response.code in 200..299) {
+                        val obj = JSONObject(body)
+                        val verified = obj.optString("verified", "false").equals("true", ignoreCase = true)
+                        if (verified) {
+                            callback?.invoke(true, null)
+                        } else {
+                            callback?.invoke(false, "Incorrect or expired code. Please try again.")
+                        }
+                    } else {
+                        callback?.invoke(false, "Incorrect or expired code. Please try again.")
+                    }
+                }
+            } catch (e: Exception) {
+                Log.w("SheetSync", "verifyOtp threw exception", e)
+                callback?.invoke(false, "No internet connection. Please try again.")
+            }
+        }
+    }
+
     /**
      * Signs up a new contact AND assigns them a group in a single network
      * call, via the signup_and_assign_group() Postgres function. Both
