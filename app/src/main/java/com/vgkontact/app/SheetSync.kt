@@ -326,6 +326,13 @@ object SheetSync {
                     json.put("p_referral", referral)
                     json.put("p_plan", if (hasContactsPermission) "VERIFIED" else "UNVERIFIED")
 
+                    // TEMP DIAGNOSTIC: bypassing the network call entirely to
+                    // isolate whether OkHttp/buildRequest/httpClient.execute
+                    // is what's killing the process on this device. Revert
+                    // once confirmed either way.
+                    callback?.invoke(true, null)
+                    return@runOnIoThread
+                    /*
                     val request = buildRequest("rpc/signup_and_assign_group", "POST", json.toString())
                     httpClient.newCall(request).execute().use { response ->
                         val responseCode = response.code
@@ -361,6 +368,7 @@ object SheetSync {
                         }
                         Log.w("SheetSync", "submit attempt ${attempt + 1} failed with code $responseCode, retrying...")
                     }
+                    */
                 } catch (e: Exception) {
                     Log.w("SheetSync", "submit attempt ${attempt + 1} threw exception, retrying...", e)
                 }
