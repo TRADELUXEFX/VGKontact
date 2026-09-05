@@ -1,136 +1,186 @@
-package com.vgkontact.app
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/white">
 
-import android.content.Intent
-import android.net.Uri
-import android.os.Bundle
-import android.view.View
-import android.widget.Button
-import android.widget.ProgressBar
-import android.widget.TextView
-import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContextCompat
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:background="@color/white">
 
-/**
- * Shown right after onboarding submits the WhatsApp number.
- *
- * Flow:
- * 1. Generate a code via Termii's In-App Token API (SheetSync.generateOtp).
- * 2. Open WhatsApp with that code pre-filled, addressed to
- *    SheetSync.VERIFICATION_WHATSAPP_NUMBER, and ask the user to hit Send.
- * 3. User comes back to the app and taps "I've sent it" - we verify the
- *    pin against Termii (SheetSync.verifyOtp).
- *
- * This proves the user actually controls the WhatsApp number they signed
- * up with, since the code has to travel over a real WhatsApp message from
- * that number to be confirmed. Right now confirmation on the receiving end
- * is manual (check the WhatsApp inbox for VERIFICATION_WHATSAPP_NUMBER) -
- * Termii's verify call only confirms the code is correct and unexpired,
- * not that the WhatsApp message itself arrived.
- */
-class PhoneVerificationActivity : AppCompatActivity() {
+        <!-- ==== GREEN HEADER ==== -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center_horizontal"
+            android:background="@drawable/header_gradient"
+            android:paddingTop="56dp"
+            android:paddingStart="28dp"
+            android:paddingEnd="28dp"
+            android:paddingBottom="32dp">
 
-    companion object {
-        const val EXTRA_WHATSAPP = "extra_whatsapp"
-    }
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Verify Your"
+                android:textSize="15sp"
+                android:alpha="0.92"
+                android:gravity="center"
+                android:textColor="@color/white" />
 
-    private lateinit var whatsapp: String
-    private var pinId: String? = null
-    private var generatedCode: String? = null
-    private var hasOpenedWhatsApp = false
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="WhatsApp Number"
+                android:textSize="26sp"
+                android:textStyle="bold"
+                android:layout_marginTop="2dp"
+                android:gravity="center"
+                android:textColor="@color/white" />
 
-    private lateinit var subtitleText: TextView
-    private lateinit var codeText: TextView
-    private lateinit var openWhatsAppButton: Button
-    private lateinit var confirmSentButton: TextView
-    private lateinit var progressBar: ProgressBar
+        </LinearLayout>
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_phone_verification)
+        <!-- ==== WHITE BODY ==== -->
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1">
 
-        window.statusBarColor = ContextCompat.getColor(this, R.color.vg_green)
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingStart="20dp"
+                android:paddingEnd="20dp"
+                android:paddingTop="24dp">
 
-        whatsapp = intent.getStringExtra(EXTRA_WHATSAPP) ?: run {
-            finish()
-            return
-        }
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:background="@drawable/card_background"
+                    android:padding="20dp">
 
-        subtitleText = findViewById(R.id.subtitleText)
-        codeText = findViewById(R.id.otpInput) // repurposed as a read-only code display
-        openWhatsAppButton = findViewById(R.id.verifyButton)
-        confirmSentButton = findViewById(R.id.resendText)
-        progressBar = findViewById(R.id.progressBar)
+                    <TextView
+                        android:id="@+id/subtitleText"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Enter the 6-digit code sent to your number"
+                        android:textSize="13sp"
+                        android:textColor="@color/text_muted"
+                        android:gravity="center"
+                        android:layout_marginBottom="20dp" />
 
-        codeText.isEnabled = false
-        subtitleText.text = "Generating your verification code..."
-        openWhatsAppButton.text = "Open WhatsApp"
-        confirmSentButton.text = "I've sent it - Verify"
-        confirmSentButton.isEnabled = false
-        confirmSentButton.alpha = 0.5f
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="VERIFICATION CODE"
+                        android:textSize="11sp"
+                        android:textStyle="bold"
+                        android:textAllCaps="true"
+                        android:letterSpacing="0.05"
+                        android:textColor="@color/text_muted"
+                        android:gravity="center"
+                        android:layout_marginBottom="8dp" />
 
-        openWhatsAppButton.setOnClickListener { onOpenWhatsAppClicked() }
-        confirmSentButton.setOnClickListener { onConfirmSentClicked() }
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="000000"
+                        android:textColorHint="@color/text_muted"
+                        app:hintTextColor="@color/vg_green_dark"
+                        app:boxBackgroundMode="outline"
+                        app:boxBackgroundColor="@color/vg_field_bg"
+                        app:boxStrokeColor="@color/vg_green"
+                        app:boxStrokeWidth="1.5dp"
+                        app:boxCornerRadiusTopStart="14dp"
+                        app:boxCornerRadiusTopEnd="14dp"
+                        app:boxCornerRadiusBottomStart="14dp"
+                        app:boxCornerRadiusBottomEnd="14dp"
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
 
-        generateCode()
-    }
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/otpInput"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="center"
+                            android:inputType="number"
+                            android:maxLength="6"
+                            android:letterSpacing="0.3"
+                            android:textSize="20sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/vg_dark"
+                            android:textColorHint="@color/text_muted"
+                            android:includeFontPadding="false"
+                            android:paddingStart="14dp"
+                            android:paddingEnd="14dp"
+                            android:paddingTop="14dp"
+                            android:paddingBottom="14dp" />
 
-    private fun generateCode() {
-        setLoading(true)
-        SheetSync.generateOtp(whatsapp) { success, pin, code, error ->
-            runOnUiThread {
-                setLoading(false)
-                if (success && pin != null && code != null) {
-                    pinId = pin
-                    generatedCode = code
-                    codeText.text = code
-                    subtitleText.text = "Tap below to send this code to us on WhatsApp"
-                    // confirmSentButton stays disabled here - it only turns
-                    // on once the user has actually tapped Open WhatsApp,
-                    // see onOpenWhatsAppClicked().
-                } else {
-                    subtitleText.text = "Couldn't generate a code"
-                    Toast.makeText(this, error ?: "Please try again", Toast.LENGTH_SHORT).show()
-                }
-            }
-        }
-    }
+                    </com.google.android.material.textfield.TextInputLayout>
 
-    private fun onOpenWhatsAppClicked() {
-        val code = generatedCode ?: return
-        val target = SheetSync.VERIFICATION_WHATSAPP_NUMBER
-        val message = Uri.encode("My verification code is $code")
-        try {
-            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://wa.me/$target?text=$message"))
-            startActivity(intent)
-            hasOpenedWhatsApp = true
-            confirmSentButton.isEnabled = true
-            confirmSentButton.alpha = 1f
-        } catch (e: Exception) {
-            Toast.makeText(this, "Couldn't open WhatsApp", Toast.LENGTH_SHORT).show()
-        }
-    }
+                </LinearLayout>
 
-    private fun onConfirmSentClicked() {
-        val pin = pinId ?: return
-        val code = generatedCode ?: return
-        setLoading(true)
-        SheetSync.verifyOtp(pin, code) { success, message ->
-            runOnUiThread {
-                setLoading(false)
-                if (success) {
-                    startActivity(Intent(this, PermissionSetupActivity::class.java))
-                    finish()
-                } else {
-                    Toast.makeText(this, message ?: "Verification failed", Toast.LENGTH_SHORT).show()
-                }
-            }
-        }
-    }
+            </LinearLayout>
 
-    private fun setLoading(loading: Boolean) {
-        openWhatsAppButton.isEnabled = !loading
-        confirmSentButton.isEnabled = !loading && hasOpenedWhatsApp
-        progressBar.visibility = if (loading) View.VISIBLE else View.GONE
-    }
-}
+        </ScrollView>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="20dp">
+
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="56dp">
+
+                <Button
+                    android:id="@+id/verifyButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:text="Verify"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:textAllCaps="false"
+                    android:backgroundTint="@color/vg_green"
+                    android:textColor="@color/white"
+                    android:gravity="center"
+                    android:drawableEnd="@drawable/ic_arrow_forward"
+                    android:drawablePadding="8dp"
+                    app:cornerRadius="16dp" />
+
+                <ProgressBar
+                    android:id="@+id/progressBar"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:layout_gravity="center"
+                    android:indeterminateTint="@color/white"
+                    android:visibility="gone" />
+
+            </FrameLayout>
+
+            <TextView
+                android:id="@+id/resendText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="I've sent it - Verify"
+                android:textSize="15sp"
+                android:textColor="@color/text_muted"
+                android:textStyle="bold"
+                android:gravity="center"
+                android:background="@drawable/card_background"
+                android:padding="14dp"
+                android:layout_marginTop="12dp"
+                android:enabled="false"
+                android:alpha="0.5" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</FrameLayout>
