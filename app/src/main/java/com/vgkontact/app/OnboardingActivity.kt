@@ -27,8 +27,6 @@ class OnboardingActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        showPreviousCrashIfAny()
-
         if (UserPrefs.isRegistered(this)) {
             startActivity(Intent(this, PermissionSetupActivity::class.java))
             finish()
@@ -51,34 +49,6 @@ class OnboardingActivity : AppCompatActivity() {
         continueButton.setOnClickListener { onContinueClicked() }
 
         setupCreditLink()
-    }
-
-    // TEMPORARY DEBUG TOOL - shows the last crash (if any) as an on-screen
-    // popup with a Copy button, then deletes the log so it only shows once.
-    // Remove this whole function and its call in onCreate() once the crash
-    // is fixed - it's not meant to ship.
-    private fun showPreviousCrashIfAny() {
-        val logFile = java.io.File(filesDir, CrashLoggingApplication.CRASH_LOG_FILENAME)
-        if (!logFile.exists()) return
-
-        val crashText = try {
-            logFile.readText()
-        } catch (e: Exception) {
-            return
-        }
-        logFile.delete()
-
-        androidx.appcompat.app.AlertDialog.Builder(this)
-            .setTitle("Last crash")
-            .setMessage(crashText)
-            .setPositiveButton("Copy") { _, _ ->
-                val clipboard = getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Crash log", crashText))
-                Toast.makeText(this, "Copied to clipboard", Toast.LENGTH_SHORT).show()
-            }
-            .setNegativeButton("Dismiss", null)
-            .setCancelable(false)
-            .show()
     }
 
     private fun setupCreditLink() {
