@@ -108,9 +108,7 @@ class OnboardingActivity : AppCompatActivity() {
                 continueButton.text = getString(R.string.btn_continue)
                 if (success) {
                     UserPrefs.saveUser(this, whatsapp, referral)
-                    val intent = Intent(this, PhoneVerificationActivity::class.java)
-                    intent.putExtra(PhoneVerificationActivity.EXTRA_WHATSAPP, whatsapp)
-                    startActivity(intent)
+                    startActivity(Intent(this, PermissionSetupActivity::class.java))
                     finish()
                 } else {
                     Toast.makeText(this, message ?: "Submission failed", Toast.LENGTH_SHORT).show()
