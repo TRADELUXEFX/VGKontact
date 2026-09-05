@@ -123,19 +123,6 @@
 
                     </com.google.android.material.textfield.TextInputLayout>
 
-                    <TextView
-                        android:id="@+id/resendText"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="I've sent it - Verify"
-                        android:textSize="15sp"
-                        android:textColor="@color/vg_green_dark"
-                        android:textStyle="bold"
-                        android:gravity="center"
-                        android:background="@drawable/card_background"
-                        android:padding="14dp"
-                        android:layout_marginTop="16dp" />
-
                 </LinearLayout>
 
             </LinearLayout>
@@ -177,8 +164,24 @@
 
             </FrameLayout>
 
+            <TextView
+                android:id="@+id/resendText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="I've sent it - Verify"
+                android:textSize="15sp"
+                android:textColor="@color/text_muted"
+                android:textStyle="bold"
+                android:gravity="center"
+                android:background="@drawable/card_background"
+                android:padding="14dp"
+                android:layout_marginTop="12dp"
+                android:enabled="false"
+                android:alpha="0.5" />
+
         </LinearLayout>
 
     </LinearLayout>
 
 </FrameLayout>
+
