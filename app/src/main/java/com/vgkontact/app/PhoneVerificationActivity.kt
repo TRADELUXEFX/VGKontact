@@ -41,7 +41,7 @@ class PhoneVerificationActivity : AppCompatActivity() {
     private lateinit var subtitleText: TextView
     private lateinit var codeText: TextView
     private lateinit var openWhatsAppButton: Button
-    private lateinit var confirmSentButton: Button
+    private lateinit var confirmSentButton: TextView
     private lateinit var progressBar: ProgressBar
 
     override fun onCreate(savedInstanceState: Bundle?) {
