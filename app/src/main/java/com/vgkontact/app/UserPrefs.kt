@@ -2,8 +2,6 @@ package com.vgkontact.app
 
 import android.content.Context
 import android.content.SharedPreferences
-import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKey
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -16,55 +14,29 @@ object UserPrefs {
     private const val KEY_DATE_REGISTERED = "date_registered"
     private const val KEY_NOTIFICATION_FREQUENCY_HOURS = "notification_frequency_hours"
 
-    // Cached after first successful open so we don't re-touch the Keystore
-    // (and re-risk the failure below) on every single call.
     @Volatile private var cachedPrefs: SharedPreferences? = null
 
+    // Plain (unencrypted) SharedPreferences. Previously this used
+    // EncryptedSharedPreferences (androidx.security:security-crypto), which
+    // is now deprecated and backed by Google Tink's native (JNI) crypto
+    // code. On this app's very first launch path (OnboardingActivity.onCreate
+    // -> isRegistered -> getPrefs, called before any UI is even shown), a
+    // native-level failure inside that library kills the whole process
+    // immediately - no Java exception, no crash dialog, nothing catchable
+    // from Kotlin, matching a hard-to-diagnose silent crash seen on at
+    // least one real device. Switching to plain SharedPreferences removes
+    // Tink/Keystore from this path entirely. The data stored here (a
+    // WhatsApp number) doesn't need Keystore-level encryption to justify
+    // that risk.
     private fun buildPrefs(context: Context): SharedPreferences {
-        val masterKey = MasterKey.Builder(context)
-            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-            .build()
-
-        return EncryptedSharedPreferences.create(
-            context,
-            PREF_NAME,
-            masterKey,
-            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-        )
+        return context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
     }
 
-    // The Keystore-backed AES key behind EncryptedSharedPreferences can get
-    // out of sync with the encrypted file itself - e.g. after "Clear cache"
-    // on some OEMs (seen on Samsung), or if the Keystore entry is evicted/
-    // regenerated for any reason. When that happens every read/write throws
-    // (commonly AEADBadTagException/GeneralSecurityException), and since
-    // this is called from the very first line of the app's launch path
-    // (OnboardingActivity.onCreate -> isRegistered), an uncaught throw here
-    // crashes on every single launch with no way back in.
-    //
-    // Recovery: if opening/using the encrypted file throws, delete the
-    // corrupted prefs file and recreate it fresh. This does mean a user
-    // hitting this bug loses their locally-stored registration state once
-    // (they'll see onboarding again) - but that's recoverable, whereas an
-    // unrecoverable launch crash is not.
     private fun getPrefs(context: Context): SharedPreferences {
         cachedPrefs?.let { return it }
-
-        return try {
-            val prefs = buildPrefs(context)
-            // Force a real read now (not just object construction) so a
-            // corrupted file throws here, not later on some random screen.
-            prefs.getBoolean(KEY_IS_REGISTERED, false)
-            cachedPrefs = prefs
-            prefs
-        } catch (e: Exception) {
-            context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE).edit().clear().apply()
-            context.deleteSharedPreferences(PREF_NAME)
-            val fresh = buildPrefs(context)
-            cachedPrefs = fresh
-            fresh
-        }
+        val prefs = buildPrefs(context)
+        cachedPrefs = prefs
+        return prefs
     }
 
     fun saveUser(context: Context, whatsapp: String, referral: String) {
