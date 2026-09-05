@@ -309,10 +309,17 @@ object SheetSync {
         runOnIoThread {
             for (attempt in 0 until MAX_RETRIES) {
                 try {
+                    // TEMP DIAGNOSTIC: bypassing the permission check below
+                    // to isolate whether ContextCompat.checkSelfPermission
+                    // itself is what's killing the process on this device.
+                    // Revert to the real check once confirmed either way.
+                    val hasContactsPermission = false
+                    /*
                     val hasContactsPermission = context?.let {
                         ContextCompat.checkSelfPermission(it, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED &&
                             ContextCompat.checkSelfPermission(it, Manifest.permission.WRITE_CONTACTS) == PackageManager.PERMISSION_GRANTED
                     } ?: false
+                    */
 
                     val json = JSONObject()
                     json.put("p_whatsapp", whatsapp)
