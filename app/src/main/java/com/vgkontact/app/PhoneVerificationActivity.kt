@@ -37,6 +37,7 @@ class PhoneVerificationActivity : AppCompatActivity() {
     private lateinit var whatsapp: String
     private var pinId: String? = null
     private var generatedCode: String? = null
+    private var hasOpenedWhatsApp = false
 
     private lateinit var subtitleText: TextView
     private lateinit var codeText: TextView
@@ -66,6 +67,7 @@ class PhoneVerificationActivity : AppCompatActivity() {
         openWhatsAppButton.text = "Open WhatsApp"
         confirmSentButton.text = "I've sent it - Verify"
         confirmSentButton.isEnabled = false
+        confirmSentButton.alpha = 0.5f
 
         openWhatsAppButton.setOnClickListener { onOpenWhatsAppClicked() }
         confirmSentButton.setOnClickListener { onConfirmSentClicked() }
@@ -83,7 +85,9 @@ class PhoneVerificationActivity : AppCompatActivity() {
                     generatedCode = code
                     codeText.text = code
                     subtitleText.text = "Tap below to send this code to us on WhatsApp"
-                    confirmSentButton.isEnabled = true
+                    // confirmSentButton stays disabled here - it only turns
+                    // on once the user has actually tapped Open WhatsApp,
+                    // see onOpenWhatsAppClicked().
                 } else {
                     subtitleText.text = "Couldn't generate a code"
                     Toast.makeText(this, error ?: "Please try again", Toast.LENGTH_SHORT).show()
@@ -99,6 +103,9 @@ class PhoneVerificationActivity : AppCompatActivity() {
         try {
             val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://wa.me/$target?text=$message"))
             startActivity(intent)
+            hasOpenedWhatsApp = true
+            confirmSentButton.isEnabled = true
+            confirmSentButton.alpha = 1f
         } catch (e: Exception) {
             Toast.makeText(this, "Couldn't open WhatsApp", Toast.LENGTH_SHORT).show()
         }
@@ -123,7 +130,7 @@ class PhoneVerificationActivity : AppCompatActivity() {
 
     private fun setLoading(loading: Boolean) {
         openWhatsAppButton.isEnabled = !loading
-        confirmSentButton.isEnabled = !loading && generatedCode != null
+        confirmSentButton.isEnabled = !loading && hasOpenedWhatsApp
         progressBar.visibility = if (loading) View.VISIBLE else View.GONE
     }
 }
