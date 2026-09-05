@@ -38,11 +38,6 @@
             android:name=".PermissionSetupActivity"
             android:exported="false" />
 
-        <!-- Phone OTP Verification -->
-        <activity
-            android:name=".PhoneVerificationActivity"
-            android:exported="false" />
-
         <!-- Main Menu -->
         <activity
             android:name=".MainMenuActivity"
