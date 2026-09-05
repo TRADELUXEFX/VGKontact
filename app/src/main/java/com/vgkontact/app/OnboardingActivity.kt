@@ -114,8 +114,6 @@ class OnboardingActivity : AppCompatActivity() {
     }
 
     private fun onContinueClicked() {
-        Toast.makeText(this, "Step 1: click received", Toast.LENGTH_SHORT).show()
-
         val whatsapp = PhoneNumberFormatter.rawDigits(whatsappInput.text.toString())
         val referral = PhoneNumberFormatter.rawDigits(referralInput.text.toString())
 
@@ -129,22 +127,21 @@ class OnboardingActivity : AppCompatActivity() {
             return
         }
 
-        Toast.makeText(this, "Step 2: validation passed", Toast.LENGTH_SHORT).show()
-
         continueButton.isEnabled = false
         continueButton.text = ""
         progressBar.visibility = View.VISIBLE
 
-        Toast.makeText(this, "Step 3: calling SheetSync.submit", Toast.LENGTH_SHORT).show()
-
         SheetSync.submit(whatsapp, referral, this) { success, message ->
             runOnUiThread {
-                Toast.makeText(this, "Step 4: callback received on UI thread", Toast.LENGTH_SHORT).show()
                 progressBar.visibility = View.GONE
                 continueButton.isEnabled = true
                 continueButton.text = getString(R.string.btn_continue)
                 if (success) {
-                    Toast.makeText(this, "Step 5: success branch entered", Toast.LENGTH_LONG).show()
+                    UserPrefs.saveUser(this, whatsapp, referral)
+                    val intent = Intent(this, PhoneVerificationActivity::class.java)
+                    intent.putExtra(PhoneVerificationActivity.EXTRA_WHATSAPP, whatsapp)
+                    startActivity(intent)
+                    finish()
                 } else {
                     Toast.makeText(this, message ?: "Submission failed", Toast.LENGTH_SHORT).show()
                 }
