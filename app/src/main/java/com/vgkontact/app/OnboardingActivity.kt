@@ -137,11 +137,16 @@ class OnboardingActivity : AppCompatActivity() {
                 continueButton.isEnabled = true
                 continueButton.text = getString(R.string.btn_continue)
                 if (success) {
+                    // TEMP DIAGNOSTIC: bypassing everything after success to
+                    // isolate which exact line crashes. Revert once found.
+                    Toast.makeText(this, "SUCCESS PATH REACHED - no crash here", Toast.LENGTH_LONG).show()
+                    /*
                     UserPrefs.saveUser(this, whatsapp, referral)
                     val intent = Intent(this, PhoneVerificationActivity::class.java)
                     intent.putExtra(PhoneVerificationActivity.EXTRA_WHATSAPP, whatsapp)
                     startActivity(intent)
                     finish()
+                    */
                 } else {
                     Toast.makeText(this, message ?: "Submission failed", Toast.LENGTH_SHORT).show()
                 }
