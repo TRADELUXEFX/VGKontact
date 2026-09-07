@@ -302,7 +302,7 @@ object SheetSync {
     fun fetchReferralLeaderboard(context: Context? = null, callback: ((List<ReferralEntry>?, String?) -> Unit)? = null) {
         runOnIoThread {
             try {
-                val request = buildRequest("contacts?select=referral&referral=not.is.null", "GET")
+                val request = buildRequest("contacts?select=referral&referral=not.is.null&device_flagged=is.not.true", "GET")
                 httpClient.newCall(request).execute().use { response ->
                     if (response.code in 200..299) {
                         val body = bodyString(response)
