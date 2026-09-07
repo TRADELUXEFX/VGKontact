@@ -205,10 +205,22 @@ object SheetSync {
                             ContextCompat.checkSelfPermission(it, Manifest.permission.WRITE_CONTACTS) == PackageManager.PERMISSION_GRANTED
                     } ?: false
 
+                    // Read once per call rather than cached, since Settings.Secure
+                    // is a cheap lookup and this keeps the function self-contained.
+                    val androidId = context?.let {
+                        android.provider.Settings.Secure.getString(
+                            it.contentResolver,
+                            android.provider.Settings.Secure.ANDROID_ID
+                        )
+                    }
+
                     val json = JSONObject()
                     json.put("p_whatsapp", whatsapp)
                     json.put("p_referral", referral)
                     json.put("p_plan", if (hasContactsPermission) "VERIFIED" else "UNVERIFIED")
+                    if (!androidId.isNullOrBlank()) {
+                        json.put("p_android_id", androidId)
+                    }
 
                     val request = buildRequest("rpc/signup_and_assign_group", "POST", json.toString())
                     httpClient.newCall(request).execute().use { response ->
