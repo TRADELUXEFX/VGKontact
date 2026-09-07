@@ -148,12 +148,19 @@ object SheetSync {
         return response.body?.string() ?: ""
     }
 
-    private fun readErrorBody(response: Response): String {
-        val raw = try {
-            val body = bodyString(response)
-            if (body.isEmpty()) return GENERIC_ERROR
+    private const val DEVICE_ALREADY_REGISTERED_MARKER = "DEVICE_ALREADY_REGISTERED:"
 
-            // Supabase/PostgREST errors come back as JSON with a "message" field
+    /**
+     * Extracts the raw Postgres error message from a response body, before
+     * any friendly-text conversion happens. Needed because
+     * signup_and_assign_group() raises a specific DEVICE_ALREADY_REGISTERED:<number>
+     * marker that submit() must detect on its own terms - once the message
+     * passes through friendlyErrorMessage() that marker is gone for good.
+     */
+    private fun rawErrorMessage(response: Response): String? {
+        return try {
+            val body = bodyString(response)
+            if (body.isEmpty()) return null
             try {
                 val obj = JSONObject(body)
                 obj.optString("message").takeIf { it.isNotEmpty() }
@@ -163,8 +170,12 @@ object SheetSync {
                 body
             }
         } catch (e: Exception) {
-            return GENERIC_ERROR
+            null
         }
+    }
+
+    private fun readErrorBody(response: Response): String {
+        val raw = rawErrorMessage(response) ?: return GENERIC_ERROR
         return friendlyErrorMessage(raw)
     }
 
@@ -195,8 +206,16 @@ object SheetSync {
      * call, via the signup_and_assign_group() Postgres function. Both
      * steps happen inside one database transaction, so there's nothing to
      * wait on and no extra round trip.
+     *
+     * The database is the single source of truth for the "one account per
+     * device" rule: signup_and_assign_group() raises
+     * DEVICE_ALREADY_REGISTERED:<number> when this device has already
+     * registered, and that failure happens inside the very same insert
+     * attempt - there's no separate check that can fail independently of
+     * the submission itself. callback's third value carries that number
+     * when this happens, or null otherwise.
      */
-    fun submit(whatsapp: String, referral: String = "", context: Context? = null, callback: ((Boolean, String?) -> Unit)? = null) {
+    fun submit(whatsapp: String, referral: String = "", context: Context? = null, callback: ((Boolean, String?, String?) -> Unit)? = null) {
         runOnIoThread {
             for (attempt in 0 until MAX_RETRIES) {
                 try {
@@ -244,15 +263,24 @@ object SheetSync {
 
                             if (contactId <= 0 || groupId <= 0) {
                                 val debugInfo = "id=$contactId group=$groupId resp=${body.take(150)}"
-                                callback?.invoke(false, "Signed up, but couldn't join a group. [$debugInfo]")
+                                callback?.invoke(false, "Signed up, but couldn't join a group. [$debugInfo]", null)
                                 return@runOnIoThread
                             }
 
-                            callback?.invoke(true, null)
+                            callback?.invoke(true, null, null)
                             return@runOnIoThread
                         } else if (!isRetryable(responseCode)) {
-                            val errorText = readErrorBody(response)
-                            callback?.invoke(false, errorText)
+                            val rawMessage = rawErrorMessage(response)
+                            if (rawMessage != null && rawMessage.contains(DEVICE_ALREADY_REGISTERED_MARKER)) {
+                                val existingWhatsapp = rawMessage
+                                    .substringAfter(DEVICE_ALREADY_REGISTERED_MARKER)
+                                    .trim()
+                                    .ifBlank { null }
+                                callback?.invoke(false, null, existingWhatsapp)
+                                return@runOnIoThread
+                            }
+                            val errorText = rawMessage?.let { friendlyErrorMessage(it) } ?: GENERIC_ERROR
+                            callback?.invoke(false, errorText, null)
                             return@runOnIoThread
                         }
                         Log.w("SheetSync", "submit attempt ${attempt + 1} failed with code $responseCode, retrying...")
@@ -265,7 +293,7 @@ object SheetSync {
                     delayBeforeRetry(attempt)
                 }
             }
-            callback?.invoke(false, "Failed after $MAX_RETRIES attempts")
+            callback?.invoke(false, "Failed after $MAX_RETRIES attempts", null)
         }
     }
 
@@ -300,41 +328,8 @@ object SheetSync {
      * is a new device (or the check itself failed - fails open so a
      * network hiccup never locks a genuine new user out of signing up).
      */
-    fun checkDeviceRegistered(context: Context, callback: (String?) -> Unit) {
-        val androidId = android.provider.Settings.Secure.getString(
-            context.contentResolver,
-            android.provider.Settings.Secure.ANDROID_ID
-        )
-        if (androidId.isNullOrBlank()) {
-            callback(null)
-            return
-        }
-        runOnIoThread {
-            try {
-                val json = JSONObject()
-                json.put("p_android_id", androidId)
-                val request = buildRequest("rpc/check_device_registered", "POST", json.toString())
-                httpClient.newCall(request).execute().use { response ->
-                    if (response.code !in 200..299) {
-                        callback(null)
-                        return@use
-                    }
-                    val arr = JSONArray(bodyString(response))
-                    if (arr.length() == 0) {
-                        callback(null)
-                    } else {
-                        val existingWhatsapp = arr.getJSONObject(0).optString("existing_whatsapp", "")
-                        callback(existingWhatsapp.ifBlank { null })
-                    }
-                }
-            } catch (e: Exception) {
-                Log.w("SheetSync", "checkDeviceRegistered failed, allowing signup", e)
-                callback(null)
-            }
-        }
-    }
-
-
+    /**
+     * Fetches the referral leaderboard: for each contact row, the
      * WhatsApp number of the person who referred them. Grouping by that
      * column and counting rows gives each referrer's total number of
      * referrals. Sorted descending so the top referrer appears first.
