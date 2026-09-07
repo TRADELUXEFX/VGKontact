@@ -128,6 +128,7 @@ class OnboardingActivity : AppCompatActivity() {
                     registeredNumber != null -> {
                         val intent = Intent(this, DeviceBlockedActivity::class.java)
                         intent.putExtra(DeviceBlockedActivity.EXTRA_REGISTERED_NUMBER, registeredNumber)
+                        intent.putExtra(DeviceBlockedActivity.EXTRA_ATTEMPTED_NUMBER, whatsapp)
                         startActivity(intent)
                         finish()
                     }
