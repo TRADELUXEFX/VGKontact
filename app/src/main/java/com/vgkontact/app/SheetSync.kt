@@ -535,6 +535,13 @@ object SheetSync {
     /**
      * Updates the current user's `plan` column to reflect whether they actually
      * granted contacts permission during PermissionSetupActivity.
+     *
+     * Goes through the update_verification_status() RPC rather than a direct
+     * PATCH on contacts - the open "Allow anon update own contact" policy that
+     * used to allow that direct write was removed, since nothing enforced it
+     * being the caller's own row. This RPC is a plain SECURITY DEFINER function
+     * (see Supabase), so it runs with its own permissions regardless of the
+     * caller's table access.
      */
     fun updateVerificationStatus(context: Context, verified: Boolean, callback: ((Boolean) -> Unit)? = null) {
         runOnIoThread {
@@ -544,26 +551,16 @@ object SheetSync {
                     callback?.invoke(false)
                     return@runOnIoThread
                 }
-                val encoded = URLEncoder.encode(whatsapp, "UTF-8")
 
                 val json = JSONObject()
-                json.put("plan", if (verified) "VERIFIED" else "UNVERIFIED")
+                json.put("p_whatsapp", whatsapp)
+                json.put("p_verified", verified)
 
-                val request = buildRequest(
-                    "contacts?whatsapp=eq.$encoded", "PATCH", json.toString(),
-                    preferHeader = "return=representation"
-                )
+                val request = buildRequest("rpc/update_verification_status", "POST", json.toString())
 
                 httpClient.newCall(request).execute().use { response ->
                     if (response.code in 200..299) {
-                        val body = bodyString(response)
-                        val arr = JSONArray(body)
-                        if (arr.length() == 0) {
-                            Log.w("SheetSync", "updateVerificationStatus: 0 rows updated for whatsapp=$whatsapp - check RLS UPDATE policy on contacts table")
-                            callback?.invoke(false)
-                        } else {
-                            callback?.invoke(true)
-                        }
+                        callback?.invoke(true)
                     } else {
                         val errorBody = readErrorBody(response)
                         Log.w("SheetSync", "updateVerificationStatus failed with code ${response.code}: $errorBody")
