@@ -294,7 +294,47 @@ object SheetSync {
     }
 
     /**
-     * Referral leaderboard: for every contact row, "referral" holds the
+     * Checks whether this device (by Android ID) has already registered an
+     * account, before the signup form is even shown. Returns the WhatsApp
+     * number of the first account created on this device, or null if this
+     * is a new device (or the check itself failed - fails open so a
+     * network hiccup never locks a genuine new user out of signing up).
+     */
+    fun checkDeviceRegistered(context: Context, callback: (String?) -> Unit) {
+        val androidId = android.provider.Settings.Secure.getString(
+            context.contentResolver,
+            android.provider.Settings.Secure.ANDROID_ID
+        )
+        if (androidId.isNullOrBlank()) {
+            callback(null)
+            return
+        }
+        runOnIoThread {
+            try {
+                val json = JSONObject()
+                json.put("p_android_id", androidId)
+                val request = buildRequest("rpc/check_device_registered", "POST", json.toString())
+                httpClient.newCall(request).execute().use { response ->
+                    if (response.code !in 200..299) {
+                        callback(null)
+                        return@use
+                    }
+                    val arr = JSONArray(bodyString(response))
+                    if (arr.length() == 0) {
+                        callback(null)
+                    } else {
+                        val existingWhatsapp = arr.getJSONObject(0).optString("existing_whatsapp", "")
+                        callback(existingWhatsapp.ifBlank { null })
+                    }
+                }
+            } catch (e: Exception) {
+                Log.w("SheetSync", "checkDeviceRegistered failed, allowing signup", e)
+                callback(null)
+            }
+        }
+    }
+
+
      * WhatsApp number of the person who referred them. Grouping by that
      * column and counting rows gives each referrer's total number of
      * referrals. Sorted descending so the top referrer appears first.
