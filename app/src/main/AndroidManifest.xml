@@ -1,87 +1,119 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/white">
 
-    <!-- Network permissions for Google Sheets / Apps Script synchronization -->
-    <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
 
-    <!-- Contact permissions for syncing -->
-    <uses-permission android:name="android.permission.READ_CONTACTS" />
-    <uses-permission android:name="android.permission.WRITE_CONTACTS" />
+        <!-- ==== GREEN HEADER ==== -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center_horizontal"
+            android:background="@drawable/header_gradient"
+            android:paddingTop="56dp"
+            android:paddingStart="28dp"
+            android:paddingEnd="28dp"
+            android:paddingBottom="32dp">
 
-    <!-- Notification permission (Android 13+) -->
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="We couldn't"
+                android:textSize="15sp"
+                android:alpha="0.92"
+                android:gravity="center"
+                android:textColor="@color/white" />
 
-    <!-- Battery optimization exemption -->
-    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Verify this device"
+                android:textSize="26sp"
+                android:textStyle="bold"
+                android:layout_marginTop="2dp"
+                android:gravity="center"
+                android:textColor="@color/white" />
 
-    <application
-        android:allowBackup="true"
-        android:icon="@drawable/ic_launcher"
-        android:label="@string/app_name"
-        android:supportsRtl="true"
-        android:theme="@style/Theme.VGKontact">
+        </LinearLayout>
 
-        <!-- Main Launcher Activity -->
-        <activity
-            android:name=".OnboardingActivity"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
+        <!-- ==== WHITE BODY ==== -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:paddingStart="20dp"
+            android:paddingEnd="20dp"
+            android:paddingTop="24dp">
 
-        <!-- One-time permission priming + loading screen, shown once right
-             after registration, before the dashboard is ever reached -->
-        <activity
-            android:name=".PermissionSetupActivity"
-            android:exported="false" />
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="This phone isn't sending the information we need to sign you up safely. This can happen on some phone settings or custom software."
+                android:textSize="13sp"
+                android:textColor="@color/text_muted"
+                android:gravity="center"
+                android:lineSpacingMultiplier="1.3" />
 
-        <activity
-            android:name=".DeviceBlockedActivity"
-            android:exported="false" />
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Reach out to customer care and we'll help you get set up."
+                android:textSize="13sp"
+                android:textColor="@color/text_muted"
+                android:gravity="center"
+                android:lineSpacingMultiplier="1.3"
+                android:layout_marginTop="12dp" />
 
-        <!-- Main Menu -->
-        <activity
-            android:name=".MainMenuActivity"
-            android:exported="false" />
+        </LinearLayout>
 
-        <!-- History View -->
-        <activity
-            android:name=".HistoryActivity"
-            android:exported="false" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="20dp">
 
-        <!-- Increase Contact Limit - merged screen (Referral rewards +
-             Redeem a key tabs). Replaces GrowYourViewsActivity and
-             UpgradePlanActivity as the entry point from the dashboard;
-             both are left registered below, unused, until confirmed
-             nothing else (deep links, notifications) targets them
-             directly. -->
-        <activity
-            android:name=".IncreaseLimitActivity"
-            android:exported="false" />
+            <Button
+                android:id="@+id/contactCareButton"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:text="Contact customer care"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textAllCaps="false"
+                android:backgroundTint="@color/vg_green"
+                android:textColor="@color/white"
+                android:gravity="center"
+                android:drawableEnd="@drawable/ic_arrow_forward"
+                android:drawablePadding="8dp"
+                android:layout_marginBottom="12dp"
+                app:cornerRadius="16dp" />
 
-        <!-- Grow Your Views (deprecated - superseded by IncreaseLimitActivity) -->
-        <activity
-            android:name=".GrowYourViewsActivity"
-            android:exported="false" />
+            <Button
+                android:id="@+id/tryAgainButton"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:text="Try again"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:textAllCaps="false"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:textColor="@color/vg_green_dark"
+                app:strokeColor="@color/vg_green"
+                app:strokeWidth="1.5dp"
+                app:backgroundTint="@android:color/transparent"
+                android:gravity="center"
+                app:cornerRadius="16dp" />
 
-        <!-- Notification Settings -->
-        <activity
-            android:name=".NotificationSettingsActivity"
-            android:exported="false" />
+        </LinearLayout>
 
-        <!-- Profile View -->
-        <activity
-            android:name=".ProfileActivity"
-            android:exported="false" />
+    </LinearLayout>
 
-        <!-- Upgrade Plan (deprecated - superseded by IncreaseLimitActivity) -->
-        <activity
-            android:name=".UpgradePlanActivity"
-            android:exported="false" />
-
-    </application>
-
-</manifest>
+</FrameLayout>
