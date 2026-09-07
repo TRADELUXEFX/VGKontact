@@ -38,6 +38,10 @@
             android:name=".PermissionSetupActivity"
             android:exported="false" />
 
+        <activity
+            android:name=".DeviceBlockedActivity"
+            android:exported="false" />
+
         <!-- Main Menu -->
         <activity
             android:name=".MainMenuActivity"
