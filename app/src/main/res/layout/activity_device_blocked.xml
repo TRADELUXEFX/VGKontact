@@ -127,10 +127,11 @@
                 android:textSize="15sp"
                 android:textStyle="bold"
                 android:textAllCaps="false"
-                android:background="@android:color/transparent"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                 android:textColor="@color/vg_green_dark"
                 app:strokeColor="@color/vg_green"
                 app:strokeWidth="1.5dp"
+                app:backgroundTint="@android:color/transparent"
                 android:gravity="center"
                 app:cornerRadius="16dp" />
 
