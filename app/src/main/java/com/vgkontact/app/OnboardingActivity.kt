@@ -105,6 +105,21 @@ class OnboardingActivity : AppCompatActivity() {
             return
         }
 
+        // The database's one-account-per-device rule only works if
+        // android_id is actually present - a blank id can't be matched
+        // against anything, so it would slip straight past the unique
+        // constraint. Blocking here, rather than letting it reach
+        // Supabase, is what makes the rule airtight.
+        val androidId = android.provider.Settings.Secure.getString(
+            contentResolver,
+            android.provider.Settings.Secure.ANDROID_ID
+        )
+        if (androidId.isNullOrBlank()) {
+            startActivity(Intent(this, DeviceUnverifiedActivity::class.java))
+            finish()
+            return
+        }
+
         continueButton.isEnabled = false
         continueButton.text = ""
         progressBar.visibility = View.VISIBLE
