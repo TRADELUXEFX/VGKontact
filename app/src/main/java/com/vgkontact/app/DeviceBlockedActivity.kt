@@ -24,11 +24,15 @@ class DeviceBlockedActivity : AppCompatActivity() {
 
     companion object {
         const val EXTRA_REGISTERED_NUMBER = "registered_number"
+        const val EXTRA_ATTEMPTED_NUMBER = "attempted_number"
     }
 
     // Kept identical to ProfileActivity/MainMenuActivity's contact number
     // so every "contact us" entry point in the app reaches the same place.
     private val CONTACT_US_WHATSAPP_NUMBER = "09110321143"
+
+    private var registeredNumber: String? = null
+    private var attemptedNumber: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -36,7 +40,8 @@ class DeviceBlockedActivity : AppCompatActivity() {
 
         window.statusBarColor = ContextCompat.getColor(this, R.color.vg_green)
 
-        val registeredNumber = intent.getStringExtra(EXTRA_REGISTERED_NUMBER)
+        registeredNumber = intent.getStringExtra(EXTRA_REGISTERED_NUMBER)
+        attemptedNumber = intent.getStringExtra(EXTRA_ATTEMPTED_NUMBER)
         findViewById<TextView>(R.id.registeredNumberText).text =
             registeredNumber?.takeIf { it.isNotBlank() } ?: "—"
 
@@ -65,7 +70,16 @@ class DeviceBlockedActivity : AppCompatActivity() {
     }
 
     private fun openWhatsAppContactUs() {
-        val message = Uri.encode("Hi VG Kontact, I need help with my device registration.")
+        val oldNumber = registeredNumber?.takeIf { it.isNotBlank() } ?: "—"
+        val newNumber = attemptedNumber?.takeIf { it.isNotBlank() }
+
+        val text = if (newNumber != null) {
+            "Hi VG Kontact, I need to change my number from $oldNumber to $newNumber"
+        } else {
+            "Hi VG Kontact, I need help with my device registration."
+        }
+
+        val message = Uri.encode(text)
         val uri = Uri.parse("https://wa.me/$CONTACT_US_WHATSAPP_NUMBER?text=$message")
         try {
             startActivity(Intent(Intent.ACTION_VIEW, uri))
