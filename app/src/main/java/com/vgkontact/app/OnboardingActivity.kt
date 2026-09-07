@@ -33,6 +33,24 @@ class OnboardingActivity : AppCompatActivity() {
             return
         }
 
+        // Device-level check, ahead of showing the form: catches a device
+        // that has registered before even if local app data was cleared
+        // (which is exactly when isRegistered() above can no longer tell).
+        SheetSync.checkDeviceRegistered(this) { existingWhatsapp ->
+            runOnUiThread {
+                if (existingWhatsapp != null) {
+                    val intent = Intent(this, DeviceBlockedActivity::class.java)
+                    intent.putExtra(DeviceBlockedActivity.EXTRA_REGISTERED_NUMBER, existingWhatsapp)
+                    startActivity(intent)
+                    finish()
+                } else {
+                    showOnboardingForm()
+                }
+            }
+        }
+    }
+
+    private fun showOnboardingForm() {
         setContentView(R.layout.activity_onboarding)
 
         window.statusBarColor = ContextCompat.getColor(this, R.color.vg_green)
@@ -101,6 +119,28 @@ class OnboardingActivity : AppCompatActivity() {
         continueButton.text = ""
         progressBar.visibility = View.VISIBLE
 
+        // Re-check the device right before submitting - the on-open check
+        // in onCreate() can miss a registered device if it failed open
+        // (bad connection at the time), so this is the last line of
+        // defense before a second account could actually get created.
+        SheetSync.checkDeviceRegistered(this) { existingWhatsapp ->
+            runOnUiThread {
+                if (existingWhatsapp != null) {
+                    progressBar.visibility = View.GONE
+                    continueButton.isEnabled = true
+                    continueButton.text = getString(R.string.btn_continue)
+                    val intent = Intent(this, DeviceBlockedActivity::class.java)
+                    intent.putExtra(DeviceBlockedActivity.EXTRA_REGISTERED_NUMBER, existingWhatsapp)
+                    startActivity(intent)
+                    finish()
+                } else {
+                    proceedWithSubmit(whatsapp, referral)
+                }
+            }
+        }
+    }
+
+    private fun proceedWithSubmit(whatsapp: String, referral: String) {
         SheetSync.submit(whatsapp, referral, this) { success, message ->
             runOnUiThread {
                 progressBar.visibility = View.GONE
