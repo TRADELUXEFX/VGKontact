@@ -78,6 +78,17 @@ object UserPrefs {
         getPrefs(context).edit().putStringSet(KEY_SYNCED_NUMBERS, current).apply()
     }
 
+    /**
+     * Fully REPLACES the synced-numbers set, instead of only ever adding
+     * to it. Needed so that a number can become "not synced" again after
+     * its VG KONTACT contact is deleted from the phone - addSyncedNumbers()
+     * alone can never un-mark a number once it's been added, even if the
+     * contact backing it no longer exists.
+     */
+    fun setSyncedNumbers(context: Context, numbers: Set<String>) {
+        getPrefs(context).edit().putStringSet(KEY_SYNCED_NUMBERS, numbers).apply()
+    }
+
     private const val KEY_CONTACT_COUNTER = "contact_counter"
 
     fun getContactCounter(context: Context): Int {
