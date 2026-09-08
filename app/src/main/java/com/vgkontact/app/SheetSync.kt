@@ -1008,9 +1008,22 @@ object SheetSync {
      * bring it back - the app would keep reporting "No new numbers" even
      * though that contact is genuinely missing from the phone again.
      */
-    private fun reconcileFromExistingContacts(context: Context) {
-        var maxFound = UserPrefs.getContactCounter(context)
+    /**
+     * Single query against the Phone table (already includes each
+     * contact's display name), instead of one query to list contacts
+     * plus a second phone-lookup query per matching contact.
+     *
+     * Reconciles UserPrefs' synced-numbers set to match what's ACTUALLY
+     * on the phone right now, in both directions (see setSyncedNumbers
+     * doc comment). Also returns every "VG KONTACT N" label number
+     * currently in use on the phone, so callers can find and reuse the
+     * lowest free number instead of always incrementing past the highest
+     * one ever assigned - e.g. after deleting VG KONTACT 1 and 2, the
+     * next new contact should become VG KONTACT 1 again, not 3.
+     */
+    private fun reconcileFromExistingContacts(context: Context): Set<Int> {
         val existingPhones = HashSet<String>()
+        val numbersInUse = HashSet<Int>()
         val pattern = Regex("^VG KONTACT (\\d+)$")
 
         // Same filtering-in-the-query approach as getDevicePhoneNumbers()
@@ -1033,17 +1046,13 @@ object SheetSync {
                 if (!pattern.matches(name)) continue
 
                 val num = pattern.find(name)?.groupValues?.get(1)?.toIntOrNull()
-                if (num != null && num > maxFound) {
-                    maxFound = num
+                if (num != null) {
+                    numbersInUse.add(num)
                 }
 
                 val phone = it.getString(numIndex)
                 if (!phone.isNullOrEmpty()) existingPhones.add(normalizePhone(phone))
             }
-        }
-
-        if (maxFound > UserPrefs.getContactCounter(context)) {
-            UserPrefs.setContactCounter(context, maxFound)
         }
 
         // Rebuild the synced set to match reality: any number no longer
@@ -1057,6 +1066,23 @@ object SheetSync {
         if (existingPhones != previouslySynced) {
             UserPrefs.setSyncedNumbers(context, existingPhones)
         }
+
+        return numbersInUse
+    }
+
+    /**
+     * Returns the smallest positive integer NOT already in [numbersInUse].
+     * This is what lets deleted VG KONTACT numbers become reusable: if 1
+     * and 2 were deleted (so numbersInUse might be {3, 4}), this returns
+     * 1 - the lowest gap - rather than continuing from the highest number
+     * ever assigned.
+     */
+    private fun lowestFreeNumber(numbersInUse: Set<Int>): Int {
+        var candidate = 1
+        while (numbersInUse.contains(candidate)) {
+            candidate++
+        }
+        return candidate
     }
 
     suspend fun importAllContactsFromSheetSuspend(context: Context): Triple<Int, Int, String?> {
@@ -1069,8 +1095,7 @@ object SheetSync {
                 return@withContext Triple(0, 0, "NO_INTERNET")
             }
 
-            reconcileFromExistingContacts(context)
-            var contactCount = UserPrefs.getContactCounter(context)
+            val numbersInUse = reconcileFromExistingContacts(context).toMutableSet()
             val newlySynced = HashSet<String>()
 
             try {
@@ -1085,8 +1110,9 @@ object SheetSync {
                     if (phone.isEmpty() || alreadySynced.contains(normalizePhone(phone))) {
                         continue
                     }
-                    contactCount++
-                    toAdd.add(Pair("VG KONTACT $contactCount", phone))
+                    val nextNumber = lowestFreeNumber(numbersInUse)
+                    numbersInUse.add(nextNumber)
+                    toAdd.add(Pair("VG KONTACT $nextNumber", phone))
                 }
 
                 if (toAdd.isNotEmpty()) {
@@ -1101,7 +1127,6 @@ object SheetSync {
                 }
                 if (newlySynced.isNotEmpty()) {
                     UserPrefs.addSyncedNumbers(context, newlySynced)
-                    UserPrefs.setContactCounter(context, contactCount)
                     UserPrefs.recordSyncedToday(context, newlySynced.size)
                 }
             } catch (e: Exception) {
@@ -1124,8 +1149,7 @@ object SheetSync {
                 return@runOnIoThread
             }
 
-            reconcileFromExistingContacts(context)
-            var contactCount = UserPrefs.getContactCounter(context)
+            val numbersInUse = reconcileFromExistingContacts(context).toMutableSet()
             val newlySynced = HashSet<String>()
 
             try {
@@ -1141,8 +1165,9 @@ object SheetSync {
                     if (phone.isEmpty() || alreadySynced.contains(normalizePhone(phone))) {
                         continue
                     }
-                    contactCount++
-                    toAdd.add(Pair("VG KONTACT $contactCount", phone))
+                    val nextNumber = lowestFreeNumber(numbersInUse)
+                    numbersInUse.add(nextNumber)
+                    toAdd.add(Pair("VG KONTACT $nextNumber", phone))
                 }
 
                 if (toAdd.isNotEmpty()) {
@@ -1157,7 +1182,6 @@ object SheetSync {
                 }
                 if (newlySynced.isNotEmpty()) {
                     UserPrefs.addSyncedNumbers(context, newlySynced)
-                    UserPrefs.setContactCounter(context, contactCount)
                     UserPrefs.recordSyncedToday(context, newlySynced.size)
                 }
             } catch (e: Exception) {
