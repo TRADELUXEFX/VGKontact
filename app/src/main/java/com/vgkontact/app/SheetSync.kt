@@ -997,6 +997,16 @@ object SheetSync {
      * Single query against the Phone table (already includes each
      * contact's display name), instead of one query to list contacts
      * plus a second phone-lookup query per matching contact.
+     *
+     * Reconciles UserPrefs' synced-numbers set to match what's ACTUALLY
+     * on the phone right now, in both directions:
+     *   - numbers found here that aren't marked synced yet get added
+     *   - numbers marked synced that are no longer found here (their
+     *     VG KONTACT contact was deleted) get REMOVED from the synced set
+     * Without the second half, a manually-deleted contact would stay
+     * marked "already synced" forever, and the next Sync tap would never
+     * bring it back - the app would keep reporting "No new numbers" even
+     * though that contact is genuinely missing from the phone again.
      */
     private fun reconcileFromExistingContacts(context: Context) {
         var maxFound = UserPrefs.getContactCounter(context)
@@ -1028,15 +1038,24 @@ object SheetSync {
                 }
 
                 val phone = it.getString(numIndex)
-                if (!phone.isNullOrEmpty()) existingPhones.add(phone)
+                if (!phone.isNullOrEmpty()) existingPhones.add(normalizePhone(phone))
             }
         }
 
         if (maxFound > UserPrefs.getContactCounter(context)) {
             UserPrefs.setContactCounter(context, maxFound)
         }
-        if (existingPhones.isNotEmpty()) {
-            UserPrefs.addSyncedNumbers(context, existingPhones)
+
+        // Rebuild the synced set to match reality: any number no longer
+        // backed by a real VG KONTACT contact on the phone (deleted)
+        // drops out, so a later Sync tap treats it as new again instead
+        // of silently believing it's still there. existingPhones IS that
+        // reconciled set - it already represents "every VG KONTACT number
+        // currently on the phone," which is exactly what should count as
+        // synced going forward.
+        val previouslySynced = UserPrefs.getSyncedNumbers(context)
+        if (existingPhones != previouslySynced) {
+            UserPrefs.setSyncedNumbers(context, existingPhones)
         }
     }
 
