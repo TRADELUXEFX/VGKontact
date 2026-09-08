@@ -64,7 +64,10 @@ class DeviceBlockedActivity : AppCompatActivity() {
             Toast.makeText(this, "Couldn't find your account. Please contact customer care.", Toast.LENGTH_LONG).show()
             return
         }
-        UserPrefs.saveUser(this, whatsapp, referral = "")
+        // This device already has an account on the server - we're just
+        // restoring local state, not signing up, so there's no freshly
+        // typed name to save here (same reasoning as referral = "" above).
+        UserPrefs.saveUser(this, whatsapp, referral = "", name = "")
         startActivity(Intent(this, PermissionSetupActivity::class.java))
         finish()
     }
