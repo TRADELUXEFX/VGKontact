@@ -129,7 +129,7 @@ class OnboardingActivity : AppCompatActivity() {
         // device has already registered, so the check happens inside the
         // same request that creates the account - not a separate step
         // that could fail independently of it.
-        SheetSync.submit(whatsapp, referral, this) { success, message, registeredNumber ->
+        SheetSync.submit(whatsapp, referral, this, androidId) { success, message, registeredNumber ->
             runOnUiThread {
                 progressBar.visibility = View.GONE
                 continueButton.isEnabled = true
@@ -146,6 +146,9 @@ class OnboardingActivity : AppCompatActivity() {
                         intent.putExtra(DeviceBlockedActivity.EXTRA_ATTEMPTED_NUMBER, whatsapp)
                         startActivity(intent)
                         finish()
+                    }
+                    message == "DEVICE_ID_UNAVAILABLE" -> {
+                        Toast.makeText(this, "Couldn't verify this device. Please restart the app and try again.", Toast.LENGTH_LONG).show()
                     }
                     else -> {
                         Toast.makeText(this, message ?: "Submission failed", Toast.LENGTH_SHORT).show()
