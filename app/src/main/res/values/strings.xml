@@ -6,9 +6,12 @@
     <string name="nav_profile">Profile</string>
     <string name="app_name">VG ADDUP</string>
     <string name="title_onboarding">JOIN VIEWGROW</string>
-    <string name="hint_name">Choose a username</string>
-    <string name="hint_whatsapp">Your WhatsApp Number</string>
-    <string name="hint_referral">Referrer\'s Username or Number</string>
+    <string name="hint_name">e.g. maria_g</string>
+    <string name="hint_whatsapp">e.g. 0812 3456 789</string>
+    <string name="hint_referral">Username or number</string>
+    <string name="label_field_username">Username</string>
+    <string name="label_field_whatsapp">WhatsApp number</string>
+    <string name="label_field_referral">Referred by (optional)</string>
     <string name="btn_pick_contact">Pick from Contacts</string>
     <string name="btn_continue">Get Access</string>
     <string name="onboarding_lead">Get Access to</string>
