@@ -18,6 +18,7 @@ import com.google.android.material.textfield.TextInputEditText
 
 class OnboardingActivity : AppCompatActivity() {
 
+    private lateinit var nameInput: TextInputEditText
     private lateinit var whatsappInput: TextInputEditText
     private lateinit var referralInput: TextInputEditText
     private lateinit var continueButton: android.widget.Button
@@ -45,6 +46,7 @@ class OnboardingActivity : AppCompatActivity() {
 
         window.statusBarColor = ContextCompat.getColor(this, R.color.vg_green)
 
+        nameInput = findViewById(R.id.nameInput)
         whatsappInput = findViewById(R.id.whatsappInput)
         referralInput = findViewById(R.id.referralInput)
         continueButton = findViewById(R.id.continueButton)
@@ -52,7 +54,10 @@ class OnboardingActivity : AppCompatActivity() {
         creditText = findViewById(R.id.creditText)
 
         PhoneNumberFormatter.attachTo(whatsappInput)
-        PhoneNumberFormatter.attachTo(referralInput)
+        // referralInput no longer gets the phone-digit formatter attached -
+        // it now accepts either a name or a phone number, so it needs to
+        // behave like a normal free-text field instead of being locked
+        // into digit-only formatting.
 
         continueButton.setOnClickListener { onContinueClicked() }
 
@@ -92,17 +97,50 @@ class OnboardingActivity : AppCompatActivity() {
     }
 
     private fun onContinueClicked() {
+        val name = nameInput.text.toString().trim()
         val whatsapp = PhoneNumberFormatter.rawDigits(whatsappInput.text.toString())
-        val referral = PhoneNumberFormatter.rawDigits(referralInput.text.toString())
+        val referralRaw = referralInput.text.toString().trim()
+
+        if (name.isEmpty()) {
+            nameInput.error = "Enter a username"
+            return
+        }
+
+        if (name.any { it.isWhitespace() }) {
+            nameInput.error = "No spaces allowed"
+            return
+        }
+
+        if (!name.all { it.isLetterOrDigit() || it == '_' || it == '.' }) {
+            nameInput.error = "Letters, numbers, _ and . only"
+            return
+        }
 
         if (!isValidNigerianPhone(whatsapp)) {
             whatsappInput.error = "Enter valid 11-digit Nigerian number"
             return
         }
 
-        if (referral.isNotEmpty() && !isValidNigerianPhone(referral)) {
-            referralInput.error = "Enter valid 11-digit Nigerian number"
-            return
+        // Referral now accepts EITHER a phone number or a username (the
+        // signup_and_assign_group() DB function resolves it against
+        // both). If it looks like a phone-number attempt (has digits)
+        // but isn't a valid Nigerian number, reject it early rather than
+        // sending a malformed number to the server. A plain username
+        // passes through untouched, but still can't contain spaces since
+        // usernames never do.
+        val referral = if (referralRaw.any { it.isDigit() }) {
+            val referralDigits = PhoneNumberFormatter.rawDigits(referralRaw)
+            if (!isValidNigerianPhone(referralDigits)) {
+                referralInput.error = "Enter a valid number or username"
+                return
+            }
+            referralDigits
+        } else {
+            if (referralRaw.any { it.isWhitespace() }) {
+                referralInput.error = "Usernames have no spaces"
+                return
+            }
+            referralRaw
         }
 
         // The database's one-account-per-device rule only works if
@@ -125,7 +163,7 @@ class OnboardingActivity : AppCompatActivity() {
         )
 
         if (!firstAndroidId.isNullOrBlank()) {
-            proceedWithSubmit(whatsapp, referral, firstAndroidId)
+            proceedWithSubmit(whatsapp, referral, name, firstAndroidId)
             return
         }
 
@@ -147,13 +185,13 @@ class OnboardingActivity : AppCompatActivity() {
                     startActivity(Intent(this, DeviceUnverifiedActivity::class.java))
                     finish()
                 } else {
-                    proceedWithSubmit(whatsapp, referral, retryAndroidId)
+                    proceedWithSubmit(whatsapp, referral, name, retryAndroidId)
                 }
             }
         }.start()
     }
 
-    private fun proceedWithSubmit(whatsapp: String, referral: String, androidId: String) {
+    private fun proceedWithSubmit(whatsapp: String, referral: String, name: String, androidId: String) {
         continueButton.isEnabled = false
         continueButton.text = ""
         progressBar.visibility = View.VISIBLE
@@ -163,14 +201,14 @@ class OnboardingActivity : AppCompatActivity() {
         // device has already registered, so the check happens inside the
         // same request that creates the account - not a separate step
         // that could fail independently of it.
-        SheetSync.submit(whatsapp, referral, this, androidId) { success, message, registeredNumber ->
+        SheetSync.submit(whatsapp, referral, name, this, androidId) { success, message, registeredNumber ->
             runOnUiThread {
                 progressBar.visibility = View.GONE
                 continueButton.isEnabled = true
                 continueButton.text = getString(R.string.btn_continue)
                 when {
                     success -> {
-                        UserPrefs.saveUser(this, whatsapp, referral)
+                        UserPrefs.saveUser(this, whatsapp, referral, name)
                         startActivity(Intent(this, PermissionSetupActivity::class.java))
                         finish()
                     }
