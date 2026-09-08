@@ -10,6 +10,7 @@ object UserPrefs {
     private const val PREF_NAME = "vgkontact_prefs"
     private const val KEY_WHATSAPP = "whatsapp"
     private const val KEY_REFERRAL = "referral"
+    private const val KEY_NAME = "name"
     private const val KEY_IS_REGISTERED = "is_registered"
     private const val KEY_DATE_REGISTERED = "date_registered"
     private const val KEY_NOTIFICATION_FREQUENCY_HOURS = "notification_frequency_hours"
@@ -39,11 +40,12 @@ object UserPrefs {
         return prefs
     }
 
-    fun saveUser(context: Context, whatsapp: String, referral: String) {
+    fun saveUser(context: Context, whatsapp: String, referral: String, name: String) {
         val dateRegistered = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
         getPrefs(context).edit().apply {
             putString(KEY_WHATSAPP, whatsapp)
             putString(KEY_REFERRAL, referral)
+            putString(KEY_NAME, name)
             putBoolean(KEY_IS_REGISTERED, true)
             putString(KEY_DATE_REGISTERED, dateRegistered)
             apply()
@@ -60,6 +62,10 @@ object UserPrefs {
 
     fun getReferral(context: Context): String? {
         return getPrefs(context).getString(KEY_REFERRAL, null)
+    }
+
+    fun getName(context: Context): String? {
+        return getPrefs(context).getString(KEY_NAME, null)
     }
 
     fun getDateRegistered(context: Context): String? {
