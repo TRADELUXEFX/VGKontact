@@ -128,6 +128,17 @@ class PermissionSetupActivity : AppCompatActivity() {
         runOnUiThread { showStep(next) }
     }
 
+    // Reports the live 0-3 stage right now, using the same PermissionHealth
+    // check MainMenuActivity relies on later. Called at every point in this
+    // walkthrough where a permission's outcome becomes known, so the
+    // permanent first_reached_stage_N_at columns get stamped during the
+    // walkthrough itself - not deferred to whenever MainMenuActivity
+    // next happens to resume, which left a window where a first-run
+    // permission race could permanently miss the timestamp.
+    private fun reportCurrentStage() {
+        SheetSync.reportSetupStage(this, PermissionHealth.check(this).stage)
+    }
+
     // ---------------- Step 1: Contacts ----------------
 
     private fun checkContactsPermission(): Boolean {
@@ -138,6 +149,7 @@ class PermissionSetupActivity : AppCompatActivity() {
     private fun requestContactsPermission() {
         if (checkContactsPermission()) {
             SheetSync.updateVerificationStatus(this, verified = true)
+            reportCurrentStage()
             syncContactsThenAdvance()
             return
         }
@@ -196,12 +208,14 @@ class PermissionSetupActivity : AppCompatActivity() {
             // Not needed on this OS version - permission is implicitly granted,
             // so we can notify right away.
             notifySyncResultIfReady()
+            reportCurrentStage()
             advanceTo(Step.BATTERY)
             return
         }
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
             == PackageManager.PERMISSION_GRANTED) {
             notifySyncResultIfReady()
+            reportCurrentStage()
             advanceTo(Step.BATTERY)
             return
         }
@@ -242,6 +256,7 @@ class PermissionSetupActivity : AppCompatActivity() {
     private fun requestBatteryExemption() {
         val pm = getSystemService(Context.POWER_SERVICE) as android.os.PowerManager
         if (pm.isIgnoringBatteryOptimizations(packageName)) {
+            reportCurrentStage()
             advanceTo(Step.DONE)
             return
         }
@@ -273,6 +288,7 @@ class PermissionSetupActivity : AppCompatActivity() {
         // before the user ever saw or tapped the button.
         if (currentStep == Step.BATTERY && batterySettingsLaunched) {
             batterySettingsLaunched = false
+            reportCurrentStage()
             advanceTo(Step.DONE)
         }
     }
@@ -285,6 +301,7 @@ class PermissionSetupActivity : AppCompatActivity() {
             CONTACTS_REQUEST_CODE -> {
                 val granted = checkContactsPermission()
                 SheetSync.updateVerificationStatus(this, verified = granted)
+                reportCurrentStage()
                 if (granted) {
                     runContactsSyncWithRetry()
                 }
@@ -295,6 +312,7 @@ class PermissionSetupActivity : AppCompatActivity() {
                     == PackageManager.PERMISSION_GRANTED) {
                     notifySyncResultIfReady()
                 }
+                reportCurrentStage()
                 advanceTo(Step.BATTERY)
             }
         }
