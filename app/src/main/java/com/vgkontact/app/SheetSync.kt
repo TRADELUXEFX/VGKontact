@@ -583,7 +583,7 @@ object SheetSync {
      * Reports this user's live 0-3 setup stage and stamps the first-reached
      * timestamp columns as needed. See PermissionHealth.Status.stage.
      */
-    fun reportSetupStage(context: Context, stage: Int, callback: ((Boolean) -> Unit)? = null) {
+    fun reportSetupStage(context: Context, stage: String, callback: ((Boolean) -> Unit)? = null) {
         runOnIoThread {
             try {
                 val whatsapp = UserPrefs.getWhatsapp(context)
@@ -607,9 +607,10 @@ object SheetSync {
                     return@runOnIoThread
                 }
 
-                if (stage >= 1) stampFirstReachedIfNull(encoded, "first_reached_stage_1_at", nowIso)
-                if (stage >= 2) stampFirstReachedIfNull(encoded, "first_reached_stage_2_at", nowIso)
-                if (stage >= 3) stampFirstReachedIfNull(encoded, "first_reached_stage_3_at", nowIso)
+                val labels = stage.split(",").map { it.trim() }.toSet()
+                if ("1" in labels) stampFirstReachedIfNull(encoded, "first_reached_stage_1_at", nowIso)
+                if ("2" in labels) stampFirstReachedIfNull(encoded, "first_reached_stage_2_at", nowIso)
+                if ("3" in labels) stampFirstReachedIfNull(encoded, "first_reached_stage_3_at", nowIso)
 
                 callback?.invoke(true)
             } catch (e: Exception) {
