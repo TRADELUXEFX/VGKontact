@@ -76,6 +76,61 @@
                     android:background="@drawable/card_background"
                     android:padding="20dp">
 
+                    <!-- ==== Field 00: Username (required) ==== -->
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="USERNAME (NO SPACES)"
+                        android:textSize="11sp"
+                        android:textStyle="bold"
+                        android:textAllCaps="true"
+                        android:letterSpacing="0.05"
+                        android:textColor="@color/text_muted"
+                        android:gravity="center"
+                        android:layout_marginBottom="8dp" />
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="@string/hint_name"
+                        android:textColorHint="@color/text_muted"
+                        app:hintTextColor="@color/vg_green_dark"
+                        app:boxBackgroundMode="outline"
+                        app:boxBackgroundColor="@color/vg_field_bg"
+                        app:boxStrokeColor="@color/vg_green"
+                        app:boxStrokeWidth="1.5dp"
+                        app:boxCornerRadiusTopStart="14dp"
+                        app:boxCornerRadiusTopEnd="14dp"
+                        app:boxCornerRadiusBottomStart="14dp"
+                        app:boxCornerRadiusBottomEnd="14dp"
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/nameInput"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="center"
+                            android:inputType="text"
+                            android:digits="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_."
+                            android:maxLength="30"
+                            android:textSize="15sp"
+                            android:textColor="@color/vg_dark"
+                            android:textColorHint="@color/text_muted"
+                            android:includeFontPadding="false"
+                            android:paddingStart="14dp"
+                            android:paddingEnd="14dp"
+                            android:paddingTop="14dp"
+                            android:paddingBottom="14dp" />
+
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="@color/stats_card_border"
+                        android:layout_marginTop="20dp"
+                        android:layout_marginBottom="20dp" />
+
                     <!-- ==== Field 01: WhatsApp number (required) ==== -->
                     <TextView
                         android:layout_width="match_parent"
@@ -130,11 +185,11 @@
                         android:layout_marginTop="20dp"
                         android:layout_marginBottom="20dp" />
 
-                    <!-- ==== Field 02: Referral number (optional) ==== -->
+                    <!-- ==== Field 02: Referral (optional) — accepts a username or a phone number ==== -->
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="REFERRAL NUMBER (OPTIONAL)"
+                        android:text="REFERRED BY (USERNAME OR NUMBER, OPTIONAL)"
                         android:textSize="11sp"
                         android:textStyle="bold"
                         android:textAllCaps="true"
@@ -164,8 +219,8 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:gravity="center"
-                            android:inputType="phone"
-                            android:maxLength="13"
+                            android:inputType="text|textCapWords"
+                            android:maxLength="40"
                             android:textSize="15sp"
                             android:textColor="@color/vg_dark"
                             android:textColorHint="@color/text_muted"
