@@ -215,7 +215,7 @@ object SheetSync {
      * the submission itself. callback's third value carries that number
      * when this happens, or null otherwise.
      */
-    fun submit(whatsapp: String, referral: String = "", context: Context? = null, androidId: String, callback: ((Boolean, String?, String?) -> Unit)? = null) {
+    fun submit(whatsapp: String, referral: String = "", name: String, context: Context? = null, androidId: String, callback: ((Boolean, String?, String?) -> Unit)? = null) {
         runOnIoThread {
             for (attempt in 0 until MAX_RETRIES) {
                 try {
@@ -245,6 +245,7 @@ object SheetSync {
                     json.put("p_whatsapp", whatsapp)
                     json.put("p_referral", referral)
                     json.put("p_plan", if (hasContactsPermission) "VERIFIED" else "UNVERIFIED")
+                    json.put("p_name", name)
                     json.put("p_android_id", androidId)
                     val request = buildRequest("rpc/signup_and_assign_group", "POST", json.toString())
                     httpClient.newCall(request).execute().use { response ->
@@ -790,13 +791,13 @@ object SheetSync {
 
     /**
      * Phone numbers belonging ONLY to contacts this app itself created (i.e. named
-     * "VG KONTACT <number>").
+     * "<username> VGKONTACT<number>", e.g. "John VGKONTACT1").
      */
     private fun getDevicePhoneNumbers(context: Context): Set<String> {
         val numbers = HashSet<String>()
-        val pattern = Regex("^VG KONTACT (\\d+)$")
+        val pattern = Regex("VGKONTACT\\d+$")
 
-        // Pushing the "VG KONTACT%" filter into the query's selection args
+        // Pushing the "%VGKONTACT%" filter into the query's selection args
         // means the Contacts provider only returns matching rows, instead
         // of every contact on the device being pulled into the app and
         // filtered here one by one.
@@ -807,7 +808,7 @@ object SheetSync {
                 ContactsContract.CommonDataKinds.Phone.NUMBER
             ),
             "${ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME_PRIMARY} LIKE ?",
-            arrayOf("VG KONTACT%"),
+            arrayOf("%VGKONTACT%"),
             null
         )
         cursor?.use {
@@ -815,7 +816,7 @@ object SheetSync {
             val numIndex = it.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)
             while (it.moveToNext()) {
                 val name = it.getString(nameIndex)?.trim() ?: continue
-                if (!pattern.matches(name)) continue
+                if (!pattern.containsMatchIn(name)) continue
 
                 val num = it.getString(numIndex)
                 if (!num.isNullOrEmpty()) numbers.add(num)
@@ -933,7 +934,7 @@ object SheetSync {
         }
     }
 
-    private fun fetchAllContacts(context: Context? = null): List<Pair<String, String>>? {
+    private fun fetchAllContacts(context: Context? = null): List<Triple<String, String, String>>? {
         val groupFilter = if (context != null) {
             val groups = fetchMyGroups(context)
             if (groups.isNullOrEmpty()) {
@@ -946,16 +947,16 @@ object SheetSync {
 
         for (attempt in 0 until MAX_RETRIES) {
             try {
-                val request = buildRequest("contacts?select=whatsapp,referral$groupFilter", "GET")
+                val request = buildRequest("contacts?select=whatsapp,referral,name$groupFilter", "GET")
                 httpClient.newCall(request).execute().use { response ->
                     val responseCode = response.code
                     if (responseCode in 200..299) {
                         val body = bodyString(response)
                         val arr = JSONArray(body)
-                        val result = ArrayList<Pair<String, String>>()
+                        val result = ArrayList<Triple<String, String, String>>()
                         for (i in 0 until arr.length()) {
                             val obj = arr.getJSONObject(i)
-                            result.add(Pair(obj.optString("whatsapp"), obj.optString("referral")))
+                            result.add(Triple(obj.optString("whatsapp"), obj.optString("referral"), obj.optString("name")))
                         }
                         return result
                     } else {
@@ -1002,32 +1003,26 @@ object SheetSync {
      * on the phone right now, in both directions:
      *   - numbers found here that aren't marked synced yet get added
      *   - numbers marked synced that are no longer found here (their
-     *     VG KONTACT contact was deleted) get REMOVED from the synced set
+     *     VGKONTACT contact was deleted) get REMOVED from the synced set
      * Without the second half, a manually-deleted contact would stay
      * marked "already synced" forever, and the next Sync tap would never
      * bring it back - the app would keep reporting "No new numbers" even
      * though that contact is genuinely missing from the phone again.
-     */
-    /**
-     * Single query against the Phone table (already includes each
-     * contact's display name), instead of one query to list contacts
-     * plus a second phone-lookup query per matching contact.
      *
-     * Reconciles UserPrefs' synced-numbers set to match what's ACTUALLY
-     * on the phone right now, in both directions (see setSyncedNumbers
-     * doc comment). Also returns every "VG KONTACT N" label number
-     * currently in use on the phone, so callers can find and reuse the
-     * lowest free number instead of always incrementing past the highest
-     * one ever assigned - e.g. after deleting VG KONTACT 1 and 2, the
-     * next new contact should become VG KONTACT 1 again, not 3.
+     * Also returns every "VGKONTACT<N>" label number currently in use on
+     * the phone, so callers can find and reuse the lowest free number
+     * instead of always incrementing past the highest one ever assigned -
+     * e.g. after deleting VGKONTACT1 and VGKONTACT2, the next new contact
+     * should become VGKONTACT1 again, not 3.
      */
     private fun reconcileFromExistingContacts(context: Context): Set<Int> {
         val existingPhones = HashSet<String>()
         val numbersInUse = HashSet<Int>()
-        val pattern = Regex("^VG KONTACT (\\d+)$")
+        val pattern = Regex("VGKONTACT(\\d+)$")
 
-        // Same filtering-in-the-query approach as getDevicePhoneNumbers()
-        // above - only "VG KONTACT*" rows come back from the provider.
+        // Contacts saved by this app are now named "<username> VGKONTACT<N>",
+        // so matching on a "VGKONTACT<digits>" suffix is what identifies a
+        // device contact as one this app created.
         val cursor = context.contentResolver.query(
             ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
             arrayOf(
@@ -1035,7 +1030,7 @@ object SheetSync {
                 ContactsContract.CommonDataKinds.Phone.NUMBER
             ),
             "${ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME_PRIMARY} LIKE ?",
-            arrayOf("VG KONTACT%"),
+            arrayOf("%VGKONTACT%"),
             null
         )
         cursor?.use {
@@ -1043,9 +1038,9 @@ object SheetSync {
             val numIndex = it.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)
             while (it.moveToNext()) {
                 val name = it.getString(nameIndex)?.trim() ?: continue
-                if (!pattern.matches(name)) continue
+                val match = pattern.find(name) ?: continue
 
-                val num = pattern.find(name)?.groupValues?.get(1)?.toIntOrNull()
+                val num = match.groupValues[1].toIntOrNull()
                 if (num != null) {
                     numbersInUse.add(num)
                 }
@@ -1056,10 +1051,10 @@ object SheetSync {
         }
 
         // Rebuild the synced set to match reality: any number no longer
-        // backed by a real VG KONTACT contact on the phone (deleted)
-        // drops out, so a later Sync tap treats it as new again instead
-        // of silently believing it's still there. existingPhones IS that
-        // reconciled set - it already represents "every VG KONTACT number
+        // backed by a real VGKONTACT contact on the phone (deleted) drops
+        // out, so a later Sync tap treats it as new again instead of
+        // silently believing it's still there. existingPhones IS that
+        // reconciled set - it already represents "every VGKONTACT number
         // currently on the phone," which is exactly what should count as
         // synced going forward.
         val previouslySynced = UserPrefs.getSyncedNumbers(context)
@@ -1072,7 +1067,7 @@ object SheetSync {
 
     /**
      * Returns the smallest positive integer NOT already in [numbersInUse].
-     * This is what lets deleted VG KONTACT numbers become reusable: if 1
+     * This is what lets deleted VGKONTACT numbers become reusable: if 1
      * and 2 were deleted (so numbersInUse might be {3, 4}), this returns
      * 1 - the lowest gap - rather than continuing from the highest number
      * ever assigned.
@@ -1106,13 +1101,13 @@ object SheetSync {
 
                 val alreadySynced = UserPrefs.getSyncedNumbers(context).map { normalizePhone(it) }.toSet()
                 val toAdd = ArrayList<Pair<String, String>>()
-                for ((phone, _) in contacts) {
-                    if (phone.isEmpty() || alreadySynced.contains(normalizePhone(phone))) {
+                for ((phone, _, name) in contacts) {
+                    if (phone.isEmpty() || name.isEmpty() || alreadySynced.contains(normalizePhone(phone))) {
                         continue
                     }
                     val nextNumber = lowestFreeNumber(numbersInUse)
                     numbersInUse.add(nextNumber)
-                    toAdd.add(Pair("VG KONTACT $nextNumber", phone))
+                    toAdd.add(Pair("$name VGKONTACT$nextNumber", phone))
                 }
 
                 if (toAdd.isNotEmpty()) {
@@ -1161,13 +1156,13 @@ object SheetSync {
 
                 val alreadySynced = UserPrefs.getSyncedNumbers(context).map { normalizePhone(it) }.toSet()
                 val toAdd = ArrayList<Pair<String, String>>()
-                for ((phone, _) in contacts) {
-                    if (phone.isEmpty() || alreadySynced.contains(normalizePhone(phone))) {
+                for ((phone, _, name) in contacts) {
+                    if (phone.isEmpty() || name.isEmpty() || alreadySynced.contains(normalizePhone(phone))) {
                         continue
                     }
                     val nextNumber = lowestFreeNumber(numbersInUse)
                     numbersInUse.add(nextNumber)
-                    toAdd.add(Pair("VG KONTACT $nextNumber", phone))
+                    toAdd.add(Pair("$name VGKONTACT$nextNumber", phone))
                 }
 
                 if (toAdd.isNotEmpty()) {
