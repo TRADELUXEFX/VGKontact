@@ -41,27 +41,37 @@ object PermissionHealth {
             }
 
         /**
-         * The live 0-3 setup stage, used for tracking/reporting only (not
-         * for gating any feature in the app itself):
-         *   0 = nothing on
-         *   1 = Contacts on (sync can work)
-         *   2 = Contacts + Notifications on
-         *   3 = all three on (Contacts + Notifications + Battery)
+         * The live setup stage, used for tracking/reporting only (not for
+         * gating any feature in the app itself). Reports EVERY permission
+         * that is currently on, not just the furthest one reached in a
+         * fixed order - so any combination is representable, not only the
+         * ones that happen to match a strict Contacts-then-Notifications-
+         * then-Battery ladder.
+         *
+         * Format: comma-separated labels, one per permission that is
+         * currently on, always in this fixed order:
+         *   1 = Contacts
+         *   2 = Notifications
+         *   3 = Battery
+         * e.g. "1,3" means Contacts and Battery are on, Notifications is
+         * not. "0" means none are on.
          *
          * This always reflects right now - it goes up AND down as
          * permissions are toggled, unlike the separate permanent
          * "first ever reached this stage" record kept in the database
          * (see SheetSync.reportSetupStage). The admin panel is expected to
-         * use both: this live number to see where someone currently
+         * use both: this live value to see where someone currently
          * stands, and the permanent first-reached timestamps to decide
          * anything reward-related, since those never move backwards.
          */
-        val stage: Int
-            get() = when {
-                !contactsGranted -> 0
-                !notificationsGranted -> 1
-                !batteryExempted -> 2
-                else -> 3
+        val stage: String
+            get() {
+                val labels = listOfNotNull(
+                    "1".takeIf { contactsGranted },
+                    "2".takeIf { notificationsGranted },
+                    "3".takeIf { batteryExempted }
+                )
+                return if (labels.isEmpty()) "0" else labels.joinToString(",")
             }
 
         /** Short, user-facing summary of what's missing, worst issue first. */
