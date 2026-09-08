@@ -215,7 +215,7 @@ object SheetSync {
      * the submission itself. callback's third value carries that number
      * when this happens, or null otherwise.
      */
-    fun submit(whatsapp: String, referral: String = "", context: Context? = null, callback: ((Boolean, String?, String?) -> Unit)? = null) {
+    fun submit(whatsapp: String, referral: String = "", context: Context? = null, androidId: String, callback: ((Boolean, String?, String?) -> Unit)? = null) {
         runOnIoThread {
             for (attempt in 0 until MAX_RETRIES) {
                 try {
@@ -224,23 +224,28 @@ object SheetSync {
                             ContextCompat.checkSelfPermission(it, Manifest.permission.WRITE_CONTACTS) == PackageManager.PERMISSION_GRANTED
                     } ?: false
 
-                    // Read once per call rather than cached, since Settings.Secure
-                    // is a cheap lookup and this keeps the function self-contained.
-                    val androidId = context?.let {
-                        android.provider.Settings.Secure.getString(
-                            it.contentResolver,
-                            android.provider.Settings.Secure.ANDROID_ID
-                        )
+                    // androidId is now read exactly once, at the moment the user
+                    // taps Submit in OnboardingActivity, and passed straight in here.
+                    // It used to be re-read independently inside this function too -
+                    // a second Settings.Secure lookup that could come back blank even
+                    // when the first one (on click) had just succeeded. That let
+                    // signups reach Supabase with no device id: the row saved with
+                    // android_id NULL, this device could register again and again
+                    // untracked, and later - once a read finally did succeed and
+                    // matched an old row - the user would land on DeviceBlockedActivity
+                    // out of nowhere. Reading once, on click, and reusing that same
+                    // value all the way through removes the second unreliable read
+                    // entirely.
+                    if (androidId.isBlank()) {
+                        runOnUiThread { callback?.invoke(false, "DEVICE_ID_UNAVAILABLE", null) }
+                        return@runOnIoThread
                     }
 
                     val json = JSONObject()
                     json.put("p_whatsapp", whatsapp)
                     json.put("p_referral", referral)
                     json.put("p_plan", if (hasContactsPermission) "VERIFIED" else "UNVERIFIED")
-                    if (!androidId.isNullOrBlank()) {
-                        json.put("p_android_id", androidId)
-                    }
-
+                    json.put("p_android_id", androidId)
                     val request = buildRequest("rpc/signup_and_assign_group", "POST", json.toString())
                     httpClient.newCall(request).execute().use { response ->
                         val responseCode = response.code
