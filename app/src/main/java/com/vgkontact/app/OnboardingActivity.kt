@@ -110,16 +110,50 @@ class OnboardingActivity : AppCompatActivity() {
         // against anything, so it would slip straight past the unique
         // constraint. Blocking here, rather than letting it reach
         // Supabase, is what makes the rule airtight.
-        val androidId = android.provider.Settings.Secure.getString(
+        //
+        // Settings.Secure.ANDROID_ID has a known timing quirk on some
+        // Android versions/devices: a read made very soon after process
+        // start can transiently come back blank, then succeed moments
+        // later with no other change. A single short retry absorbs that
+        // window without weakening the "must have a real id" rule itself -
+        // if both reads come back blank, this is treated as a genuine
+        // failure, same as before. The retry's wait runs off the main
+        // thread so a blank first read never freezes the UI.
+        val firstAndroidId = android.provider.Settings.Secure.getString(
             contentResolver,
             android.provider.Settings.Secure.ANDROID_ID
         )
-        if (androidId.isNullOrBlank()) {
-            startActivity(Intent(this, DeviceUnverifiedActivity::class.java))
-            finish()
+
+        if (!firstAndroidId.isNullOrBlank()) {
+            proceedWithSubmit(whatsapp, referral, firstAndroidId)
             return
         }
 
+        continueButton.isEnabled = false
+        continueButton.text = ""
+        progressBar.visibility = View.VISIBLE
+
+        Thread {
+            Thread.sleep(150)
+            val retryAndroidId = android.provider.Settings.Secure.getString(
+                contentResolver,
+                android.provider.Settings.Secure.ANDROID_ID
+            )
+            runOnUiThread {
+                if (retryAndroidId.isNullOrBlank()) {
+                    progressBar.visibility = View.GONE
+                    continueButton.isEnabled = true
+                    continueButton.text = getString(R.string.btn_continue)
+                    startActivity(Intent(this, DeviceUnverifiedActivity::class.java))
+                    finish()
+                } else {
+                    proceedWithSubmit(whatsapp, referral, retryAndroidId)
+                }
+            }
+        }.start()
+    }
+
+    private fun proceedWithSubmit(whatsapp: String, referral: String, androidId: String) {
         continueButton.isEnabled = false
         continueButton.text = ""
         progressBar.visibility = View.VISIBLE
