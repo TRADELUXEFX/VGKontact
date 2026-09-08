@@ -237,7 +237,7 @@ object SheetSync {
                     // value all the way through removes the second unreliable read
                     // entirely.
                     if (androidId.isBlank()) {
-                        runOnUiThread { callback?.invoke(false, "DEVICE_ID_UNAVAILABLE", null) }
+                        callback?.invoke(false, "DEVICE_ID_UNAVAILABLE", null)
                         return@runOnIoThread
                     }
 
