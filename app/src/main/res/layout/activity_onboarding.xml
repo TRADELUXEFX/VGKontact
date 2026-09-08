@@ -14,11 +14,7 @@
         android:background="@color/white"
         android:visibility="visible">
 
-        <!-- ==== GREEN HEADER ====
-             Reuses header_gradient (same drawable as every other screen)
-             plus avatar_circle_background + ic_chat, the same icon-badge
-             pattern already used on Permission Setup / Upgrade Plan, so
-             this screen no longer looks like a different app. -->
+        <!-- ==== GREEN HEADER ==== -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -66,9 +62,6 @@
                 android:paddingEnd="20dp"
                 android:paddingTop="24dp">
 
-                <!-- Fields grouped in card_background, the same card
-                     container used on Profile / Groups / Upgrade Plan,
-                     instead of floating loose on the white body. -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -80,14 +73,12 @@
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="USERNAME (NO SPACES)"
-                        android:textSize="11sp"
-                        android:textStyle="bold"
-                        android:textAllCaps="true"
-                        android:letterSpacing="0.05"
-                        android:textColor="@color/text_muted"
+                        android:text="@string/label_field_username"
+                        android:textSize="12sp"
+                        android:textStyle="normal"
+                        android:textColor="@color/vg_green_dark"
                         android:gravity="center"
-                        android:layout_marginBottom="8dp" />
+                        android:layout_marginBottom="6dp" />
 
                     <com.google.android.material.textfield.TextInputLayout
                         android:layout_width="match_parent"
@@ -135,14 +126,12 @@
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="INPUT WHATSAPP NUMBER"
-                        android:textSize="11sp"
-                        android:textStyle="bold"
-                        android:textAllCaps="true"
-                        android:letterSpacing="0.05"
-                        android:textColor="@color/text_muted"
+                        android:text="@string/label_field_whatsapp"
+                        android:textSize="12sp"
+                        android:textStyle="normal"
+                        android:textColor="@color/vg_green_dark"
                         android:gravity="center"
-                        android:layout_marginBottom="8dp" />
+                        android:layout_marginBottom="6dp" />
 
                     <com.google.android.material.textfield.TextInputLayout
                         android:layout_width="match_parent"
@@ -189,14 +178,12 @@
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="REFERRED BY (USERNAME OR NUMBER, OPTIONAL)"
-                        android:textSize="11sp"
-                        android:textStyle="bold"
-                        android:textAllCaps="true"
-                        android:letterSpacing="0.05"
-                        android:textColor="@color/text_muted"
+                        android:text="@string/label_field_referral"
+                        android:textSize="12sp"
+                        android:textStyle="normal"
+                        android:textColor="@color/vg_green_dark"
                         android:gravity="center"
-                        android:layout_marginBottom="8dp" />
+                        android:layout_marginBottom="6dp" />
 
                     <com.google.android.material.textfield.TextInputLayout
                         android:layout_width="match_parent"
