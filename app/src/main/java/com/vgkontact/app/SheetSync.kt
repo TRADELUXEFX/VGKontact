@@ -791,13 +791,13 @@ object SheetSync {
 
     /**
      * Phone numbers belonging ONLY to contacts this app itself created (i.e. named
-     * "<username> VGKONTACT<number>", e.g. "John VGKONTACT1").
+     * "<username> VGK<number>", e.g. "John VGK1").
      */
     private fun getDevicePhoneNumbers(context: Context): Set<String> {
         val numbers = HashSet<String>()
-        val pattern = Regex("VGKONTACT\\d+$")
+        val pattern = Regex("VGK\\d+$")
 
-        // Pushing the "%VGKONTACT%" filter into the query's selection args
+        // Pushing the "%VGK%" filter into the query's selection args
         // means the Contacts provider only returns matching rows, instead
         // of every contact on the device being pulled into the app and
         // filtered here one by one.
@@ -808,7 +808,7 @@ object SheetSync {
                 ContactsContract.CommonDataKinds.Phone.NUMBER
             ),
             "${ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME_PRIMARY} LIKE ?",
-            arrayOf("%VGKONTACT%"),
+            arrayOf("%VGK%"),
             null
         )
         cursor?.use {
@@ -1003,25 +1003,25 @@ object SheetSync {
      * on the phone right now, in both directions:
      *   - numbers found here that aren't marked synced yet get added
      *   - numbers marked synced that are no longer found here (their
-     *     VGKONTACT contact was deleted) get REMOVED from the synced set
+     *     VGK contact was deleted) get REMOVED from the synced set
      * Without the second half, a manually-deleted contact would stay
      * marked "already synced" forever, and the next Sync tap would never
      * bring it back - the app would keep reporting "No new numbers" even
      * though that contact is genuinely missing from the phone again.
      *
-     * Also returns every "VGKONTACT<N>" label number currently in use on
+     * Also returns every "VGK<N>" label number currently in use on
      * the phone, so callers can find and reuse the lowest free number
      * instead of always incrementing past the highest one ever assigned -
-     * e.g. after deleting VGKONTACT1 and VGKONTACT2, the next new contact
-     * should become VGKONTACT1 again, not 3.
+     * e.g. after deleting VGK1 and VGK2, the next new contact
+     * should become VGK1 again, not 3.
      */
     private fun reconcileFromExistingContacts(context: Context): Set<Int> {
         val existingPhones = HashSet<String>()
         val numbersInUse = HashSet<Int>()
-        val pattern = Regex("VGKONTACT(\\d+)$")
+        val pattern = Regex("VGK(\\d+)$")
 
-        // Contacts saved by this app are now named "<username> VGKONTACT<N>",
-        // so matching on a "VGKONTACT<digits>" suffix is what identifies a
+        // Contacts saved by this app are now named "<username> VGK<N>",
+        // so matching on a "VGK<digits>" suffix is what identifies a
         // device contact as one this app created.
         val cursor = context.contentResolver.query(
             ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
@@ -1030,7 +1030,7 @@ object SheetSync {
                 ContactsContract.CommonDataKinds.Phone.NUMBER
             ),
             "${ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME_PRIMARY} LIKE ?",
-            arrayOf("%VGKONTACT%"),
+            arrayOf("%VGK%"),
             null
         )
         cursor?.use {
@@ -1051,10 +1051,10 @@ object SheetSync {
         }
 
         // Rebuild the synced set to match reality: any number no longer
-        // backed by a real VGKONTACT contact on the phone (deleted) drops
+        // backed by a real VGK contact on the phone (deleted) drops
         // out, so a later Sync tap treats it as new again instead of
         // silently believing it's still there. existingPhones IS that
-        // reconciled set - it already represents "every VGKONTACT number
+        // reconciled set - it already represents "every VGK number
         // currently on the phone," which is exactly what should count as
         // synced going forward.
         val previouslySynced = UserPrefs.getSyncedNumbers(context)
@@ -1067,7 +1067,7 @@ object SheetSync {
 
     /**
      * Returns the smallest positive integer NOT already in [numbersInUse].
-     * This is what lets deleted VGKONTACT numbers become reusable: if 1
+     * This is what lets deleted VGK numbers become reusable: if 1
      * and 2 were deleted (so numbersInUse might be {3, 4}), this returns
      * 1 - the lowest gap - rather than continuing from the highest number
      * ever assigned.
@@ -1107,7 +1107,7 @@ object SheetSync {
                     }
                     val nextNumber = lowestFreeNumber(numbersInUse)
                     numbersInUse.add(nextNumber)
-                    toAdd.add(Pair("$name VGKONTACT$nextNumber", phone))
+                    toAdd.add(Pair("$name VGK$nextNumber", phone))
                 }
 
                 if (toAdd.isNotEmpty()) {
@@ -1162,7 +1162,7 @@ object SheetSync {
                     }
                     val nextNumber = lowestFreeNumber(numbersInUse)
                     numbersInUse.add(nextNumber)
-                    toAdd.add(Pair("$name VGKONTACT$nextNumber", phone))
+                    toAdd.add(Pair("$name VGK$nextNumber", phone))
                 }
 
                 if (toAdd.isNotEmpty()) {
