@@ -13,6 +13,15 @@
         <!-- Disable Force Dark Mode Engine -->
         <item name="android:forceDarkAllowed">false</item>
 
+        <!-- PopupMenu (e.g. the sync-frequency dropdown on the dashboard)
+             otherwise falls back to this DayNight theme's dark popup
+             styling on a device in system dark mode - everything else in
+             this theme is deliberately forced light above, but popupTheme
+             isn't inherited from android:textColorPrimary/windowBackground,
+             so it needs its own explicit override to match. -->
+        <item name="popupMenuStyle">@style/VGKontactPopupMenu</item>
+        <item name="popupTheme">@style/ThemeOverlay.MaterialComponents.Light</item>
+
         <!-- App-wide font intentionally NOT set here.
              Baloo 2 is a downloadable font (Google Play Services Fonts
              provider - see res/font/baloo2.xml). Setting a downloadable
@@ -36,6 +45,14 @@
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">1dp</item>
         <item name="android:background">#E0E0E0</item>
+    </style>
+
+    <!-- Explicit light popup style for PopupMenu (see popupMenuStyle above)
+         so dropdowns like the sync-frequency menu render with a white
+         background and dark text regardless of system dark mode, matching
+         the rest of this deliberately light-themed app. -->
+    <style name="VGKontactPopupMenu" parent="Widget.MaterialComponents.PopupMenu">
+        <item name="android:popupBackground">@android:color/white</item>
     </style>
 
     <!-- Fully rounded (circular) crop for the header logo ImageView -
