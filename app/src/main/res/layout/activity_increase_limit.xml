@@ -291,6 +291,127 @@
                     android:gravity="center"
                     android:layout_marginBottom="20dp" />
 
+                <!-- ============ CONTACT AMOUNT PICKER ============
+                     Lets the user pick how many contacts they want before
+                     buying a code. Backed by a fixed rate (₦250 per 250
+                     contacts - see STEP_CONTACTS/RATE_PER_STEP in
+                     IncreaseLimitActivity.kt) - the stepper only ever
+                     moves in 250-contact increments so the total price
+                     always lines up with a whole number of purchasable
+                     units, without exposing that "unit" concept in the
+                     UI copy itself. -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:background="@drawable/card_background"
+                    android:padding="14dp"
+                    android:layout_marginBottom="16dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <Button
+                            android:id="@+id/contactsMinusButton"
+                            android:layout_width="34dp"
+                            android:layout_height="34dp"
+                            android:minWidth="0dp"
+                            android:minHeight="0dp"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            android:padding="0dp"
+                            android:text="–"
+                            android:textSize="18sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/vg_green_dark"
+                            android:backgroundTint="@color/vg_green_tint"
+                            app:cornerRadius="17dp"
+                            app:elevation="0dp"
+                            android:stateListAnimator="@null" />
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical"
+                            android:gravity="center">
+
+                            <TextView
+                                android:id="@+id/contactsAmountText"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:textSize="18sp"
+                                android:textStyle="bold"
+                                android:textColor="@color/vg_dark"
+                                tools:text="250 contacts" />
+
+                        </LinearLayout>
+
+                        <Button
+                            android:id="@+id/contactsPlusButton"
+                            android:layout_width="34dp"
+                            android:layout_height="34dp"
+                            android:minWidth="0dp"
+                            android:minHeight="0dp"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            android:padding="0dp"
+                            android:text="+"
+                            android:textSize="18sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/vg_green_dark"
+                            android:backgroundTint="@color/vg_green_tint"
+                            app:cornerRadius="17dp"
+                            app:elevation="0dp"
+                            android:stateListAnimator="@null" />
+
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginTop="12dp"
+                        android:paddingTop="12dp"
+                        android:background="@drawable/limit_breakdown_divider">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/label_youll_pay"
+                            android:textSize="12.5sp"
+                            android:textColor="@color/text_muted" />
+
+                        <TextView
+                            android:id="@+id/contactsTotalPriceText"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textSize="15sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/vg_green_dark"
+                            tools:text="₦250" />
+
+                    </LinearLayout>
+
+                </LinearLayout>
+
+                <Button
+                    android:id="@+id/noCodeContactUsButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="56dp"
+                    android:layout_marginBottom="20dp"
+                    android:text="@string/btn_no_code_contact_us"
+                    android:textAllCaps="true"
+                    android:letterSpacing="0.02"
+                    android:backgroundTint="@color/vg_green"
+                    android:textColor="@color/white"
+                    android:textStyle="bold"
+                    app:cornerRadius="16dp" />
+
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -328,23 +449,6 @@
                     android:backgroundTint="@color/vg_green"
                     android:textColor="@color/white"
                     android:textStyle="bold"
-                    app:cornerRadius="16dp" />
-
-                <Button
-                    android:id="@+id/noCodeContactUsButton"
-                    android:layout_width="match_parent"
-                    android:layout_height="56dp"
-                    android:layout_marginTop="12dp"
-                    android:text="@string/btn_no_code_contact_us"
-                    android:textAllCaps="true"
-                    android:letterSpacing="0.02"
-                    android:textStyle="bold"
-                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                    app:strokeColor="@color/primary_light"
-                    android:textColor="@color/primary_light"
-                    app:icon="@drawable/ic_chat"
-                    app:iconTint="@color/primary_light"
-                    app:iconGravity="textStart"
                     app:cornerRadius="16dp" />
 
                 <ProgressBar
