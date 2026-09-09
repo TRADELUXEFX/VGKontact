@@ -19,6 +19,7 @@ import androidx.core.content.ContextCompat
 
 class ProfileActivity : AppCompatActivity() {
 
+    private lateinit var profileUsernameText: TextView
     private lateinit var profileNumberText: TextView
     private lateinit var profileReferralText: TextView
     private lateinit var profileDateRegisteredText: TextView
@@ -47,6 +48,7 @@ class ProfileActivity : AppCompatActivity() {
 
         window.statusBarColor = ContextCompat.getColor(this, R.color.vg_green)
 
+        profileUsernameText = findViewById(R.id.profileUsernameText)
         profileNumberText = findViewById(R.id.profileNumberText)
         profileReferralText = findViewById(R.id.profileReferralText)
         profileDateRegisteredText = findViewById(R.id.profileDateRegisteredText)
@@ -63,6 +65,10 @@ class ProfileActivity : AppCompatActivity() {
         profileContactUsButton = findViewById(R.id.profileContactUsButton)
 
         val whatsapp = UserPrefs.getWhatsapp(this)
+
+        // Username
+        val name = UserPrefs.getName(this)
+        profileUsernameText.text = if (name.isNullOrEmpty()) "N/A" else name
 
         // Number
         profileNumberText.text = whatsapp ?: "N/A"
