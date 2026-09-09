@@ -81,13 +81,32 @@ object CoachMarkOverlay {
         root.addView(ring, ring.layoutParams)
         root.addView(tooltip.root, tooltip.root.layoutParams)
 
-        // Post rather than call directly: both views were just added and
-        // have not been through a layout pass yet, so getLocationInWindow()
-        // on the ring itself would be meaningless this instant. The target
-        // view is already laid out (dashboard is already on screen by the
-        // time showIfNeeded is called), so only the ring/tooltip need the
-        // extra frame.
-        ring.post { showStep() }
+        // A single post{} isn't enough: on first run the dashboard's stats
+        // card is still reflowing (sync stats/limit numbers populate async
+        // after onCreate), so the very first target can still measure 0x0
+        // or a stale size one frame later, which is what drew the ring
+        // around the whole card instead of the small button. Wait for an
+        // actual completed layout pass on the target - via
+        // OnGlobalLayoutListener - rather than guessing a frame count.
+        val firstTarget = steps[0].target
+        if (firstTarget.width > 0 && firstTarget.height > 0) {
+            showStep()
+        } else {
+            val vto = firstTarget.viewTreeObserver
+            val listener = object : android.view.ViewTreeObserver.OnGlobalLayoutListener {
+                override fun onGlobalLayout() {
+                    if (firstTarget.width > 0 && firstTarget.height > 0) {
+                        if (vto.isAlive) {
+                            vto.removeOnGlobalLayoutListener(this)
+                        }
+                        showStep()
+                    }
+                    // else: keep waiting for a later layout pass that
+                    // actually gives the target real dimensions.
+                }
+            }
+            vto.addOnGlobalLayoutListener(listener)
+        }
     }
 
     /**
