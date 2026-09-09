@@ -15,6 +15,7 @@ import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.core.view.doOnNextLayout
 import androidx.core.widget.NestedScrollView
 
 /**
@@ -101,7 +102,16 @@ object CoachMarkOverlay {
 
         root.addView(overlay, MATCH_MATCH)
         root.addView(tooltip.root, tooltip.root.layoutParams)
-        showStep()
+
+        // HighlightView has just been added and hasn't been through a
+        // layout pass yet - it has no real width/height the instant this
+        // line runs. Calling highlight() before that first layout landed
+        // produced a degenerate, near-zero-size hole (visible as a stray
+        // dot instead of a ring around the real button). Waiting for
+        // overlay's own layout to complete guarantees onDraw has a
+        // correctly sized canvas before the first step ever tries to
+        // draw a hole into it.
+        overlay.doOnNextLayout { showStep() }
     }
 
     /**
