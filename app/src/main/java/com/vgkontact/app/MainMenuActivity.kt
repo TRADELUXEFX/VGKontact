@@ -366,12 +366,13 @@ class MainMenuActivity : AppCompatActivity() {
 
     /**
      * Reflects the current auto-sync frequency (default 24h, same default
-     * NotificationSettingsActivity/UserPrefs already use) on the small pill
-     * under the notification bell.
+     * NotificationSettingsActivity/UserPrefs already use) on the
+     * full-width sync row in the header, below the profile/bell row.
      */
     private fun renderSyncFrequencyPill() {
         val hours = UserPrefs.getNotificationFrequencyHours(this)
-        syncFrequencyText.text = "Syncs every ${hours}h"
+        val label = if (hours == 1) "hour" else "hours"
+        syncFrequencyText.text = "Syncs every $hours $label"
     }
 
     /**
