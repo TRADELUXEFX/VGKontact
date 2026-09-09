@@ -38,54 +38,59 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
+            android:orientation="vertical"
             android:background="@drawable/header_gradient"
-            android:gravity="center_vertical"
             android:paddingTop="48dp"
-            android:paddingBottom="24dp"
+            android:paddingBottom="18dp"
             android:paddingStart="20dp"
             android:paddingEnd="20dp">
 
-            <com.google.android.material.imageview.ShapeableImageView
-                android:id="@+id/profileIcon"
-                android:layout_width="52dp"
-                android:layout_height="52dp"
-                android:src="@drawable/ic_launcher"
-                android:background="@color/white"
-                android:scaleType="centerCrop"
-                app:shapeAppearanceOverlay="@style/CircleImageShape" />
-
             <LinearLayout
-                android:layout_width="0dp"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginStart="12dp"
-                android:orientation="vertical">
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
 
-                <TextView
-                    android:id="@+id/phoneNumberText"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:textSize="19sp"
-                    android:textStyle="bold"
-                    android:letterSpacing="0.01"
-                    android:textColor="@color/white"
-                    android:fontFamily="@font/baloo2"
-                    tools:text="08108709625" />
+                <com.google.android.material.imageview.ShapeableImageView
+                    android:id="@+id/profileIcon"
+                    android:layout_width="52dp"
+                    android:layout_height="52dp"
+                    android:src="@drawable/ic_launcher"
+                    android:background="@color/white"
+                    android:scaleType="centerCrop"
+                    app:shapeAppearanceOverlay="@style/CircleImageShape" />
 
                 <LinearLayout
-                    android:layout_width="wrap_content"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:layout_marginTop="5dp">
+                    android:layout_weight="1"
+                    android:layout_marginStart="12dp"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/phoneNumberText"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textSize="19sp"
+                        android:textStyle="bold"
+                        android:letterSpacing="0.01"
+                        android:textColor="@color/white"
+                        android:fontFamily="@font/baloo2"
+                        tools:text="08108709625" />
 
                     <!-- Group badge (reference: .group-badge). Shows the user's
                          plan tier today (planPreviewText, existing id/logic
                          preserved) inside the same pill styling the reference
-                         uses for its "GROUP 1 - 5 MEMBERS" badge. -->
+                         uses for its "GROUP 1 - 5 MEMBERS" badge. The sync-
+                         frequency pill that used to sit next to this has moved
+                         to its own full-width row below (syncFrequencyRow) -
+                         it was unreadable crammed in here at 10sp, truncating
+                         to "SYNC 24H" instead of the intended "Syncs every
+                         24h". -->
                     <LinearLayout
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:layout_marginTop="5dp"
                         android:orientation="horizontal"
                         android:gravity="center_vertical"
                         android:background="@drawable/group_badge_background"
@@ -114,62 +119,297 @@
 
                     </LinearLayout>
 
-                    <!-- Sync-frequency pill - same visual language as the
-                         plan badge pill right next to it. Tapping it opens a
-                         dropdown of frequency options right here on the
-                         dashboard, so changing sync frequency no longer
-                         requires going into NotificationSettingsActivity.
-                         Text is set at runtime from
-                         UserPrefs.getNotificationFrequencyHours() (see
-                         MainMenuActivity). -->
-                    <LinearLayout
-                        android:id="@+id/syncFrequencyPill"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="6dp"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical"
-                        android:background="@drawable/group_badge_background"
-                        android:paddingStart="8dp"
-                        android:paddingEnd="8dp"
-                        android:paddingTop="3dp"
-                        android:paddingBottom="3dp"
-                        android:clickable="true"
-                        android:focusable="true">
-
-                        <ImageView
-                            android:layout_width="10dp"
-                            android:layout_height="10dp"
-                            android:layout_marginEnd="4dp"
-                            android:src="@drawable/ic_sync"
-                            app:tint="@color/white" />
-
-                        <TextView
-                            android:id="@+id/syncFrequencyText"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:textSize="10sp"
-                            android:textStyle="bold"
-                            android:textColor="@color/white"
-                            android:fontFamily="@font/baloo2"
-                            tools:text="Syncs every 24h" />
-
-                        <ImageView
-                            android:layout_width="8dp"
-                            android:layout_height="8dp"
-                            android:layout_marginStart="3dp"
-                            android:src="@drawable/ic_arrow_forward"
-                            android:rotation="90"
-                            app:tint="@color/white" />
-
-                    </LinearLayout>
-
                 </LinearLayout>
+
+                <!-- Notification bell - enlarged from 42dp to 48dp and the
+                     icon itself from an 11dp inset to 12dp padding (bigger
+                     glyph), since it previously read as too small next to
+                     the 52dp profile photo it sits across from. The unread
+                     dot's margins were tuned to this new size so it still
+                     sits snugly in the bell's top-right corner instead of
+                     floating off-center. -->
+                <FrameLayout
+                    android:layout_width="48dp"
+                    android:layout_height="48dp">
+
+                    <ImageView
+                        android:id="@+id/notificationIcon"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:padding="12dp"
+                        android:src="@drawable/ic_notification_bell"
+                        android:background="@drawable/notification_circle_background"
+                        android:clickable="true"
+                        android:focusable="true"
+                        app:tint="@color/white" />
+
+                    <!-- Red dot shown when ActivityLog.hasUnread() is true;
+                         see MainMenuActivity.renderNotificationDot(). Hidden
+                         by default so it never flashes on first layout pass. -->
+                    <View
+                        android:id="@+id/notificationUnreadDot"
+                        android:layout_width="11dp"
+                        android:layout_height="11dp"
+                        android:layout_gravity="top|end"
+                        android:layout_marginTop="3dp"
+                        android:layout_marginEnd="3dp"
+                        android:background="@drawable/notification_unread_dot"
+                        android:visibility="gone" />
+
+                </FrameLayout>
 
             </LinearLayout>
 
-            <FrameLayout
-< truncated lines 172-387 >
+            <!-- Hairline separating the sync row from the profile row above -
+                 a plain 1dp View instead of a background-drawable border, so
+                 it doesn't depend on guessing the row's height. -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginTop="14dp"
+                android:background="#33FFFFFF" />
+
+            <!-- Sync-frequency row - moved out of the cramped inline pill
+                 next to the plan badge (approach 1 of the header redesign).
+                 Full-width, separated from the row above by the hairline
+                 just above, so "Syncs every 24 hours" reads in full instead
+                 of truncating to all-caps "SYNC 24H". Tapping it still opens
+                 the same frequency dropdown as before (see
+                 MainMenuActivity.showSyncFrequencyMenu). Text is set at
+                 runtime from UserPrefs.getNotificationFrequencyHours(). -->
+            <LinearLayout
+                android:id="@+id/syncFrequencyPill"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:clickable="true"
+                android:focusable="true">
+
+                <ImageView
+                    android:layout_width="14dp"
+                    android:layout_height="14dp"
+                    android:layout_marginEnd="8dp"
+                    android:src="@drawable/ic_sync"
+                    app:tint="@color/white" />
+
+                <TextView
+                    android:id="@+id/syncFrequencyText"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:textSize="13sp"
+                    android:textColor="@color/white"
+                    android:fontFamily="@font/baloo2"
+                    tools:text="Syncs every 24 hours" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/label_change_sync_frequency"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/white"
+                    android:fontFamily="@font/baloo2" />
+
+                <ImageView
+                    android:layout_width="8dp"
+                    android:layout_height="8dp"
+                    android:layout_marginStart="4dp"
+                    android:src="@drawable/ic_arrow_forward"
+                    android:rotation="90"
+                    app:tint="@color/white" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <!-- Permission health banner - app-specific safety feature with no
+             reference equivalent, kept as-is (unchanged id/logic) since it's
+             functionally important; it simply sits below the header instead
+             of overlapping it. -->
+        <LinearLayout
+            android:id="@+id/permissionWarningBanner"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:background="@drawable/permission_banner_background"
+            android:padding="14dp"
+            android:layout_marginStart="20dp"
+            android:layout_marginEnd="20dp"
+            android:layout_marginTop="16dp"
+            android:visibility="gone"
+            android:clickable="true"
+            android:focusable="true">
+
+            <ImageView
+                android:id="@+id/permissionWarningIcon"
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:src="@drawable/ic_battery"
+                app:tint="@color/white" />
+
+            <TextView
+                android:id="@+id/permissionWarningText"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="10dp"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:textColor="@color/white"
+                tools:text="Contacts permission is off - Sync is disabled" />
+
+            <TextView
+                android:id="@+id/permissionWarningAction"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="FIX"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:textColor="@color/white"
+                android:paddingStart="10dp"
+                android:paddingEnd="4dp" />
+
+        </LinearLayout>
+
+        <!-- ================= BODY (reference: .body) ================= -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingTop="20dp"
+            android:paddingStart="20dp"
+            android:paddingEnd="20dp"
+            android:paddingBottom="8dp">
+
+            <!-- Sync stats card -->
+            <LinearLayout
+                android:id="@+id/statsCard"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@drawable/card_background"
+                android:padding="20dp">
+
+                <ProgressBar
+                    android:id="@+id/statsProgressBar"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center_horizontal"
+                    android:visibility="gone" />
+
+                <LinearLayout
+                    android:id="@+id/statsContent"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center"
+                        android:layout_marginBottom="18dp">
+
+                        <ImageView
+                            android:layout_width="16dp"
+                            android:layout_height="16dp"
+                            android:layout_marginEnd="8dp"
+                            android:src="@drawable/ic_sync"
+                            app:tint="@color/vg_green" />
+
+                        <TextView
+                            android:id="@+id/statsTodayText"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textSize="13sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/vg_dark"
+                            tools:text="3 kontacts synced today" />
+
+                    </LinearLayout>
+
+                    <!-- ===== Contact Limit meter =====
+                         Replaces the old "total in database / available to
+                         import" two-tile row. current = syncedToPhone,
+                         limit = contactLimit (sum of joined groups' real
+                         caps on Supabase - see ImportStats.contactLimit).
+                         Bar color + width are set entirely in Kotlin
+                         (updateLimitMeter in MainMenuActivity), same
+                         green -> amber -> red threshold behavior as the
+                         approved HTML preview. -->
+                    <LinearLayout
+                        android:id="@+id/limitBlock"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:background="@drawable/limit_block_background"
+                        android:padding="18dp">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/contact_limit_label"
+                            android:textSize="11sp"
+                            android:textStyle="bold"
+                            android:textAllCaps="true"
+                            android:letterSpacing="0.05"
+                            android:textColor="@color/text_muted"
+                            android:gravity="center" />
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:layout_marginBottom="14dp"
+                            android:orientation="horizontal"
+                            android:gravity="center"
+                            android:baselineAligned="true">
+
+                            <TextView
+                                android:id="@+id/limitCurrentText"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:textSize="34sp"
+                                android:textStyle="bold"
+                                android:textColor="@color/vg_dark"
+                                android:fontFamily="@font/baloo2"
+                                tools:text="15" />
+
+                            <TextView
+                                android:id="@+id/limitOfText"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="6dp"
+                                android:textSize="16sp"
+                                android:textStyle="bold"
+                                android:textColor="@color/text_muted"
+                                tools:text="/ 250" />
+
+                        </LinearLayout>
+
+                        <ProgressBar
+                            android:id="@+id/limitMeterBar"
+                            style="?android:attr/progressBarStyleHorizontal"
+                            android:layout_width="match_parent"
+                            android:layout_height="14dp"
+                            android:max="100"
+                            android:progress="2"
+                            android:progressDrawable="@drawable/limit_meter_progress" />
+
+                        <TextView
+                            android:id="@+id/limitPctText"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:textSize="12sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/text_muted"
+                            android:gravity="center"
+                            tools:text="2% used" />
 
                         <TextView
                             android:id="@+id/limitWarningText"
