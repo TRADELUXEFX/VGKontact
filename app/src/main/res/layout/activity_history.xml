@@ -74,259 +74,262 @@
             android:paddingTop="24dp"
             android:paddingBottom="24dp">
 
+            <!-- ============ TAB SWITCHER (segmented control) ============
+                 Same tab_track_background pattern as
+                 IncreaseLimitActivity's tabReferralButton/tabKeyButton.
+                 No outer card wrapper here (matches IncreaseLimitActivity's
+                 layout - tabs and panels sit directly in the 20dp scroll
+                 padding, not nested inside a second card). -->
             <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:background="@drawable/tab_track_background"
+                android:padding="4dp"
+                android:layout_marginBottom="16dp">
+
+                <Button
+                    android:id="@+id/tabMyReferralsButton"
+                    android:layout_width="0dp"
+                    android:layout_height="44dp"
+                    android:layout_weight="1"
+                    android:text="@string/tab_my_referrals"
+                    android:textAllCaps="false"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:backgroundTint="@android:color/transparent"
+                    android:textColor="@color/text_muted"
+                    app:cornerRadius="12dp"
+                    app:elevation="0dp"
+                    app:rippleColor="@color/vg_green_tint"
+                    android:stateListAnimator="@null"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp" />
+
+                <Button
+                    android:id="@+id/tabLeaderboardButton"
+                    android:layout_width="0dp"
+                    android:layout_height="44dp"
+                    android:layout_weight="1"
+                    android:layout_marginStart="4dp"
+                    android:text="@string/tab_leaderboard"
+                    android:textAllCaps="false"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:backgroundTint="@android:color/transparent"
+                    android:textColor="@color/text_muted"
+                    app:cornerRadius="12dp"
+                    app:elevation="0dp"
+                    app:rippleColor="@color/vg_green_tint"
+                    android:stateListAnimator="@null"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp" />
+
+            </LinearLayout>
+
+            <!-- ============ MY REFERRALS PANEL ============
+                 Own card wrapper (not nested inside a second outer card),
+                 matching how IncreaseLimitActivity wraps its individual
+                 cards directly at the 20dp scroll padding. -->
+            <LinearLayout
+                android:id="@+id/myReferralsPanel"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:background="@drawable/card_background"
-                android:padding="20dp">
+                android:padding="20dp"
+                android:visibility="visible">
 
-                <!-- ============ TAB SWITCHER (segmented control) ============
-                     Same tab_track_background pattern as
-                     IncreaseLimitActivity's tabReferralButton/tabKeyButton. -->
+                <!-- Total referrals stat card -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:background="@drawable/referral_code_background"
+                    android:padding="18dp"
+                    android:layout_marginBottom="16dp">
+
+                    <TextView
+                        android:id="@+id/myReferralsTotalText"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0"
+                        android:textSize="28sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/vg_green" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Total referrals"
+                        android:textSize="12sp"
+                        android:textColor="@color/text_muted"
+                        android:layout_marginTop="2dp" />
+
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="RECENT REFERRALS"
+                    android:textSize="11sp"
+                    android:textAllCaps="true"
+                    android:letterSpacing="0.05"
+                    android:textColor="@color/text_muted"
+                    android:paddingBottom="8dp" />
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="@color/stats_card_border" />
+
+                <!-- List of this user's own referrals, one page at a
+                     time - wired in HistoryActivity.renderMyReferralsPage() -->
+                <LinearLayout
+                    android:id="@+id/myReferralsListContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical" />
+
+                <!-- Shown when this user has made no referrals yet. -->
+                <TextView
+                    android:id="@+id/myReferralsEmptyText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:padding="24dp"
+                    android:gravity="center"
+                    android:textSize="13sp"
+                    android:textColor="@color/text_muted"
+                    android:text="No referrals yet."
+                    android:visibility="gone" />
+
+                <!-- Numbered page row for myReferralsListContainer,
+                     same pattern/drawables as historyPagerScroll below. -->
+                <HorizontalScrollView
+                    android:id="@+id/myReferralsPagerScroll"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:scrollbars="none"
+                    android:visibility="gone">
+
+                    <LinearLayout
+                        android:id="@+id/myReferralsPagerContainer"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center" />
+
+                </HorizontalScrollView>
+
+            </LinearLayout>
+
+            <!-- ============ LEADERBOARD PANEL ============
+                 Own card wrapper, same reasoning as myReferralsPanel above. -->
+            <LinearLayout
+                android:id="@+id/leaderboardPanel"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@drawable/card_background"
+                android:padding="20dp"
+                android:layout_marginTop="16dp"
+                android:visibility="gone">
+
+                <!-- Search field - filters the leaderboard by WhatsApp
+                     number, same style/drawable as GroupsActivity's
+                     groupSearchInput. -->
+                <EditText
+                    android:id="@+id/historySearchInput"
+                    android:layout_width="match_parent"
+                    android:layout_height="46dp"
+                    android:hint="Search by WhatsApp number..."
+                    android:inputType="number"
+                    android:paddingStart="14dp"
+                    android:paddingEnd="14dp"
+                    android:background="@drawable/referral_code_background"
+                    android:textSize="13sp"
+                    android:textColor="@color/vg_dark"
+                    android:textColorHint="@color/text_muted"
+                    android:fontFamily="@font/manrope"
+                    android:imeOptions="actionDone"
+                    android:layout_marginBottom="16dp" />
+
+                <!-- List column headers -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
-                    android:background="@drawable/tab_track_background"
-                    android:padding="4dp"
-                    android:layout_marginBottom="16dp">
-
-                    <Button
-                        android:id="@+id/tabMyReferralsButton"
-                        android:layout_width="0dp"
-                        android:layout_height="44dp"
-                        android:layout_weight="1"
-                        android:text="@string/tab_my_referrals"
-                        android:textAllCaps="false"
-                        android:textSize="13sp"
-                        android:textStyle="bold"
-                        android:backgroundTint="@android:color/transparent"
-                        android:textColor="@color/text_muted"
-                        app:cornerRadius="12dp"
-                        app:elevation="0dp"
-                        app:rippleColor="@color/vg_green_tint"
-                        android:stateListAnimator="@null"
-                        android:insetTop="0dp"
-                        android:insetBottom="0dp" />
-
-                    <Button
-                        android:id="@+id/tabLeaderboardButton"
-                        android:layout_width="0dp"
-                        android:layout_height="44dp"
-                        android:layout_weight="1"
-                        android:layout_marginStart="4dp"
-                        android:text="@string/tab_leaderboard"
-                        android:textAllCaps="false"
-                        android:textSize="13sp"
-                        android:textStyle="bold"
-                        android:backgroundTint="@android:color/transparent"
-                        android:textColor="@color/text_muted"
-                        app:cornerRadius="12dp"
-                        app:elevation="0dp"
-                        app:rippleColor="@color/vg_green_tint"
-                        android:stateListAnimator="@null"
-                        android:insetTop="0dp"
-                        android:insetBottom="0dp" />
-
-                </LinearLayout>
-
-                <!-- ============ MY REFERRALS PANEL ============ -->
-                <LinearLayout
-                    android:id="@+id/myReferralsPanel"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:visibility="visible">
-
-                    <!-- Total referrals stat card -->
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical"
-                        android:gravity="center"
-                        android:background="@drawable/referral_code_background"
-                        android:padding="18dp"
-                        android:layout_marginBottom="16dp">
-
-                        <TextView
-                            android:id="@+id/myReferralsTotalText"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="0"
-                            android:textSize="28sp"
-                            android:textStyle="bold"
-                            android:textColor="@color/vg_green" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Total referrals"
-                            android:textSize="12sp"
-                            android:textColor="@color/text_muted"
-                            android:layout_marginTop="2dp" />
-
-                    </LinearLayout>
+                    android:paddingBottom="8dp">
 
                     <TextView
-                        android:layout_width="match_parent"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:text="RECENT REFERRALS"
+                        android:layout_weight="1"
+                        android:text="@string/history_column_number"
                         android:textSize="11sp"
                         android:textAllCaps="true"
                         android:letterSpacing="0.05"
-                        android:textColor="@color/text_muted"
-                        android:paddingBottom="8dp" />
+                        android:textColor="@color/text_muted" />
 
-                    <View
-                        android:layout_width="match_parent"
-                        android:layout_height="1dp"
-                        android:background="@color/stats_card_border" />
-
-                    <!-- List of this user's own referrals, one page at a
-                         time - wired in HistoryActivity.renderMyReferralsPage() -->
-                    <LinearLayout
-                        android:id="@+id/myReferralsListContainer"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical" />
-
-                    <!-- Shown when this user has made no referrals yet. -->
                     <TextView
-                        android:id="@+id/myReferralsEmptyText"
-                        android:layout_width="match_parent"
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:padding="24dp"
-                        android:gravity="center"
-                        android:textSize="13sp"
-                        android:textColor="@color/text_muted"
-                        android:text="No referrals yet."
-                        android:visibility="gone" />
-
-                    <!-- Numbered page row for myReferralsListContainer,
-                         same pattern/drawables as historyPagerScroll below. -->
-                    <HorizontalScrollView
-                        android:id="@+id/myReferralsPagerScroll"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="16dp"
-                        android:scrollbars="none"
-                        android:visibility="gone">
-
-                        <LinearLayout
-                            android:id="@+id/myReferralsPagerContainer"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:orientation="horizontal"
-                            android:gravity="center" />
-
-                    </HorizontalScrollView>
+                        android:text="@string/history_column_referrals"
+                        android:textSize="11sp"
+                        android:textAllCaps="true"
+                        android:letterSpacing="0.05"
+                        android:textColor="@color/text_muted" />
 
                 </LinearLayout>
 
-                <!-- ============ LEADERBOARD PANEL ============ -->
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="@color/stats_card_border" />
+
+                <!-- Referral leaderboard list - one page of rows at a
+                     time, each row given its own bottom divider except
+                     the last, wired in HistoryActivity.renderCurrentPage() -->
                 <LinearLayout
-                    android:id="@+id/leaderboardPanel"
+                    android:id="@+id/dayListContainer"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
+                    android:orientation="vertical" />
+
+                <!-- Shown instead of dayListContainer rows when a search
+                     query matches nothing. -->
+                <TextView
+                    android:id="@+id/noResultsText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:padding="24dp"
+                    android:gravity="center"
+                    android:textSize="13sp"
+                    android:textColor="@color/text_muted"
+                    android:visibility="gone" />
+
+                <!-- Numbered page row, same pattern/drawables as the old
+                     Groups pager (page_button_selected_background /
+                     page_button_default_background). Hidden entirely
+                     when everything fits on one page. -->
+                <HorizontalScrollView
+                    android:id="@+id/historyPagerScroll"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:scrollbars="none"
                     android:visibility="gone">
 
-                    <!-- Search field - filters the leaderboard by WhatsApp
-                         number, same style/drawable as GroupsActivity's
-                         groupSearchInput. -->
-                    <EditText
-                        android:id="@+id/historySearchInput"
-                        android:layout_width="match_parent"
-                        android:layout_height="46dp"
-                        android:hint="Search by WhatsApp number..."
-                        android:inputType="number"
-                        android:paddingStart="14dp"
-                        android:paddingEnd="14dp"
-                        android:background="@drawable/referral_code_background"
-                        android:textSize="13sp"
-                        android:textColor="@color/vg_dark"
-                        android:textColorHint="@color/text_muted"
-                        android:fontFamily="@font/manrope"
-                        android:imeOptions="actionDone"
-                        android:layout_marginBottom="16dp" />
-
-                    <!-- List column headers -->
                     <LinearLayout
-                        android:layout_width="match_parent"
+                        android:id="@+id/historyPagerContainer"
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
-                        android:paddingBottom="8dp">
+                        android:gravity="center" />
 
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="@string/history_column_number"
-                            android:textSize="11sp"
-                            android:textAllCaps="true"
-                            android:letterSpacing="0.05"
-                            android:textColor="@color/text_muted" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/history_column_referrals"
-                            android:textSize="11sp"
-                            android:textAllCaps="true"
-                            android:letterSpacing="0.05"
-                            android:textColor="@color/text_muted" />
-
-                    </LinearLayout>
-
-                    <View
-                        android:layout_width="match_parent"
-                        android:layout_height="1dp"
-                        android:background="@color/stats_card_border" />
-
-                    <!-- Referral leaderboard list - one page of rows at a
-                         time, each row given its own bottom divider except
-                         the last, wired in HistoryActivity.renderCurrentPage() -->
-                    <LinearLayout
-                        android:id="@+id/dayListContainer"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical" />
-
-                    <!-- Shown instead of dayListContainer rows when a search
-                         query matches nothing. -->
-                    <TextView
-                        android:id="@+id/noResultsText"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:padding="24dp"
-                        android:gravity="center"
-                        android:textSize="13sp"
-                        android:textColor="@color/text_muted"
-                        android:visibility="gone" />
-
-                    <!-- Numbered page row, same pattern/drawables as the old
-                         Groups pager (page_button_selected_background /
-                         page_button_default_background). Hidden entirely
-                         when everything fits on one page. -->
-                    <HorizontalScrollView
-                        android:id="@+id/historyPagerScroll"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="16dp"
-                        android:scrollbars="none"
-                        android:visibility="gone">
-
-                        <LinearLayout
-                            android:id="@+id/historyPagerContainer"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:orientation="horizontal"
-                            android:gravity="center" />
-
-                    </HorizontalScrollView>
-
-                </LinearLayout>
+                </HorizontalScrollView>
 
             </LinearLayout>
 
