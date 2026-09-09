@@ -1,8 +1,12 @@
 package com.vgkontact.app
 
 import android.app.Activity
+import android.graphics.Canvas
 import android.graphics.Color
-import android.graphics.drawable.GradientDrawable
+import android.graphics.Paint
+import android.graphics.PorterDuff
+import android.graphics.PorterDuffXfermode
+import android.graphics.RectF
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -12,16 +16,18 @@ import android.widget.LinearLayout
 import android.widget.TextView
 
 /**
- * First-run dashboard tour: a simple green ring drawn around one real
- * button at a time, plus a fixed tooltip card explaining it.
+ * First-run dashboard tour: a full-screen dimming scrim with a rounded-rect
+ * cutout ("spotlight") around one real button at a time, plus a fixed
+ * tooltip card explaining it. The cutout is punched with PorterDuff.CLEAR
+ * on a hardware layer, so everything outside the target stays dark and
+ * only the target itself reads at full brightness.
  *
- * Deliberately simple - no canvas hole-punching, no scroll-position
- * syncing, no multi-frame post{} chains. The ring is an ordinary sibling
- * View positioned with plain pixel math from getLocationInWindow(), and
- * the tooltip always docks at a fixed top or bottom spot. If a target is
- * off-screen behind a scrollable area, this does not auto-scroll to it -
- * callers should pick targets that are already visible, or call
- * scrollTo() themselves before showIfNeeded().
+ * Deliberately simple otherwise - no scroll-position syncing, no
+ * multi-frame post{} chains. The scrim is an ordinary sibling View
+ * positioned to fill the root, and the tooltip always docks at a fixed
+ * top or bottom spot. If a target is off-screen behind a scrollable area,
+ * this does not auto-scroll to it - callers should pick targets that are
+ * already visible, or call scrollTo() themselves before showIfNeeded().
  *
  * Runs once per install, gated by UserPrefs.isWalkthroughDone(). Call
  * showIfNeeded(activity, steps) after the screen has been laid out
@@ -45,20 +51,20 @@ object CoachMarkOverlay {
         // screen, including a floating bottom nav bar in its own layout.
         val root = activity.findViewById<ViewGroup>(android.R.id.content) ?: return
 
-        val ring = buildRing(activity)
+        val scrim = SpotlightScrimView(activity)
         val tooltip = TooltipView(activity)
 
         var index = 0
 
         fun finish() {
             UserPrefs.setWalkthroughDone(activity)
-            root.removeView(ring)
+            root.removeView(scrim)
             root.removeView(tooltip.root)
         }
 
         fun showStep() {
             val step = steps[index]
-            positionRing(ring, step.target, root)
+            positionSpotlight(scrim, step.target, root)
             tooltip.dockAt(top = !step.dockAtBottom)
             tooltip.bind(
                 title = step.title,
@@ -78,13 +84,16 @@ object CoachMarkOverlay {
         }
         tooltip.onSkip = { finish() }
 
-        root.addView(ring, ring.layoutParams)
+        root.addView(scrim, FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.MATCH_PARENT
+        ))
         root.addView(tooltip.root, tooltip.root.layoutParams)
 
         // A single post{} isn't enough: on first run the dashboard's stats
         // card is still reflowing (sync stats/limit numbers populate async
         // after onCreate), so the very first target can still measure 0x0
-        // or a stale size one frame later, which is what drew the ring
+        // or a stale size one frame later, which is what drew the spotlight
         // around the whole card instead of the small button. Wait for an
         // actual completed layout pass on the target - via
         // OnGlobalLayoutListener - rather than guessing a frame count.
@@ -110,38 +119,76 @@ object CoachMarkOverlay {
     }
 
     /**
-     * Moves the ring to sit around target's current on-screen position.
-     * Plain pixel math - getLocationInWindow() for both views, subtract to
-     * get target's position relative to root, no scroll offsets involved
-     * because both are read fresh at call time.
+     * Moves the spotlight cutout to sit around target's current on-screen
+     * position. Plain pixel math - getLocationInWindow() for both views,
+     * subtract to get target's position relative to root, no scroll
+     * offsets involved because both are read fresh at call time.
      */
-    private fun positionRing(ring: View, target: View, root: View) {
+    private fun positionSpotlight(scrim: SpotlightScrimView, target: View, root: View) {
         val t = IntArray(2)
         target.getLocationInWindow(t)
         val r = IntArray(2)
         root.getLocationInWindow(r)
 
-        val pad = (6 * ring.resources.displayMetrics.density).toInt()
-        val params = ring.layoutParams as FrameLayout.LayoutParams
-        params.width = target.width + pad * 2
-        params.height = target.height + pad * 2
-        params.leftMargin = t[0] - r[0] - pad
-        params.topMargin = t[1] - r[1] - pad
-        params.gravity = Gravity.TOP or Gravity.START
-        ring.layoutParams = params
+        val pad = 6 * scrim.resources.displayMetrics.density
+        val left = (t[0] - r[0]).toFloat() - pad
+        val top = (t[1] - r[1]).toFloat() - pad
+        scrim.setHole(
+            RectF(left, top, left + target.width + pad * 2, top + target.height + pad * 2)
+        )
     }
 
-    private fun buildRing(activity: Activity): View {
-        val density = activity.resources.displayMetrics.density
-        val ring = View(activity)
-        ring.background = GradientDrawable().apply {
-            shape = GradientDrawable.RECTANGLE
-            cornerRadius = 16 * density
-            setStroke((3 * density).toInt(), Color.parseColor("#1FAA59"))
+    /**
+     * Full-screen dimming scrim that punches a rounded-rect hole around
+     * the current target, with a thin green stroke tracing the cutout
+     * edge for definition against whatever's behind it.
+     */
+    private class SpotlightScrimView(activity: Activity) : View(activity) {
+        private val density = activity.resources.displayMetrics.density
+        private val cornerRadius = 16 * density
+        private val hole = RectF()
+
+        private val dimPaint = Paint().apply {
+            color = Color.parseColor("#CC000000") // ~80% black
+            isAntiAlias = true
         }
-        ring.layoutParams = FrameLayout.LayoutParams(0, 0)
-        ring.elevation = 12 * density
-        return ring
+        private val clearPaint = Paint().apply {
+            isAntiAlias = true
+            xfermode = PorterDuffXfermode(PorterDuff.Mode.CLEAR)
+        }
+        private val strokePaint = Paint().apply {
+            style = Paint.Style.STROKE
+            strokeWidth = 3 * density
+            color = Color.parseColor("#1FAA59")
+            isAntiAlias = true
+        }
+
+        init {
+            // CLEAR blending only works correctly on a hardware layer -
+            // without this the "hole" would just draw black-on-black
+            // instead of actually cutting through to the views beneath.
+            setLayerType(LAYER_TYPE_HARDWARE, null)
+        }
+
+        fun setHole(rect: RectF) {
+            hole.set(rect)
+            invalidate()
+        }
+
+        override fun onDraw(canvas: Canvas) {
+            super.onDraw(canvas)
+            if (hole.isEmpty) return
+            canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), dimPaint)
+            canvas.drawRoundRect(hole, cornerRadius, cornerRadius, clearPaint)
+            canvas.drawRoundRect(hole, cornerRadius, cornerRadius, strokePaint)
+        }
+
+        // Block every touch except inside the cutout, so the dimmed area
+        // can't be tapped through to whatever's underneath - only the
+        // spotlighted target itself stays interactive during the tour.
+        override fun onTouchEvent(event: android.view.MotionEvent): Boolean {
+            return !hole.contains(event.x, event.y)
+        }
     }
 
     /**
