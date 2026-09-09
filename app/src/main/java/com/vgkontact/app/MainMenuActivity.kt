@@ -51,6 +51,7 @@ class MainMenuActivity : AppCompatActivity() {
     private lateinit var notificationIcon: ImageView
     private lateinit var notificationUnreadDot: View
     private lateinit var syncFrequencyPill: LinearLayout
+    private lateinit var btnChangeSyncFrequency: LinearLayout
     private lateinit var syncFrequencyText: TextView
     private lateinit var profileIcon: ImageView
     private lateinit var planPreviewText: TextView
@@ -97,6 +98,7 @@ class MainMenuActivity : AppCompatActivity() {
         notificationIcon = findViewById(R.id.notificationIcon)
         notificationUnreadDot = findViewById(R.id.notificationUnreadDot)
         syncFrequencyPill = findViewById(R.id.syncFrequencyPill)
+        btnChangeSyncFrequency = findViewById(R.id.btnChangeSyncFrequency)
         syncFrequencyText = findViewById(R.id.syncFrequencyText)
         profileIcon = findViewById(R.id.profileIcon)
         planPreviewText = findViewById(R.id.planPreviewText)
@@ -165,7 +167,7 @@ class MainMenuActivity : AppCompatActivity() {
         renderNotificationDot()
 
         renderSyncFrequencyPill()
-        syncFrequencyPill.setOnClickListener {
+        btnChangeSyncFrequency.setOnClickListener {
             showSyncFrequencyMenu()
         }
 
@@ -429,7 +431,7 @@ class MainMenuActivity : AppCompatActivity() {
             container.addView(row)
         }
 
-        popup.showAsDropDown(syncFrequencyPill)
+        popup.showAsDropDown(btnChangeSyncFrequency)
     }
 
     /**
