@@ -64,7 +64,7 @@
 
     <!-- Upgrade Plan -->
     <string name="title_upgrade_plan">Unlock More Kontacts</string>
-    <string name="upgrade_plan_coming_soon">Enter a key code to unlock more contacts limit.</string>
+    <string name="upgrade_plan_coming_soon">Enter a key code to unlock more status viewers.</string>
     <string name="hint_key_code">VGK-XXXX-XXXX</string>
     <string name="btn_redeem_key">Unlock</string>
     <string name="key_redeem_empty">Please enter a key code</string>
@@ -90,7 +90,7 @@
     <string name="subtitle_grow_your_views">Refer friends, get more status views</string>
 
     <string name="title_increase_limit">Increase Status Viewers</string>
-    <string name="subtitle_increase_limit">Redeem a key or refer friends to raise your limit</string>
+    <string name="subtitle_increase_limit">Redeem a key or refer friends to grow status viewers</string>
     <string name="tab_referral_rewards">Referral rewards</string>
     <string name="tab_redeem_key">Redeem a key</string>
     <string name="label_your_status_viewers">Your status viewers</string>
