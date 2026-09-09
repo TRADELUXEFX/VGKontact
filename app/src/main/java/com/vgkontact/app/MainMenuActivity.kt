@@ -175,6 +175,10 @@ class MainMenuActivity : AppCompatActivity() {
     private fun showDashboardTourIfNeeded() {
         val navUpgradeTab = findViewById<View>(R.id.navUpgradeTab)
         val navHistoryTab = findViewById<View>(R.id.navHistoryTab)
+        // limitBlock is the "CONTACT LIMIT / 1 of 5 / progress bar" block
+        // specifically - statsCard also wraps syncKontactButton beneath it,
+        // so highlighting statsCard lit up the Sync button too.
+        val limitBlock = findViewById<View>(R.id.limitBlock)
 
         CoachMarkOverlay.showIfNeeded(
             this,
@@ -185,7 +189,7 @@ class MainMenuActivity : AppCompatActivity() {
                     "Tap Sync Kontact to add your WhatsApp and referral numbers."
                 ),
                 CoachMarkOverlay.Step(
-                    statsCard,
+                    limitBlock,
                     "Your contact limit",
                     "You can only add a few contacts for free. Check your limit here."
                 ),
