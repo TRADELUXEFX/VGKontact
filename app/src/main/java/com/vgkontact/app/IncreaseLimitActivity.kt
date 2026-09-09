@@ -48,6 +48,12 @@ class IncreaseLimitActivity : AppCompatActivity() {
         const val EXTRA_INITIAL_TAB = "initial_tab"
         const val TAB_KEY = "key"
         const val TAB_REFERRAL = "referral"
+
+        // Selling rate for the contact amount picker: ₦250 per 250
+        // contacts. Both sides move together so the picker only ever
+        // lands on amounts we actually sell.
+        private const val STEP_CONTACTS = 250
+        private const val RATE_PER_STEP = 250
     }
 
     // Tabs
@@ -71,6 +77,17 @@ class IncreaseLimitActivity : AppCompatActivity() {
     private lateinit var redeemKeyButton: Button
     private lateinit var noCodeContactUsButton: Button
     private lateinit var redeemProgressBar: ProgressBar
+
+    // Contact amount picker - lets the user pick how many contacts they
+    // want before purchasing a code. STEP_CONTACTS/RATE_PER_STEP define
+    // the fixed selling rate (₦250 per 250 contacts); the stepper only
+    // moves in whole steps so the total always lines up with a purchasable
+    // amount, without exposing that "unit" framing in the UI copy.
+    private lateinit var contactsMinusButton: Button
+    private lateinit var contactsPlusButton: Button
+    private lateinit var contactsAmountText: TextView
+    private lateinit var contactsTotalPriceText: TextView
+    private var selectedContacts: Int = STEP_CONTACTS
 
     // Campaigns are only fetched once, the first time the Referral Rewards
     // tab is shown - not re-fetched every time the user switches back to
@@ -106,6 +123,11 @@ class IncreaseLimitActivity : AppCompatActivity() {
         noCodeContactUsButton = findViewById(R.id.noCodeContactUsButton)
         redeemProgressBar = findViewById(R.id.redeemProgressBar)
 
+        contactsMinusButton = findViewById(R.id.contactsMinusButton)
+        contactsPlusButton = findViewById(R.id.contactsPlusButton)
+        contactsAmountText = findViewById(R.id.contactsAmountText)
+        contactsTotalPriceText = findViewById(R.id.contactsTotalPriceText)
+
         upgradeSubtitleText.text = getString(R.string.upgrade_plan_coming_soon)
 
         // My Referral Code - same as ProfileActivity: this is simply the
@@ -123,6 +145,18 @@ class IncreaseLimitActivity : AppCompatActivity() {
 
         redeemKeyButton.setOnClickListener { redeemKey() }
         noCodeContactUsButton.setOnClickListener { openWhatsAppForUnlockCode() }
+
+        contactsMinusButton.setOnClickListener {
+            if (selectedContacts > STEP_CONTACTS) {
+                selectedContacts -= STEP_CONTACTS
+                renderContactsPicker()
+            }
+        }
+        contactsPlusButton.setOnClickListener {
+            selectedContacts += STEP_CONTACTS
+            renderContactsPicker()
+        }
+        renderContactsPicker()
 
         // XML no longer hardcodes which tab looks active/inactive - both
         // buttons start visually neutral, and this call is what actually
@@ -295,6 +329,16 @@ class IncreaseLimitActivity : AppCompatActivity() {
         Toast.makeText(this, "Referral code copied", Toast.LENGTH_SHORT).show()
     }
 
+    // ==================== Contact amount picker ====================
+
+    private fun renderContactsPicker() {
+        contactsAmountText.text = "$selectedContacts contacts"
+        val total = (selectedContacts / STEP_CONTACTS) * RATE_PER_STEP
+        contactsTotalPriceText.text = "₦$total"
+        contactsMinusButton.isEnabled = selectedContacts > STEP_CONTACTS
+        contactsMinusButton.alpha = if (contactsMinusButton.isEnabled) 1f else 0.4f
+    }
+
     // ==================== Redeem a key ====================
 
     private fun redeemKey() {
@@ -340,7 +384,8 @@ class IncreaseLimitActivity : AppCompatActivity() {
     }
 
     private fun openWhatsAppForUnlockCode() {
-        val messageText = "Hi VG Kontact, I don't have an unlock code yet and would like to join more groups."
+        val total = (selectedContacts / STEP_CONTACTS) * RATE_PER_STEP
+        val messageText = "Hi VG Kontact, I'd like to purchase a code for $selectedContacts contacts (₦$total)."
         val message = Uri.encode(messageText)
         val uri = Uri.parse("https://wa.me/$CONTACT_US_WHATSAPP_NUMBER?text=$message")
         try {
