@@ -339,7 +339,7 @@ class MainMenuActivity : AppCompatActivity() {
      */
     private fun renderSyncFrequencyPill() {
         val hours = UserPrefs.getNotificationFrequencyHours(this)
-        syncFrequencyText.text = "SYNC ${hours}H"
+        syncFrequencyText.text = "Syncs every ${hours}h"
     }
 
     /**
