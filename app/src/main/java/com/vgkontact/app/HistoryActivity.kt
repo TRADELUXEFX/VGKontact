@@ -245,7 +245,7 @@ class HistoryActivity : AppCompatActivity() {
 
     /** Opens WhatsApp to [number] with a pre-filled nudge message, same intent pattern as ProfileActivity.openWhatsAppContactUs. */
     private fun openWhatsAppNudge(number: String) {
-        val message = Uri.encode("Hi, have you synced your VG Kontact yet?")
+        val message = Uri.encode("Hi \uD83D\uDE42 you registered under me on VGKONTACT")
         val uri = Uri.parse("https://wa.me/${toWhatsAppNumber(number)}?text=$message")
         try {
             startActivity(Intent(Intent.ACTION_VIEW, uri))
