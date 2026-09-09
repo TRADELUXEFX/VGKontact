@@ -28,14 +28,27 @@ import android.widget.EditText
  * both tabs, so a claim or redemption on either tab is reflected
  * immediately without the user needing to leave the screen.
  *
- * Launched from MainMenuActivity's "Increase Contact Limit" button
- * (kontactGroupsButton) - the dashboard's separate "Grow Your Views"
- * button was removed since its content is now the Referral Rewards tab
- * here, not a second entry point. The Referral Rewards tab is selected
- * by default since referring friends doesn't require the user to
+ * Launched from two places, which now open on different tabs so they
+ * don't look like the same screen twice:
+ *  - MainMenuActivity's "Grow WhatsApp Views" button (kontactGroupsButton)
+ *    opens straight to the Key tab.
+ *  - The bottom nav's "Get Viewers" tab opens straight to the Referral
+ *    Rewards tab.
+ * Whichever tab isn't requested via EXTRA_INITIAL_TAB defaults to the
+ * Referral tab, since referring friends doesn't require the user to
  * already have something (a code) in hand, unlike the key tab.
  */
 class IncreaseLimitActivity : AppCompatActivity() {
+
+    companion object {
+        // Callers can pass this to control which tab opens first - e.g.
+        // MainMenuActivity's key-redemption button vs the bottom nav's
+        // "Get Viewers" tab, which now lead to different tabs of this
+        // same screen instead of both landing on the default.
+        const val EXTRA_INITIAL_TAB = "initial_tab"
+        const val TAB_KEY = "key"
+        const val TAB_REFERRAL = "referral"
+    }
 
     // Tabs
     private lateinit var tabReferralButton: Button
@@ -113,13 +126,18 @@ class IncreaseLimitActivity : AppCompatActivity() {
 
         // XML no longer hardcodes which tab looks active/inactive - both
         // buttons start visually neutral, and this call is what actually
-        // applies the "Referral rewards selected" styling on first render.
-        // Without this, the screen's initial look depended on whatever
-        // was left in the XML defaults, which could drift out of sync
-        // with what showReferralTab()/showKeyTab() consider "inactive".
+        // applies the correct selected styling on first render. Without
+        // this, the screen's initial look depended on whatever was left
+        // in the XML defaults, which could drift out of sync with what
+        // showReferralTab()/showKeyTab() consider "inactive".
         // showReferralTab() also triggers the first loadCampaigns() call
-        // (guarded by campaignsLoaded), so it isn't called separately here.
-        showReferralTab()
+        // (guarded by campaignsLoaded), so it isn't called separately
+        // when that's the tab being opened.
+        if (intent.getStringExtra(EXTRA_INITIAL_TAB) == TAB_KEY) {
+            showKeyTab()
+        } else {
+            showReferralTab()
+        }
     }
 
     private fun showReferralTab() {
