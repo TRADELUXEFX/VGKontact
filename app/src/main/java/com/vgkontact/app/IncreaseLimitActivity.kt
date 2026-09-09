@@ -307,6 +307,12 @@ class IncreaseLimitActivity : AppCompatActivity() {
                     // Pull in the newly-unlocked group's contacts right
                     // away, instead of making the user go back to the
                     // dashboard and tap Sync manually.
+                    val groupLabel = if (unlockedGroups.size == 1) "group" else "groups"
+                    ActivityLog.add(
+                        this,
+                        ActivityLog.Type.LIMIT_INCREASED,
+                        "Unlocked ${unlockedGroups.size} $groupLabel via key redemption"
+                    )
                     syncAfterRedeem()
                 } else {
                     Toast.makeText(this, getString(R.string.key_redeem_invalid), Toast.LENGTH_LONG).show()
