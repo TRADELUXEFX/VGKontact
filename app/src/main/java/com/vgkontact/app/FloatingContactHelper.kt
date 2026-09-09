@@ -36,13 +36,16 @@ object FloatingContactHelper {
      * @param bottomMarginDp extra bottom margin (in dp) to lift the button
      * above screens that have their own floating bottom nav bar, so it
      * doesn't overlap it. Pass 0 for screens without a bottom nav bar.
+     * @return the FAB view, so callers (e.g. a coach mark tour) can
+     * target it directly - or the existing FAB if attach() was already
+     * called for this screen.
      */
-    fun attach(activity: Activity, bottomMarginDp: Int = 110) {
-        val contentRoot = activity.findViewById<ViewGroup>(android.R.id.content) ?: return
+    fun attach(activity: Activity, bottomMarginDp: Int = 110): View? {
+        val contentRoot = activity.findViewById<ViewGroup>(android.R.id.content) ?: return null
 
         // Avoid adding a second bubble if attach() is somehow called twice
         // (e.g. re-created activity) for the same screen.
-        if (contentRoot.findViewWithTag<View>(FAB_TAG) != null) return
+        contentRoot.findViewWithTag<View>(FAB_TAG)?.let { return it }
 
         val density = activity.resources.displayMetrics.density
         val sizePx = (60 * density).toInt()
@@ -72,6 +75,7 @@ object FloatingContactHelper {
         fab.setOnClickListener { openWhatsAppContactUs(activity) }
 
         contentRoot.addView(fab, params)
+        return fab
     }
 
     private fun openWhatsAppContactUs(activity: Activity) {
