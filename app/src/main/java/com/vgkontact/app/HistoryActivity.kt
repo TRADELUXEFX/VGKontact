@@ -56,6 +56,7 @@ class HistoryActivity : AppCompatActivity() {
     private lateinit var tabLeaderboardButton: Button
     private lateinit var myReferralsPanel: LinearLayout
     private lateinit var leaderboardPanel: LinearLayout
+    private lateinit var headerTotalPill: LinearLayout
 
     private lateinit var myReferralsTotalText: TextView
     private lateinit var myReferralsSearchInput: EditText
@@ -101,6 +102,7 @@ class HistoryActivity : AppCompatActivity() {
         leaderboardPanel = findViewById(R.id.leaderboardPanel)
 
         myReferralsTotalText = findViewById(R.id.myReferralsTotalText)
+        headerTotalPill = findViewById(R.id.headerTotalPill)
         myReferralsSearchInput = findViewById(R.id.myReferralsSearchInput)
         myReferralsListContainer = findViewById(R.id.myReferralsListContainer)
         myReferralsEmptyText = findViewById(R.id.myReferralsEmptyText)
@@ -138,6 +140,7 @@ class HistoryActivity : AppCompatActivity() {
     private fun showMyReferralsTab() {
         myReferralsPanel.visibility = View.VISIBLE
         leaderboardPanel.visibility = View.GONE
+        headerTotalPill.visibility = View.VISIBLE
         tabMyReferralsButton.backgroundTintList = ContextCompat.getColorStateList(this, R.color.white)
         tabMyReferralsButton.setTextColor(ContextCompat.getColor(this, R.color.vg_green))
         tabLeaderboardButton.backgroundTintList = ContextCompat.getColorStateList(this, android.R.color.transparent)
@@ -151,6 +154,7 @@ class HistoryActivity : AppCompatActivity() {
     private fun showLeaderboardTab() {
         myReferralsPanel.visibility = View.GONE
         leaderboardPanel.visibility = View.VISIBLE
+        headerTotalPill.visibility = View.GONE
         tabLeaderboardButton.backgroundTintList = ContextCompat.getColorStateList(this, R.color.white)
         tabLeaderboardButton.setTextColor(ContextCompat.getColor(this, R.color.vg_green))
         tabMyReferralsButton.backgroundTintList = ContextCompat.getColorStateList(this, android.R.color.transparent)
@@ -271,16 +275,31 @@ class HistoryActivity : AppCompatActivity() {
             val textRow = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = android.view.Gravity.CENTER_VERTICAL
-                setPadding(0, 26, 0, 26)
+                setPadding(0, 18, 0, 18)
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT
                 )
             }
 
+            // Avatar circle - purely decorative (no photo data available),
+            // matches Option 1's row style.
+            val avatarSizePx = (34 * resources.displayMetrics.density).toInt()
+            val avatar = ImageView(this).apply {
+                setImageResource(R.drawable.ic_profile)
+                setColorFilter(ContextCompat.getColor(this@HistoryActivity, R.color.vg_green))
+                background = ContextCompat.getDrawable(this@HistoryActivity, R.drawable.avatar_circle_tint_background)
+                val paddingPx = (7 * resources.displayMetrics.density).toInt()
+                setPadding(paddingPx, paddingPx, paddingPx, paddingPx)
+                layoutParams = LinearLayout.LayoutParams(avatarSizePx, avatarSizePx)
+            }
+
             val textColumn = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
-                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+                val marginPx = (12 * resources.displayMetrics.density).toInt()
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
+                    marginStart = marginPx
+                }
             }
 
             val numberView = TextView(this).apply {
@@ -312,6 +331,7 @@ class HistoryActivity : AppCompatActivity() {
                 setOnClickListener { openWhatsAppNudge(entry.whatsapp) }
             }
 
+            textRow.addView(avatar)
             textRow.addView(textColumn)
             textRow.addView(nudgeIcon)
             row.addView(textRow)
