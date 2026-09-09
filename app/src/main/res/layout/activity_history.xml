@@ -144,28 +144,28 @@
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
+                    android:orientation="horizontal"
                     android:gravity="center"
                     android:background="@drawable/referral_code_background"
                     android:padding="18dp"
                     android:layout_marginBottom="16dp">
 
                     <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Total referrals"
+                        android:textSize="14sp"
+                        android:textColor="@color/text_muted" />
+
+                    <TextView
                         android:id="@+id/myReferralsTotalText"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="0"
-                        android:textSize="28sp"
+                        android:textSize="20sp"
                         android:textStyle="bold"
-                        android:textColor="@color/vg_green" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Total referrals"
-                        android:textSize="12sp"
-                        android:textColor="@color/text_muted"
-                        android:layout_marginTop="2dp" />
+                        android:textColor="@color/vg_green"
+                        android:layout_marginStart="8dp" />
 
                 </LinearLayout>
 
@@ -180,7 +180,7 @@
                     android:inputType="number"
                     android:paddingStart="14dp"
                     android:paddingEnd="14dp"
-                    android:background="@drawable/referral_code_background"
+                    android:background="@drawable/rect_box_background"
                     android:textSize="13sp"
                     android:textColor="@color/vg_dark"
                     android:textColorHint="@color/text_muted"
