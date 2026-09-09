@@ -34,8 +34,13 @@ object CoachMarkOverlay {
         if (UserPrefs.isWalkthroughDone(activity)) return
         if (steps.isEmpty()) return
 
-        val root = activity.findViewById<ViewGroup>(android.R.id.content)
-            .getChildAt(0) as? ViewGroup ?: return
+        // Attach to the content root itself (not its first child) so the
+        // overlay and tooltip are guaranteed to be added last / drawn last
+        // regardless of how many siblings the activity's layout has (e.g.
+        // MainMenuActivity's root FrameLayout has both the scrollable
+        // dashboard AND the floating bottom_nav_bar as direct children -
+        // grabbing only childAt(0) missed that structure entirely).
+        val root = activity.findViewById<ViewGroup>(android.R.id.content) ?: return
 
         var index = 0
 
@@ -253,12 +258,19 @@ object CoachMarkOverlay {
         }
 
         init {
-            setLayerType(LAYER_TYPE_SOFTWARE, null)
-            // The floating bottom nav bar (bottom_nav_bar.xml) renders at
-            // elevation 10dp, above this view's default 0dp - without this,
-            // the nav bar draws on top of the punched-out hole instead of
-            // being revealed through it, so steps 4/5 (which target nav
-            // tabs) showed no visible cutout at all.
+            // NOTE: deliberately NOT using LAYER_TYPE_SOFTWARE here. Forcing
+            // a software layer on the whole view takes it out of the normal
+            // hardware-accelerated RenderNode pipeline, which is what
+            // Android actually uses to compare `elevation` between sibling
+            // views. The floating bottom nav bar (bottom_nav_bar.xml) draws
+            // at elevation 10dp using a hardware layer; a software-layer
+            // overlay can't be reliably Z-compared against it, so the nav
+            // bar kept winning and painting over the punched-out hole -
+            // steps 4/5 (targeting nav tabs) showed no visible cutout.
+            // Instead we punch the hole into an offscreen layer via
+            // saveLayer() below and composite that onto this (still
+            // hardware-accelerated) view's canvas, so elevation ordering
+            // against the nav bar works normally.
             elevation = 12 * resources.displayMetrics.density
         }
 
@@ -275,11 +287,21 @@ object CoachMarkOverlay {
 
         override fun onDraw(canvas: Canvas) {
             super.onDraw(canvas)
+            // Composite the scrim + hole on an offscreen layer instead of
+            // drawing PorterDuff.CLEAR straight onto the view's own canvas.
+            // saveLayer() gives us a transparent buffer to punch a real
+            // hole into; that buffer is then drawn as a single opaque-ish
+            // bitmap onto the (hardware-accelerated) view canvas, so this
+            // view's elevation is compared normally against sibling views
+            // like the bottom nav bar instead of being defeated by a
+            // software layer.
+            val layerId = canvas.saveLayer(0f, 0f, width.toFloat(), height.toFloat(), null)
             canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), scrimPaint)
             targetRect?.let { rect ->
                 canvas.drawRoundRect(rect, 16f, 16f, holePaint)
                 canvas.drawRoundRect(rect, 16f, 16f, strokePaint)
             }
+            canvas.restoreToCount(layerId)
         }
     }
 }
