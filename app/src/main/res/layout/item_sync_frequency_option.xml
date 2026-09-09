@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/syncFrequencyOptionText"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:textColor="@color/vg_dark"
+    android:textSize="15sp"
+    android:fontFamily="@font/baloo2"
+    android:paddingStart="20dp"
+    android:paddingEnd="20dp"
+    android:paddingTop="14dp"
+    android:paddingBottom="14dp"
+    android:background="?android:attr/selectableItemBackground"
+    android:clickable="true"
+    android:focusable="true"
+    tools:text="Every 24h"
+    xmlns:tools="http://schemas.android.com/tools" />
