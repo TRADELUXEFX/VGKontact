@@ -183,15 +183,13 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
                 android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:clickable="true"
-                android:focusable="true">
+                android:gravity="center_vertical">
 
                 <ImageView
                     android:layout_width="14dp"
                     android:layout_height="14dp"
                     android:layout_marginEnd="8dp"
-                    android:src="@drawable/ic_sync"
+                    android:src="@drawable/ic_alarm"
                     app:tint="@color/white" />
 
                 <TextView
@@ -204,22 +202,34 @@
                     android:fontFamily="@font/baloo2"
                     tools:text="Syncs every 24 hours" />
 
-                <TextView
+                <!-- Real tappable button (was plain "Change ⌄" text in the
+                     row) - own pill background + ripple so it reads as a
+                     button rather than an inline label. -->
+                <LinearLayout
+                    android:id="@+id/btnChangeSyncFrequency"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/label_change_sync_frequency"
-                    android:textSize="12sp"
-                    android:textStyle="bold"
-                    android:textColor="@color/white"
-                    android:fontFamily="@font/baloo2" />
+                    android:layout_marginStart="8dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:paddingStart="12dp"
+                    android:paddingEnd="12dp"
+                    android:paddingTop="6dp"
+                    android:paddingBottom="6dp"
+                    android:background="@drawable/change_sync_button_background"
+                    android:clickable="true"
+                    android:focusable="true">
 
-                <ImageView
-                    android:layout_width="10dp"
-                    android:layout_height="10dp"
-                    android:layout_marginStart="5dp"
-                    android:src="@drawable/ic_arrow_forward"
-                    android:rotation="90"
-                    app:tint="@color/white" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/label_change_sync_frequency"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/white"
+                        android:fontFamily="@font/baloo2" />
+
+                </LinearLayout>
 
             </LinearLayout>
 
