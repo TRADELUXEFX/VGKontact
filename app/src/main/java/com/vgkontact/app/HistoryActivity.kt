@@ -1,5 +1,7 @@
 package com.vgkontact.app
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
@@ -8,6 +10,7 @@ import android.view.View
 import android.widget.Button
 import android.widget.EditText
 import android.widget.HorizontalScrollView
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
@@ -55,8 +58,10 @@ class HistoryActivity : AppCompatActivity() {
     private lateinit var leaderboardPanel: LinearLayout
 
     private lateinit var myReferralsTotalText: TextView
+    private lateinit var myReferralsSearchInput: EditText
     private lateinit var myReferralsListContainer: LinearLayout
     private lateinit var myReferralsEmptyText: TextView
+    private lateinit var myReferralsNoResultsText: TextView
     private lateinit var myReferralsPagerScroll: HorizontalScrollView
     private lateinit var myReferralsPagerContainer: LinearLayout
 
@@ -69,7 +74,9 @@ class HistoryActivity : AppCompatActivity() {
     private var leaderboardLoaded = false
 
     private var myReferrals: List<MyReferral> = emptyList()
+    private var filteredMyReferrals: List<MyReferral> = emptyList()
     private var myReferralsCurrentPage = 0
+    private var myReferralsSearchQuery = ""
     private var myReferralsLoaded = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -94,8 +101,10 @@ class HistoryActivity : AppCompatActivity() {
         leaderboardPanel = findViewById(R.id.leaderboardPanel)
 
         myReferralsTotalText = findViewById(R.id.myReferralsTotalText)
+        myReferralsSearchInput = findViewById(R.id.myReferralsSearchInput)
         myReferralsListContainer = findViewById(R.id.myReferralsListContainer)
         myReferralsEmptyText = findViewById(R.id.myReferralsEmptyText)
+        myReferralsNoResultsText = findViewById(R.id.myReferralsNoResultsText)
         myReferralsPagerScroll = findViewById(R.id.myReferralsPagerScroll)
         myReferralsPagerContainer = findViewById(R.id.myReferralsPagerContainer)
 
@@ -105,6 +114,15 @@ class HistoryActivity : AppCompatActivity() {
             override fun afterTextChanged(s: Editable?) {
                 currentSearchQuery = s?.toString()?.trim() ?: ""
                 applySearch()
+            }
+        })
+
+        myReferralsSearchInput.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                myReferralsSearchQuery = s?.toString()?.trim() ?: ""
+                applyMyReferralsSearch()
             }
         })
 
@@ -146,6 +164,7 @@ class HistoryActivity : AppCompatActivity() {
     private fun loadMyReferrals() {
         myReferralsListContainer.removeAllViews()
         myReferralsEmptyText.visibility = View.GONE
+        myReferralsNoResultsText.visibility = View.GONE
         myReferralsPagerScroll.visibility = View.GONE
 
         SheetSync.fetchMyReferrals(this) { list, error ->
@@ -154,14 +173,14 @@ class HistoryActivity : AppCompatActivity() {
                     myReferralsLoaded = true
                     myReferrals = list
                     myReferralsTotalText.text = list.size.toString()
-                    myReferralsCurrentPage = 0
+                    myReferralsSearchQuery = ""
+                    myReferralsSearchInput.setText("")
                     if (list.isEmpty()) {
                         myReferralsEmptyText.visibility = View.VISIBLE
                         myReferralsEmptyText.text = "No referrals yet."
                         return@runOnUiThread
                     }
-                    renderMyReferralsPage()
-                    renderMyReferralsPager()
+                    applyMyReferralsSearch()
                 } else {
                     myReferralsEmptyText.visibility = View.VISIBLE
                     val message = if (error == "NO_INTERNET") {
@@ -176,15 +195,53 @@ class HistoryActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Filters [myReferrals] by [myReferralsSearchQuery] (matched against
+     * the WhatsApp number, same approach as [applySearch]), resets to
+     * page 0, and re-renders the list and pager.
+     */
+    private fun applyMyReferralsSearch() {
+        myReferralsCurrentPage = 0
+
+        filteredMyReferrals = if (myReferralsSearchQuery.isEmpty()) {
+            myReferrals
+        } else {
+            myReferrals.filter { it.whatsapp.contains(myReferralsSearchQuery, ignoreCase = true) }
+        }
+
+        if (filteredMyReferrals.isEmpty() && myReferralsSearchQuery.isNotEmpty()) {
+            myReferralsListContainer.removeAllViews()
+            myReferralsPagerScroll.visibility = View.GONE
+            myReferralsNoResultsText.visibility = View.VISIBLE
+            myReferralsNoResultsText.text = "No referrals match \u201c$myReferralsSearchQuery\u201d"
+            return
+        }
+
+        myReferralsNoResultsText.visibility = View.GONE
+        renderMyReferralsPage()
+        renderMyReferralsPager()
+    }
+
+    /** Opens WhatsApp to [number] with a pre-filled nudge message, same intent pattern as ProfileActivity.openWhatsAppContactUs. */
+    private fun openWhatsAppNudge(number: String) {
+        val message = Uri.encode("Hi, have you synced your VG Kontact yet?")
+        val uri = Uri.parse("https://wa.me/$number?text=$message")
+        try {
+            startActivity(Intent(Intent.ACTION_VIEW, uri))
+        } catch (e: Exception) {
+            Toast.makeText(this, "WhatsApp is not installed", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     /** Renders just the rows for [myReferralsCurrentPage], each with a bottom divider except the last. */
     private fun renderMyReferralsPage() {
         myReferralsListContainer.removeAllViews()
 
         val start = myReferralsCurrentPage * ENTRIES_PER_PAGE
-        val end = minOf(start + ENTRIES_PER_PAGE, myReferrals.size)
-        if (start >= myReferrals.size) return
+        val end = minOf(start + ENTRIES_PER_PAGE, filteredMyReferrals.size)
+        if (start >= filteredMyReferrals.size) return
 
-        val pageEntries = myReferrals.subList(start, end)
+        val pageEntries = filteredMyReferrals.subList(start, end)
 
         for ((index, entry) in pageEntries.withIndex()) {
             val row = LinearLayout(this).apply {
@@ -197,18 +254,23 @@ class HistoryActivity : AppCompatActivity() {
 
             val textRow = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
-                setPadding(0, 26, 0, 26)
+                gravity = android.view.Gravity.CENTER_VERTICAL
+                setPadding(0, 20, 0, 20)
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT
                 )
             }
 
+            val textColumn = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            }
+
             val numberView = TextView(this).apply {
                 text = entry.whatsapp
                 textSize = 14f
                 setTextColor(ContextCompat.getColor(this@HistoryActivity, R.color.vg_dark))
-                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
             }
 
             val timeView = TextView(this).apply {
@@ -217,8 +279,25 @@ class HistoryActivity : AppCompatActivity() {
                 setTextColor(ContextCompat.getColor(this@HistoryActivity, R.color.text_muted))
             }
 
-            textRow.addView(numberView)
-            textRow.addView(timeView)
+            textColumn.addView(numberView)
+            textColumn.addView(timeView)
+
+            // WhatsApp nudge icon - opens a chat to this referral's
+            // number with a pre-filled follow-up message.
+            val iconSizePx = (24 * resources.displayMetrics.density).toInt()
+            val iconMarginPx = (12 * resources.displayMetrics.density).toInt()
+            val nudgeIcon = ImageView(this).apply {
+                setImageResource(R.drawable.ic_chat)
+                setColorFilter(ContextCompat.getColor(this@HistoryActivity, R.color.vg_green))
+                contentDescription = "Message ${entry.whatsapp} on WhatsApp"
+                layoutParams = LinearLayout.LayoutParams(iconSizePx, iconSizePx).apply {
+                    marginStart = iconMarginPx
+                }
+                setOnClickListener { openWhatsAppNudge(entry.whatsapp) }
+            }
+
+            textRow.addView(textColumn)
+            textRow.addView(nudgeIcon)
             row.addView(textRow)
 
             // Skip the divider after the last row on this page.
@@ -238,7 +317,7 @@ class HistoryActivity : AppCompatActivity() {
 
     /** Builds the numbered page row below the "My referrals" list, mirroring [renderPager]. */
     private fun renderMyReferralsPager() {
-        val pageCount = (myReferrals.size + ENTRIES_PER_PAGE - 1) / ENTRIES_PER_PAGE
+        val pageCount = (filteredMyReferrals.size + ENTRIES_PER_PAGE - 1) / ENTRIES_PER_PAGE
 
         if (pageCount <= 1) {
             myReferralsPagerScroll.visibility = View.GONE
