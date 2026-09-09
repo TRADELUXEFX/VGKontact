@@ -222,7 +222,9 @@ object CoachMarkOverlay {
         next.textSize = 14f
         next.setTextColor(android.graphics.Color.WHITE)
         next.isAllCaps = false
-        next.backgroundTintList = android.content.res.ColorStateList.valueOf(activity.getColor(R.color.vg_green))
+        next.background = activity.getDrawable(R.drawable.coach_mark_button_background)
+        next.stateListAnimator = null
+        next.setPadding((20 * density).toInt(), (10 * density).toInt(), (20 * density).toInt(), (10 * density).toInt())
         actionsRow.addView(next)
 
         container.addView(actionsRow)
@@ -252,10 +254,16 @@ object CoachMarkOverlay {
 
         init {
             setLayerType(LAYER_TYPE_SOFTWARE, null)
+            // The floating bottom nav bar (bottom_nav_bar.xml) renders at
+            // elevation 10dp, above this view's default 0dp - without this,
+            // the nav bar draws on top of the punched-out hole instead of
+            // being revealed through it, so steps 4/5 (which target nav
+            // tabs) showed no visible cutout at all.
+            elevation = 12 * resources.displayMetrics.density
         }
 
         fun setTargetRect(rect: Rect) {
-            val padding = 12f
+            val padding = 6f
             targetRect = RectF(
                 rect.left - padding,
                 rect.top - padding,
