@@ -431,7 +431,18 @@ class MainMenuActivity : AppCompatActivity() {
             container.addView(row)
         }
 
-        popup.showAsDropDown(btnChangeSyncFrequency)
+        // showAsDropDown's default (x=0) left-aligns the popup's left edge
+        // to the anchor's left edge. btnChangeSyncFrequency sits near the
+        // right side of the header, and the popup is wider than the
+        // button, so a zero offset pushes the popup's right edge off the
+        // screen. Measure the popup first so we can shift it left by
+        // (popup width - anchor width), right-aligning the two instead.
+        container.measure(
+            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
+            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+        )
+        val xOffset = btnChangeSyncFrequency.width - container.measuredWidth
+        popup.showAsDropDown(btnChangeSyncFrequency, xOffset, 0)
     }
 
     /**
