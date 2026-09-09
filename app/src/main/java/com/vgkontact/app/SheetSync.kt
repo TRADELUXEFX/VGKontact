@@ -390,7 +390,7 @@ object SheetSync {
                 }
                 val encodedWhatsapp = URLEncoder.encode(whatsapp, "UTF-8")
                 val request = buildRequest(
-                    "contacts?select=referral,created_at&referral=eq.$encodedWhatsapp&order=created_at.desc",
+                    "contacts?select=whatsapp,created_at&referral=eq.$encodedWhatsapp&order=created_at.desc",
                     "GET"
                 )
                 httpClient.newCall(request).execute().use { response ->
@@ -400,7 +400,7 @@ object SheetSync {
                         val entries = mutableListOf<MyReferral>()
                         for (i in 0 until arr.length()) {
                             val obj = arr.getJSONObject(i)
-                            entries.add(MyReferral(whatsapp, obj.optString("created_at")))
+                            entries.add(MyReferral(obj.optString("whatsapp"), obj.optString("created_at")))
                         }
                         callback(entries, null)
                     } else {
