@@ -41,6 +41,7 @@ class MainMenuActivity : AppCompatActivity() {
 
     private lateinit var syncKontactButton: Button
     private lateinit var kontactGroupsButton: Button
+    private var contactUsFab: View? = null
     private lateinit var shareAppButton: Button
     private lateinit var phoneNumberText: TextView
     private lateinit var statsCard: LinearLayout
@@ -78,7 +79,7 @@ class MainMenuActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main_menu)
-        FloatingContactHelper.attach(this)
+        contactUsFab = FloatingContactHelper.attach(this)
 
         window.statusBarColor = ContextCompat.getColor(this, R.color.vg_green)
 
@@ -125,12 +126,16 @@ class MainMenuActivity : AppCompatActivity() {
         // go stale whichever way the user flips a permission.
 
         kontactGroupsButton.setOnClickListener {
-            // This button is labeled "Increase Contact Limit" (see
+            // This button is labeled "Grow WhatsApp Views" (see
             // activity_main_menu.xml, menu_increase_contact_limit) and
-            // opens the merged Referral rewards / Redeem a key screen -
-            // previously went straight to UpgradePlanActivity's
-            // redeem-a-code screen alone.
-            startActivity(Intent(this, IncreaseLimitActivity::class.java))
+            // opens the merged Referral rewards / Redeem a key screen,
+            // landing on the Key tab specifically - the bottom nav's
+            // "Get Viewers" tab opens the same screen on the Referral
+            // tab instead, so the two entry points no longer look
+            // identical to the user.
+            val intent = Intent(this, IncreaseLimitActivity::class.java)
+            intent.putExtra(IncreaseLimitActivity.EXTRA_INITIAL_TAB, IncreaseLimitActivity.TAB_KEY)
+            startActivity(intent)
         }
 
         SheetCheckWorker.schedule(this)
@@ -174,7 +179,6 @@ class MainMenuActivity : AppCompatActivity() {
     }
 
     private fun showDashboardTourIfNeeded() {
-        val navUpgradeTab = findViewById<View>(R.id.navUpgradeTab)
         val navHistoryTab = findViewById<View>(R.id.navHistoryTab)
         // limitBlock is the "CONTACT LIMIT / 1 of 5 / progress bar" block
         // specifically - statsCard also wraps syncKontactButton beneath it,
@@ -186,8 +190,8 @@ class MainMenuActivity : AppCompatActivity() {
             listOf(
                 CoachMarkOverlay.Step(
                     syncKontactButton,
-                    "Sync your kontacts",
-                    "Tap Sync Kontact to add your WhatsApp and referral numbers."
+                    "Claim Free Viewers",
+                    "Tap Claim Free Viewers button to claim free WhatsApp Viewers"
                 ),
                 CoachMarkOverlay.Step(
                     limitBlock,
@@ -201,19 +205,22 @@ class MainMenuActivity : AppCompatActivity() {
                 ),
                 CoachMarkOverlay.Step(
                     kontactGroupsButton,
-                    "Increase your limit",
-                    "Tap here to unlock more contacts."
-                ),
-                CoachMarkOverlay.Step(
-                    navUpgradeTab,
-                    "Get viewers",
-                    "Go to Get Viewers to get more people seeing your profile."
+                    "Grow whatsapp views",
+                    "Have an unlock key? Tap here to redeem it."
                 ),
                 CoachMarkOverlay.Step(
                     navHistoryTab,
                     "Earn from referrals",
                     "Share your app link here. Earn when people join with it."
                 )
+            ) + listOfNotNull(
+                contactUsFab?.let { fab ->
+                    CoachMarkOverlay.Step(
+                        fab,
+                        "Need help?",
+                        "Tap the chat button anytime to contact us if you run into issues."
+                    )
+                }
             )
         )
     }
