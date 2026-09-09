@@ -372,7 +372,7 @@ class MainMenuActivity : AppCompatActivity() {
     private fun renderSyncFrequencyPill() {
         val hours = UserPrefs.getNotificationFrequencyHours(this)
         val label = if (hours == 1) "hour" else "hours"
-        syncFrequencyText.text = "Syncs every $hours $label"
+        syncFrequencyText.text = "Contact syncs every $hours $label"
     }
 
     /**
