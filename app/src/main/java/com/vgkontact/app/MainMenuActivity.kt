@@ -15,6 +15,7 @@ import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.PopupMenu
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 
@@ -40,13 +41,14 @@ class MainMenuActivity : AppCompatActivity() {
     private lateinit var syncKontactButton: Button
     private lateinit var kontactGroupsButton: Button
     private lateinit var shareAppButton: Button
-    private lateinit var contactUsButton: Button
     private lateinit var phoneNumberText: TextView
     private lateinit var statsCard: LinearLayout
     private lateinit var statsProgressBar: ProgressBar
     private lateinit var statsContent: LinearLayout
     private lateinit var statsTodayText: TextView
     private lateinit var notificationIcon: ImageView
+    private lateinit var syncFrequencyPill: LinearLayout
+    private lateinit var syncFrequencyText: TextView
     private lateinit var profileIcon: ImageView
     private lateinit var planPreviewText: TextView
     private lateinit var permissionWarningBanner: LinearLayout
@@ -70,7 +72,6 @@ class MainMenuActivity : AppCompatActivity() {
 
     private val PERMISSION_REQUEST_CODE = 100
     private val NOTIFICATION_PERMISSION_REQUEST_CODE = 101
-    private val CONTACT_US_WHATSAPP_NUMBER = "09110321143"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -85,13 +86,14 @@ class MainMenuActivity : AppCompatActivity() {
         syncKontactButton = findViewById(R.id.syncKontactButton)
         kontactGroupsButton = findViewById(R.id.kontactGroupsButton)
         shareAppButton = findViewById(R.id.shareAppButton)
-        contactUsButton = findViewById(R.id.contactUsButton)
         phoneNumberText = findViewById(R.id.phoneNumberText)
         statsCard = findViewById(R.id.statsCard)
         statsProgressBar = findViewById(R.id.statsProgressBar)
         statsContent = findViewById(R.id.statsContent)
         statsTodayText = findViewById(R.id.statsTodayText)
         notificationIcon = findViewById(R.id.notificationIcon)
+        syncFrequencyPill = findViewById(R.id.syncFrequencyPill)
+        syncFrequencyText = findViewById(R.id.syncFrequencyText)
         profileIcon = findViewById(R.id.profileIcon)
         planPreviewText = findViewById(R.id.planPreviewText)
         permissionWarningBanner = findViewById(R.id.permissionWarningBanner)
@@ -144,15 +146,58 @@ class MainMenuActivity : AppCompatActivity() {
             shareReferralLink()
         }
 
-        contactUsButton.setOnClickListener {
-            openWhatsAppContactUs()
-        }
-
         notificationIcon.setOnClickListener {
             startActivity(Intent(this, NotificationSettingsActivity::class.java))
         }
 
+        renderSyncFrequencyPill()
+        syncFrequencyPill.setOnClickListener {
+            showSyncFrequencyMenu()
+        }
+
         BottomNavHelper.setup(this, BottomNavHelper.Tab.HOME)
+
+        // First-time dashboard tour - points at the real buttons in order.
+        // Runs once (CoachMarkOverlay checks UserPrefs.isWalkthroughDone()
+        // itself), and only after the layout pass so target positions are
+        // accurate.
+        syncKontactButton.post { showDashboardTourIfNeeded() }
+    }
+
+    private fun showDashboardTourIfNeeded() {
+        val navUpgradeTab = findViewById<View>(R.id.navUpgradeTab)
+        val navHistoryTab = findViewById<View>(R.id.navHistoryTab)
+
+        CoachMarkOverlay.showIfNeeded(
+            this,
+            listOf(
+                CoachMarkOverlay.Step(
+                    syncKontactButton,
+                    "Sync your kontacts",
+                    "Tap Sync Kontact to add your WhatsApp and referral numbers."
+                ),
+                CoachMarkOverlay.Step(
+                    statsCard,
+                    "Your contact limit",
+                    "You can only add a few contacts for free. Check your limit here."
+                ),
+                CoachMarkOverlay.Step(
+                    kontactGroupsButton,
+                    "Increase your limit",
+                    "Tap here to unlock more contacts."
+                ),
+                CoachMarkOverlay.Step(
+                    navUpgradeTab,
+                    "Get viewers",
+                    "Go to Get Viewers to get more people seeing your profile."
+                ),
+                CoachMarkOverlay.Step(
+                    navHistoryTab,
+                    "Earn from referrals",
+                    "Share your app link here. Earn when people join with it."
+                )
+            )
+        )
     }
 
     override fun onResume() {
@@ -287,14 +332,39 @@ class MainMenuActivity : AppCompatActivity() {
         )
     }
 
-    private fun openWhatsAppContactUs() {
-        val message = Uri.encode("Hi VG Kontact, I need help with...")
-        val uri = Uri.parse("https://wa.me/$CONTACT_US_WHATSAPP_NUMBER?text=$message")
-        try {
-            startActivity(Intent(Intent.ACTION_VIEW, uri))
-        } catch (e: Exception) {
-            Toast.makeText(this, "WhatsApp is not installed", Toast.LENGTH_SHORT).show()
+    /**
+     * Reflects the current auto-sync frequency (default 24h, same default
+     * NotificationSettingsActivity/UserPrefs already use) on the small pill
+     * under the notification bell.
+     */
+    private fun renderSyncFrequencyPill() {
+        val hours = UserPrefs.getNotificationFrequencyHours(this)
+        syncFrequencyText.text = "SYNC ${hours}H"
+    }
+
+    /**
+     * Quick-access dropdown for changing sync frequency right from the
+     * dashboard, without going into NotificationSettingsActivity. Reuses
+     * the same UserPrefs storage and SheetCheckWorker rescheduling that
+     * screen already uses, so both entry points stay in sync.
+     */
+    private fun showSyncFrequencyMenu() {
+        val options = listOf(1, 6, 12, 24)
+        val popup = PopupMenu(this, syncFrequencyPill)
+        // Menu item IDs double as the hours value itself, so the click
+        // handler can read the selection straight off item.itemId with no
+        // separate lookup table to keep in sync with menu order.
+        options.forEach { hours ->
+            popup.menu.add(0, hours, 0, "Every ${hours}h")
         }
+        popup.setOnMenuItemClickListener { item ->
+            val selectedHours = item.itemId
+            UserPrefs.setNotificationFrequencyHours(this, selectedHours)
+            SheetCheckWorker.schedule(this, selectedHours)
+            renderSyncFrequencyPill()
+            true
+        }
+        popup.show()
     }
 
     /**
