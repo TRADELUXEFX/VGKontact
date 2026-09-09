@@ -62,7 +62,14 @@ object BottomNavHelper {
             navigateTo(activity, current, Tab.HOME, MainMenuActivity::class.java)
         }
         upgradeTab?.setOnClickListener {
-            navigateTo(activity, current, Tab.UPGRADE, IncreaseLimitActivity::class.java)
+            // "Get Viewers" always opens IncreaseLimitActivity on the
+            // Referral tab - the home screen's "Grow WhatsApp Views"
+            // button opens the same activity but on the Key tab instead,
+            // so the two entry points lead somewhere genuinely different.
+            navigateTo(
+                activity, current, Tab.UPGRADE, IncreaseLimitActivity::class.java,
+                extras = mapOf(IncreaseLimitActivity.EXTRA_INITIAL_TAB to IncreaseLimitActivity.TAB_REFERRAL)
+            )
         }
         historyTab?.setOnClickListener {
             navigateTo(activity, current, Tab.HISTORY, HistoryActivity::class.java)
@@ -72,11 +79,20 @@ object BottomNavHelper {
         }
     }
 
-    private fun navigateTo(activity: Activity, current: Tab, target: Tab, destination: Class<*>) {
+    private fun navigateTo(
+        activity: Activity,
+        current: Tab,
+        target: Tab,
+        destination: Class<*>,
+        extras: Map<String, String> = emptyMap()
+    ) {
         if (current == target) return
 
         val intent = Intent(activity, destination)
         intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+        for ((key, value) in extras) {
+            intent.putExtra(key, value)
+        }
         activity.startActivity(intent)
 
         if (target == Tab.HOME) {
