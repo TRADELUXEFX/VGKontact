@@ -53,6 +53,10 @@ object CoachMarkOverlay {
 
         val scrim = SpotlightScrimView(activity)
         val tooltip = TooltipView(activity)
+        // Hidden until the first real showStep() call binds content and
+        // docks it - otherwise it flashes at its default position/size
+        // for the frame(s) before layout/measurement is ready.
+        tooltip.root.visibility = View.GONE
 
         var index = 0
 
@@ -72,6 +76,7 @@ object CoachMarkOverlay {
                 counter = "${index + 1} of ${steps.size}",
                 nextLabel = if (index == steps.size - 1) "Got it" else "Next"
             )
+            tooltip.root.visibility = View.VISIBLE
         }
 
         tooltip.onNext = {
