@@ -18,7 +18,20 @@ import android.widget.TextView
 
 /**
  * Points at real dashboard buttons one at a time - a dimmed overlay with a
- * cutout "hole" around the target view, plus a tooltip card below/above it.
+ * cutout "hole" around the target view, plus a tooltip card.
+ *
+ * The tooltip docks at a FIXED spot for every step - by default just below
+ * the status bar at the top of the screen - and never moves after that to
+ * track the target's exact position. Only the highlight cutout moves
+ * between steps.
+ *
+ * Top-docked is the default for every step because most targets on this
+ * dashboard sit far enough down the screen (buttons, nav tabs) that a
+ * top-docked tooltip is never anywhere near them. The one exception is a
+ * target that sits high up right under the header (e.g. the contact-limit
+ * card) - a top-docked tooltip there would land on or overlap it, so that
+ * step alone opts into dockAtBottom = true on its Step. Everything else
+ * uses the default.
  *
  * Runs only once per install: gated by UserPrefs.isWalkthroughDone(), the
  * same one-time pattern PermissionSetupActivity uses for its own gate.
@@ -28,7 +41,14 @@ import android.widget.TextView
  */
 object CoachMarkOverlay {
 
-    data class Step(val target: View, val title: String, val message: String)
+    data class Step(
+        val target: View,
+        val title: String,
+        val message: String,
+        // Set true only for a step whose target sits high enough on
+        // screen that the default top dock would land on or near it.
+        val dockAtBottom: Boolean = false
+    )
 
     fun showIfNeeded(activity: Activity, steps: List<Step>) {
         if (UserPrefs.isWalkthroughDone(activity)) return
@@ -66,21 +86,18 @@ object CoachMarkOverlay {
         fun renderStep() {
             val step = steps[index]
 
-            // Scroll the target into view first - previously renderStep()
-            // measured the target's position immediately, which only
-            // worked for views already on screen (steps 1-2). For a view
-            // further down the dashboard (e.g. kontactGroupsButton on
-            // step 3), the view could be partially or fully off-screen
-            // when measured, producing a highlight rect that didn't
-            // actually frame the button - it either missed it entirely or
-            // clipped into whatever view happened to be on screen at that
-            // location instead. requestRectangleOnScreen asks every
-            // scrollable ancestor (the dashboard's NestedScrollView) to
-            // bring the target fully into view before we measure or draw
-            // anything.
-            step.target.requestRectangleOnScreen(
-                Rect(0, 0, step.target.width, step.target.height)
-            )
+            // Dock position comes straight from the step's own flag now -
+            // top by default, bottom only for the one step that opts in.
+            // No longer inferred from the target's on-screen position,
+            // which was fragile before the target had been scrolled into
+            // place at all.
+            val dockTop = !step.dockAtBottom
+            dockTooltip(activity, tooltip, top = dockTop)
+
+            // Scroll the target into view, leaving clearance on whichever
+            // side the tooltip now occupies, so the target doesn't end up
+            // sitting behind the (now fixed) tooltip.
+            scrollTargetClearOfDock(step.target, root, clearTop = dockTop)
 
             // The scroll above is not synchronous - it schedules a layout
             // pass. Measuring on the very next frame (via post) is enough
@@ -94,7 +111,6 @@ object CoachMarkOverlay {
                 tooltipMessage.text = step.message
                 tooltipCounter.text = "${index + 1} of ${steps.size}"
                 tooltipNextButton.text = if (index == steps.size - 1) "Got it" else "Next"
-                positionTooltip(activity, tooltip, rect)
             }
         }
 
@@ -115,6 +131,56 @@ object CoachMarkOverlay {
     }
 
     /**
+     * Scrolls the nearest scrollable ancestor (the dashboard's
+     * NestedScrollView) so the target view has clearance on the side
+     * where the tooltip is currently docked. No-ops if the target has no
+     * scrollable ancestor (e.g. the bottom nav tabs, which are always on
+     * screen at a fixed position regardless of scroll state).
+     */
+    private fun scrollTargetClearOfDock(target: View, root: View, clearTop: Boolean) {
+        val density = target.resources.displayMetrics.density
+        val dockClearance = (170 * density).toInt() // tooltip card + margins
+
+        var scrollView: androidx.core.widget.NestedScrollView? = null
+        var parent = target.parent
+        while (parent is View) {
+            if (parent is androidx.core.widget.NestedScrollView) {
+                scrollView = parent
+                break
+            }
+            parent = parent.parent
+        }
+        if (scrollView == null) return
+
+        var offset = 0
+        var v: View = target
+        while (v !== scrollView) {
+            offset += v.top
+            v = v.parent as View
+        }
+        val targetTop = offset
+        val targetBottom = targetTop + target.height
+
+        if (clearTop) {
+            // Tooltip is docked at the top - make sure the target isn't
+            // hidden underneath it by ensuring enough scroll-space above.
+            val visibleTop = scrollView.scrollY + dockClearance
+            if (targetTop < visibleTop) {
+                scrollView.scrollTo(0, (targetTop - dockClearance).coerceAtLeast(0))
+            }
+        } else {
+            // Tooltip is docked at the bottom - make sure the target sits
+            // above that zone.
+            val visibleBottom = scrollView.scrollY + scrollView.height - dockClearance
+            if (targetBottom > visibleBottom) {
+                scrollView.scrollTo(0, (targetBottom - scrollView.height + dockClearance).coerceAtLeast(0))
+            } else if (targetTop < scrollView.scrollY) {
+                scrollView.scrollTo(0, targetTop)
+            }
+        }
+    }
+
+    /**
      * Returns the target's bounds in the *overlay's own coordinate space*
      * (i.e. relative to `root`, the content view the overlay is a child
      * of) rather than raw window coordinates.
@@ -124,10 +190,9 @@ object CoachMarkOverlay {
      * view is added as a child of android.R.id.content, whose local (0,0)
      * already starts *below* the status bar. Drawing at the raw window
      * coordinate on the overlay's canvas therefore places the hole too
-     * high by exactly the status bar's height - the cutout consistently
-     * landed above the real button instead of framing it. Subtracting
-     * root's own window position converts the target's coordinate into
-     * root/overlay-local space so the two line up.
+     * high by exactly the status bar's height. Subtracting root's own
+     * window position converts the target's coordinate into root/overlay-
+     * local space so the two line up.
      */
     private fun rectOf(view: View, root: View): Rect {
         val location = IntArray(2)
@@ -139,40 +204,33 @@ object CoachMarkOverlay {
         return Rect(left, top, left + view.width, top + view.height)
     }
 
-    private fun positionTooltip(activity: Activity, tooltip: View, targetRect: Rect) {
+    /**
+     * Docks the tooltip at a fixed spot - either just below the status
+     * bar or just above the floating bottom nav bar - and nowhere else.
+     * Only ever snaps between these two positions between steps; never
+     * follows a target's exact position.
+     */
+    private fun dockTooltip(activity: Activity, tooltip: View, top: Boolean) {
         val params = tooltip.layoutParams as FrameLayout.LayoutParams
-        val screenHeight = activity.resources.displayMetrics.heightPixels
-        val screenWidth = activity.resources.displayMetrics.widthPixels
-        val margin = (16 * activity.resources.displayMetrics.density).toInt()
+        val density = activity.resources.displayMetrics.density
+        val margin = (16 * density).toInt()
+        // Clear space for the floating bottom nav bar (56dp-ish tall pill +
+        // its own 14dp bottom margin) so a bottom-docked tooltip sits just
+        // above it instead of covering it.
+        val navBarClearance = (86 * density).toInt()
+        // Clear space below the status bar for a top-docked tooltip.
+        val statusBarClearance = (24 * density).toInt()
 
         params.leftMargin = margin
         params.rightMargin = margin
-        params.gravity = Gravity.TOP
-        tooltip.layoutParams = params
-
-        // Measure the tooltip's real height (it changes per step - shorter
-        // vs longer tip text) instead of guessing a fixed number, so the
-        // "does it fit below/above" check is accurate for every step -
-        // including the bottom-nav targets (steps 4 and 5), which previously
-        // used a hardcoded guess that let the tooltip cover the very tab
-        // it was pointing at.
-        tooltip.measure(
-            View.MeasureSpec.makeMeasureSpec(screenWidth - 2 * margin, View.MeasureSpec.EXACTLY),
-            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
-        )
-        val tooltipHeight = tooltip.measuredHeight
-
-        val spaceBelow = screenHeight - targetRect.bottom
-        val spaceAbove = targetRect.top
-
-        params.topMargin = when {
-            // Enough room below the target - the normal case.
-            spaceBelow >= tooltipHeight + margin -> targetRect.bottom + margin
-            // Not enough below (e.g. bottom-nav tabs) but enough above - flip up.
-            spaceAbove >= tooltipHeight + margin -> targetRect.top - tooltipHeight - margin
-            // Neither side has room - pin near the bottom of the screen
-            // rather than letting it run off-screen or overlap the target.
-            else -> (screenHeight - tooltipHeight - margin).coerceAtLeast(margin)
+        if (top) {
+            params.gravity = Gravity.TOP
+            params.topMargin = statusBarClearance
+            params.bottomMargin = 0
+        } else {
+            params.gravity = Gravity.BOTTOM
+            params.topMargin = 0
+            params.bottomMargin = navBarClearance
         }
         tooltip.layoutParams = params
     }
@@ -182,7 +240,12 @@ object CoachMarkOverlay {
         val container = LinearLayout(activity)
         container.orientation = LinearLayout.VERTICAL
         container.background = activity.getDrawable(R.drawable.coach_mark_tooltip_background)
-        container.setPadding((20 * density).toInt(), (18 * density).toInt(), (20 * density).toInt(), (18 * density).toInt())
+        // Slightly tighter padding than before (16/14 vs 20/18) - this
+        // card needs to stay compact since, in the top-docked case, it now
+        // sits close above content like step 2's contact-limit card, and a
+        // shorter card leaves more breathing room before it could ever
+        // reach far enough down to overlap that content.
+        container.setPadding((20 * density).toInt(), (14 * density).toInt(), (20 * density).toInt(), (14 * density).toInt())
         container.layoutParams = FrameLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,
             ViewGroup.LayoutParams.WRAP_CONTENT
@@ -284,8 +347,7 @@ object CoachMarkOverlay {
             // views. The floating bottom nav bar (bottom_nav_bar.xml) draws
             // at elevation 10dp using a hardware layer; a software-layer
             // overlay can't be reliably Z-compared against it, so the nav
-            // bar kept winning and painting over the punched-out hole -
-            // steps 4/5 (targeting nav tabs) showed no visible cutout.
+            // bar kept winning and painting over the punched-out hole.
             // Instead we punch the hole into an offscreen layer via
             // saveLayer() below and composite that onto this (still
             // hardware-accelerated) view's canvas, so elevation ordering
@@ -309,11 +371,11 @@ object CoachMarkOverlay {
             // Composite the scrim + hole on an offscreen layer instead of
             // drawing PorterDuff.CLEAR straight onto the view's own canvas.
             // saveLayer() gives us a transparent buffer to punch a real
-            // hole into; that buffer is then drawn as a single opaque-ish
-            // bitmap onto the (hardware-accelerated) view canvas, so this
-            // view's elevation is compared normally against sibling views
-            // like the bottom nav bar instead of being defeated by a
-            // software layer.
+            // hole into; that buffer is then drawn as a single bitmap onto
+            // the (hardware-accelerated) view canvas, so this view's
+            // elevation is compared normally against sibling views like
+            // the bottom nav bar instead of being defeated by a software
+            // layer.
             val layerId = canvas.saveLayer(0f, 0f, width.toFloat(), height.toFloat(), null)
             canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), scrimPaint)
             targetRect?.let { rect ->
