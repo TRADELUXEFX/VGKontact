@@ -5,6 +5,7 @@ import android.text.Editable
 import android.text.TextWatcher
 import android.view.LayoutInflater
 import android.view.View
+import android.widget.Button
 import android.widget.EditText
 import android.widget.HorizontalScrollView
 import android.widget.LinearLayout
@@ -13,6 +14,10 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import java.util.concurrent.TimeUnit
 
 /**
  * Referral leaderboard. Shows every referrer's WhatsApp number next to how
@@ -27,6 +32,12 @@ import androidx.core.content.ContextCompat
  * screen). Rows within a page are separated by a thin divider line,
  * matching the Profile card's field-row style - no divider after the
  * last row on a page.
+ *
+ * Two tabs sit above the panel, same segmented-control pattern as
+ * IncreaseLimitActivity's "Referral rewards" / "Redeem a key" tabs:
+ * "My referrals" shows this user's own referral count + list, and
+ * "Leaderboard" shows the ranked list above (search + pager unchanged).
+ * Each tab only fetches its data the first time it's opened.
  */
 class HistoryActivity : AppCompatActivity() {
 
@@ -38,12 +49,28 @@ class HistoryActivity : AppCompatActivity() {
     private lateinit var historyPagerScroll: HorizontalScrollView
     private lateinit var historyPagerContainer: LinearLayout
 
+    private lateinit var tabMyReferralsButton: Button
+    private lateinit var tabLeaderboardButton: Button
+    private lateinit var myReferralsPanel: LinearLayout
+    private lateinit var leaderboardPanel: LinearLayout
+
+    private lateinit var myReferralsTotalText: TextView
+    private lateinit var myReferralsListContainer: LinearLayout
+    private lateinit var myReferralsEmptyText: TextView
+    private lateinit var myReferralsPagerScroll: HorizontalScrollView
+    private lateinit var myReferralsPagerContainer: LinearLayout
+
     private val ENTRIES_PER_PAGE = 10
 
     private var allEntries: List<ReferralEntry> = emptyList()
     private var filteredEntries: List<ReferralEntry> = emptyList()
     private var currentPage = 0
     private var currentSearchQuery = ""
+    private var leaderboardLoaded = false
+
+    private var myReferrals: List<MyReferral> = emptyList()
+    private var myReferralsCurrentPage = 0
+    private var myReferralsLoaded = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -61,6 +88,17 @@ class HistoryActivity : AppCompatActivity() {
         historyPagerScroll = findViewById(R.id.historyPagerScroll)
         historyPagerContainer = findViewById(R.id.historyPagerContainer)
 
+        tabMyReferralsButton = findViewById(R.id.tabMyReferralsButton)
+        tabLeaderboardButton = findViewById(R.id.tabLeaderboardButton)
+        myReferralsPanel = findViewById(R.id.myReferralsPanel)
+        leaderboardPanel = findViewById(R.id.leaderboardPanel)
+
+        myReferralsTotalText = findViewById(R.id.myReferralsTotalText)
+        myReferralsListContainer = findViewById(R.id.myReferralsListContainer)
+        myReferralsEmptyText = findViewById(R.id.myReferralsEmptyText)
+        myReferralsPagerScroll = findViewById(R.id.myReferralsPagerScroll)
+        myReferralsPagerContainer = findViewById(R.id.myReferralsPagerContainer)
+
         historySearchInput.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
@@ -70,7 +108,207 @@ class HistoryActivity : AppCompatActivity() {
             }
         })
 
-        loadReferralLeaderboard()
+        tabMyReferralsButton.setOnClickListener { showMyReferralsTab() }
+        tabLeaderboardButton.setOnClickListener { showLeaderboardTab() }
+
+        // Mirrors IncreaseLimitActivity: calling showMyReferralsTab() first
+        // both sets the initial active/inactive tab styling and triggers
+        // the first load for that tab.
+        showMyReferralsTab()
+    }
+
+    private fun showMyReferralsTab() {
+        myReferralsPanel.visibility = View.VISIBLE
+        leaderboardPanel.visibility = View.GONE
+        tabMyReferralsButton.backgroundTintList = ContextCompat.getColorStateList(this, R.color.white)
+        tabMyReferralsButton.setTextColor(ContextCompat.getColor(this, R.color.vg_green))
+        tabLeaderboardButton.backgroundTintList = ContextCompat.getColorStateList(this, android.R.color.transparent)
+        tabLeaderboardButton.setTextColor(ContextCompat.getColor(this, R.color.text_muted))
+
+        if (!myReferralsLoaded) {
+            loadMyReferrals()
+        }
+    }
+
+    private fun showLeaderboardTab() {
+        myReferralsPanel.visibility = View.GONE
+        leaderboardPanel.visibility = View.VISIBLE
+        tabLeaderboardButton.backgroundTintList = ContextCompat.getColorStateList(this, R.color.white)
+        tabLeaderboardButton.setTextColor(ContextCompat.getColor(this, R.color.vg_green))
+        tabMyReferralsButton.backgroundTintList = ContextCompat.getColorStateList(this, android.R.color.transparent)
+        tabMyReferralsButton.setTextColor(ContextCompat.getColor(this, R.color.text_muted))
+
+        if (!leaderboardLoaded) {
+            loadReferralLeaderboard()
+        }
+    }
+
+    private fun loadMyReferrals() {
+        myReferralsListContainer.removeAllViews()
+        myReferralsEmptyText.visibility = View.GONE
+        myReferralsPagerScroll.visibility = View.GONE
+
+        SheetSync.fetchMyReferrals(this) { list, error ->
+            runOnUiThread {
+                if (list != null) {
+                    myReferralsLoaded = true
+                    myReferrals = list
+                    myReferralsTotalText.text = list.size.toString()
+                    myReferralsCurrentPage = 0
+                    if (list.isEmpty()) {
+                        myReferralsEmptyText.visibility = View.VISIBLE
+                        myReferralsEmptyText.text = "No referrals yet."
+                        return@runOnUiThread
+                    }
+                    renderMyReferralsPage()
+                    renderMyReferralsPager()
+                } else {
+                    myReferralsEmptyText.visibility = View.VISIBLE
+                    val message = if (error == "NO_INTERNET") {
+                        "No internet connection. Check your connection and try again."
+                    } else {
+                        "Couldn't load your referrals. Please try again."
+                    }
+                    myReferralsEmptyText.text = message
+                    Toast.makeText(this@HistoryActivity, message, Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
+    /** Renders just the rows for [myReferralsCurrentPage], each with a bottom divider except the last. */
+    private fun renderMyReferralsPage() {
+        myReferralsListContainer.removeAllViews()
+
+        val start = myReferralsCurrentPage * ENTRIES_PER_PAGE
+        val end = minOf(start + ENTRIES_PER_PAGE, myReferrals.size)
+        if (start >= myReferrals.size) return
+
+        val pageEntries = myReferrals.subList(start, end)
+
+        for ((index, entry) in pageEntries.withIndex()) {
+            val row = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                )
+            }
+
+            val textRow = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                setPadding(0, 26, 0, 26)
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                )
+            }
+
+            val numberView = TextView(this).apply {
+                text = entry.whatsapp
+                textSize = 14f
+                setTextColor(ContextCompat.getColor(this@HistoryActivity, R.color.vg_dark))
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            }
+
+            val timeView = TextView(this).apply {
+                text = formatRelativeTime(entry.createdAt)
+                textSize = 12f
+                setTextColor(ContextCompat.getColor(this@HistoryActivity, R.color.text_muted))
+            }
+
+            textRow.addView(numberView)
+            textRow.addView(timeView)
+            row.addView(textRow)
+
+            // Skip the divider after the last row on this page.
+            if (index != pageEntries.lastIndex) {
+                val divider = View(this).apply {
+                    layoutParams = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT, 1
+                    )
+                    setBackgroundColor(ContextCompat.getColor(this@HistoryActivity, R.color.stats_card_border))
+                }
+                row.addView(divider)
+            }
+
+            myReferralsListContainer.addView(row)
+        }
+    }
+
+    /** Builds the numbered page row below the "My referrals" list, mirroring [renderPager]. */
+    private fun renderMyReferralsPager() {
+        val pageCount = (myReferrals.size + ENTRIES_PER_PAGE - 1) / ENTRIES_PER_PAGE
+
+        if (pageCount <= 1) {
+            myReferralsPagerScroll.visibility = View.GONE
+            return
+        }
+
+        myReferralsPagerScroll.visibility = View.VISIBLE
+        myReferralsPagerContainer.removeAllViews()
+        val inflater = LayoutInflater.from(this)
+
+        for (pageIndex in 0 until pageCount) {
+            val pageButton = inflater.inflate(R.layout.item_group_page_button, myReferralsPagerContainer, false) as TextView
+            pageButton.text = (pageIndex + 1).toString()
+            pageButton.setOnClickListener {
+                if (myReferralsCurrentPage != pageIndex) {
+                    myReferralsCurrentPage = pageIndex
+                    renderMyReferralsPage()
+                    updateMyReferralsPagerSelection()
+                }
+            }
+            myReferralsPagerContainer.addView(pageButton)
+        }
+
+        updateMyReferralsPagerSelection()
+    }
+
+    /** Re-styles every "My referrals" page button so only myReferralsCurrentPage shows as selected. */
+    private fun updateMyReferralsPagerSelection() {
+        for (i in 0 until myReferralsPagerContainer.childCount) {
+            val pageButton = myReferralsPagerContainer.getChildAt(i) as TextView
+            val isSelected = i == myReferralsCurrentPage
+            pageButton.setBackgroundResource(
+                if (isSelected) R.drawable.page_button_selected_background else R.drawable.page_button_default_background
+            )
+            pageButton.setTextColor(
+                ContextCompat.getColor(this, if (isSelected) R.color.white else R.color.vg_dark)
+            )
+        }
+    }
+
+    /**
+     * Formats a Postgres/PostgREST timestamp (e.g. "2026-09-05T14:32:10")
+     * as a short relative label like "2 days ago", "Today", or "Yesterday".
+     * Falls back to the raw string if it can't be parsed.
+     */
+    private fun formatRelativeTime(createdAt: String): String {
+        val patterns = listOf(
+            "yyyy-MM-dd'T'HH:mm:ss",
+            "yyyy-MM-dd'T'HH:mm:ss.SSS",
+            "yyyy-MM-dd HH:mm:ss"
+        )
+        var parsedDate: Date? = null
+        for (pattern in patterns) {
+            try {
+                val cleaned = createdAt.substringBefore("+").substringBefore("Z")
+                parsedDate = SimpleDateFormat(pattern, Locale.US).parse(cleaned)
+                if (parsedDate != null) break
+            } catch (e: Exception) {
+                // try next pattern
+            }
+        }
+        val date = parsedDate ?: return createdAt
+
+        val diffMs = Date().time - date.time
+        val days = TimeUnit.MILLISECONDS.toDays(diffMs)
+        return when {
+            days <= 0 -> "Today"
+            days == 1L -> "Yesterday"
+            else -> "$days days ago"
+        }
     }
 
     private fun loadReferralLeaderboard() {
@@ -83,6 +321,7 @@ class HistoryActivity : AppCompatActivity() {
             runOnUiThread {
                 progressBar.visibility = View.GONE
                 if (list != null) {
+                    leaderboardLoaded = true
                     if (list.isEmpty()) {
                         emptyText.visibility = View.VISIBLE
                         emptyText.text = "No referrals yet."
