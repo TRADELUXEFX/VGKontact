@@ -216,6 +216,22 @@ object UserPrefs {
         getPrefs(context).edit().putBoolean(KEY_PERMISSION_SETUP_DONE, true).apply()
     }
 
+    private const val KEY_WALKTHROUGH_DONE = "walkthrough_done"
+
+    /**
+     * True once the user has been through the one-time feature walkthrough
+     * (Sync, Contact limit, Get viewers, Referrals) shown right after
+     * PermissionSetupActivity, before the dashboard. Gates re-entry so
+     * returning users skip straight to MainMenuActivity.
+     */
+    fun isWalkthroughDone(context: Context): Boolean {
+        return getPrefs(context).getBoolean(KEY_WALKTHROUGH_DONE, false)
+    }
+
+    fun setWalkthroughDone(context: Context) {
+        getPrefs(context).edit().putBoolean(KEY_WALKTHROUGH_DONE, true).apply()
+    }
+
     private const val KEY_LAST_LIMIT_ZONE_NOTIFIED = "last_limit_zone_notified"
 
     /**
