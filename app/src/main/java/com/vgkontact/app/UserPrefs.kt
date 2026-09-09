@@ -250,4 +250,22 @@ object UserPrefs {
     fun setLastLimitZoneNotified(context: Context, zone: String) {
         getPrefs(context).edit().putString(KEY_LAST_LIMIT_ZONE_NOTIFIED, zone).apply()
     }
+
+    private const val KEY_LAST_PERMISSION_SEVERITY_LOGGED = "last_permission_severity_logged"
+
+    /**
+     * Same "notify once per crossing" pattern as the limit-zone key above,
+     * but for PermissionHealth.Severity. refreshPermissionHealth() runs on
+     * every dashboard resume, so without this guard a permission issue
+     * would get logged to ActivityLog on every single resume instead of
+     * once when it's first detected - resets to "NONE" once fixed, so a
+     * future re-occurrence logs again.
+     */
+    fun getLastPermissionSeverityLogged(context: Context): String {
+        return getPrefs(context).getString(KEY_LAST_PERMISSION_SEVERITY_LOGGED, "NONE") ?: "NONE"
+    }
+
+    fun setLastPermissionSeverityLogged(context: Context, severity: String) {
+        getPrefs(context).edit().putString(KEY_LAST_PERMISSION_SEVERITY_LOGGED, severity).apply()
+    }
 }
