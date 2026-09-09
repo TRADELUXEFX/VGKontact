@@ -73,7 +73,7 @@ object CoachMarkOverlay {
             tooltip.bind(
                 title = step.title,
                 message = step.message,
-                counter = "${index + 1} of ${steps.size}",
+                counter = "${index + 1}/${steps.size}",
                 nextLabel = if (index == steps.size - 1) "Got it" else "Next"
             )
             tooltip.root.visibility = View.VISIBLE
@@ -277,12 +277,6 @@ object CoachMarkOverlay {
                 elevation = dp(12).toFloat()
             }
 
-            val counter = TextView(activity).apply {
-                textSize = 12f
-                setTextColor(activity.getColor(R.color.text_muted))
-            }
-            container.addView(counter)
-
             val title = TextView(activity).apply {
                 textSize = 16f
                 setTextColor(activity.getColor(R.color.vg_dark))
@@ -304,6 +298,17 @@ object CoachMarkOverlay {
             }
             container.addView(message)
 
+            // Counter now lives in the actions row (left side) instead of
+            // above the title, so it sits on the same line as Skip/Next
+            // per the "5/5   Skip   Next" layout.
+            val counter = TextView(activity).apply {
+                textSize = 13f
+                setTextColor(activity.getColor(R.color.text_muted))
+                layoutParams = LinearLayout.LayoutParams(
+                    0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f
+                )
+            }
+
             val actionsRow = LinearLayout(activity).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
@@ -312,15 +317,31 @@ object CoachMarkOverlay {
                     ViewGroup.LayoutParams.WRAP_CONTENT
                 ).apply { topMargin = dp(14) }
             }
+            actionsRow.addView(counter)
+
+            // Skip and Next are grouped together on the right, tightly
+            // spaced, rather than Skip floating on the left with a big gap
+            // before Next.
+            val buttonGroup = LinearLayout(activity).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                layoutParams = LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+                )
+            }
 
             val skip = TextView(activity).apply {
                 text = "Skip"
                 textSize = 14f
-                setTextColor(activity.getColor(R.color.text_muted))
-                setPadding(dp(8), dp(8), dp(8), dp(8))
-                layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+                setTextColor(activity.getColor(R.color.text_secondary))
+                background = activity.getDrawable(R.drawable.coach_mark_skip_background)
+                setPadding(dp(18), dp(10), dp(18), dp(10))
+                layoutParams = LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT
+                ).apply { rightMargin = dp(10) }
             }
-            actionsRow.addView(skip)
+            buttonGroup.addView(skip)
 
             val next = Button(activity).apply {
                 text = "Next"
@@ -331,8 +352,9 @@ object CoachMarkOverlay {
                 stateListAnimator = null
                 setPadding(dp(20), dp(10), dp(20), dp(10))
             }
-            actionsRow.addView(next)
+            buttonGroup.addView(next)
 
+            actionsRow.addView(buttonGroup)
             container.addView(actionsRow)
             return Pair(container, listOf(counter, title, message, skip, next))
         }
