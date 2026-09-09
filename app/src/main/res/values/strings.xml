@@ -17,7 +17,7 @@
     <string name="onboarding_lead">Get Access to</string>
     <string name="onboarding_hook">1000+ Status Viewers</string>
     <string name="onboarding_credit">Powered by VGKontact</string>
-    <string name="btn_sync_kontact">Sync Kontact</string>
+    <string name="btn_sync_kontact">Claim Free Viewers</string>
     <string name="btn_upgrade_plan">Upgrade Plan</string>
     <string name="btn_save">Save</string>
     <string name="stats_total_label">Total Kontacts Synced</string>
@@ -34,7 +34,7 @@
     <string name="main_menu_title">Settings</string>
     <string name="menu_profile">My Profile</string>
     <string name="menu_kontact_groups">Kontact Groups</string>
-    <string name="menu_increase_contact_limit">Increase Contact Limit</string>
+    <string name="menu_increase_contact_limit">Grow WhatsApp Views</string>
     <string name="menu_share_app">Share App</string>
     <string name="contact_limit_label">Contact Limit</string>
     <string name="label_free_plan">Contact limit</string>
