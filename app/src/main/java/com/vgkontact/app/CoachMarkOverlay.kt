@@ -15,29 +15,22 @@ import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.core.widget.NestedScrollView
 
 /**
- * Points at real dashboard buttons one at a time - a dimmed overlay with a
- * cutout "hole" around the target view, plus a tooltip card.
+ * First-run dashboard tour: a dimmed scrim with a hole punched around one
+ * real button at a time, plus a tooltip card explaining it.
  *
- * The tooltip docks at a FIXED spot for every step - by default just below
- * the status bar at the top of the screen - and never moves after that to
- * track the target's exact position. Only the highlight cutout moves
- * between steps.
+ * The tooltip sits at a FIXED position on screen - just below the status
+ * bar - for every step, and never moves to chase the target. Only the
+ * highlight hole moves between steps. One step (the contact-limit card,
+ * which sits right under the header) opts into docking at the bottom
+ * instead, via Step.dockAtBottom, since a top-docked tooltip would land on
+ * top of it.
  *
- * Top-docked is the default for every step because most targets on this
- * dashboard sit far enough down the screen (buttons, nav tabs) that a
- * top-docked tooltip is never anywhere near them. The one exception is a
- * target that sits high up right under the header (e.g. the contact-limit
- * card) - a top-docked tooltip there would land on or overlap it, so that
- * step alone opts into dockAtBottom = true on its Step. Everything else
- * uses the default.
- *
- * Runs only once per install: gated by UserPrefs.isWalkthroughDone(), the
- * same one-time pattern PermissionSetupActivity uses for its own gate.
- * Call CoachMarkOverlay.showIfNeeded(activity, steps) once the dashboard's
- * views are laid out (e.g. from a view.post { } in onCreate) so target
- * positions are already known.
+ * Runs once per install, gated by UserPrefs.isWalkthroughDone(). Call
+ * showIfNeeded(activity, steps) after the dashboard has been laid out
+ * (e.g. from a view.post{} in onCreate).
  */
 object CoachMarkOverlay {
 
@@ -45,294 +38,160 @@ object CoachMarkOverlay {
         val target: View,
         val title: String,
         val message: String,
-        // Set true only for a step whose target sits high enough on
-        // screen that the default top dock would land on or near it.
         val dockAtBottom: Boolean = false
     )
+
+    private const val TOOLTIP_TITLE_ID = 1001
+    private const val TOOLTIP_MESSAGE_ID = 1002
+    private const val TOOLTIP_COUNTER_ID = 1003
+    private const val TOOLTIP_NEXT_ID = 1004
+    private const val TOOLTIP_SKIP_ID = 1005
 
     fun showIfNeeded(activity: Activity, steps: List<Step>) {
         if (UserPrefs.isWalkthroughDone(activity)) return
         if (steps.isEmpty()) return
 
-        // Attach to the content root itself (not its first child) so the
-        // overlay and tooltip are guaranteed to be added last / drawn last
-        // regardless of how many siblings the activity's layout has (e.g.
-        // MainMenuActivity's root FrameLayout has both the scrollable
-        // dashboard AND the floating bottom_nav_bar as direct children -
-        // grabbing only childAt(0) missed that structure entirely).
+        // android.R.id.content is the Activity's true top-level container.
+        // Adding views here (not to some inner layout) guarantees they are
+        // the very last children drawn, above everything else on screen -
+        // including a floating bottom nav bar that lives in its own
+        // sibling layout, not inside the scrollable dashboard content.
         val root = activity.findViewById<ViewGroup>(android.R.id.content) ?: return
 
-        var index = 0
-
         val overlay = HighlightView(activity)
-        overlay.layoutParams = FrameLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT,
-            ViewGroup.LayoutParams.MATCH_PARENT
-        )
+        val tooltip = TooltipView(activity)
 
-        val tooltip = buildTooltip(activity)
-        val tooltipTitle = tooltip.findViewById<TextView>(1001)
-        val tooltipMessage = tooltip.findViewById<TextView>(1002)
-        val tooltipCounter = tooltip.findViewById<TextView>(1003)
-        val tooltipNextButton = tooltip.findViewById<Button>(1004)
-        val tooltipSkipText = tooltip.findViewById<TextView>(1005)
+        var index = 0
 
         fun finish() {
             UserPrefs.setWalkthroughDone(activity)
             root.removeView(overlay)
-            root.removeView(tooltip)
+            root.removeView(tooltip.root)
         }
 
-        fun renderStep() {
+        fun showStep() {
             val step = steps[index]
+            tooltip.dockAt(top = !step.dockAtBottom)
+            scrollIntoClearView(step.target, dockAtBottom = step.dockAtBottom)
 
-            // Dock position comes straight from the step's own flag now -
-            // top by default, bottom only for the one step that opts in.
-            // No longer inferred from the target's on-screen position,
-            // which was fragile before the target had been scrolled into
-            // place at all.
-            val dockTop = !step.dockAtBottom
-            dockTooltip(activity, tooltip, top = dockTop)
-
-            // Scroll the target into view, leaving clearance on whichever
-            // side the tooltip now occupies, so the target doesn't end up
-            // sitting behind the (now fixed) tooltip.
-            scrollTargetClearOfDock(step.target, root, clearTop = dockTop)
-
-            // The scroll above is not synchronous - it schedules a layout
-            // pass. Measuring on the very next frame (via post) is enough
-            // for a NestedScrollView's fling-free scrollTo to have applied,
-            // matching the same "wait for layout" pattern already used to
-            // call showDashboardTourIfNeeded() in the first place.
+            // Scrolling above is not synchronous. One frame later the
+            // NestedScrollView has settled, so the target's final on-
+            // screen position can be measured correctly.
             step.target.post {
-                val rect = rectOf(step.target, root)
-                overlay.setTargetRect(rect)
-                tooltipTitle.text = step.title
-                tooltipMessage.text = step.message
-                tooltipCounter.text = "${index + 1} of ${steps.size}"
-                tooltipNextButton.text = if (index == steps.size - 1) "Got it" else "Next"
+                overlay.highlight(boundsInWindow(step.target, root))
+                tooltip.bind(
+                    title = step.title,
+                    message = step.message,
+                    counter = "${index + 1} of ${steps.size}",
+                    nextLabel = if (index == steps.size - 1) "Got it" else "Next"
+                )
             }
         }
 
-        tooltipNextButton.setOnClickListener {
+        tooltip.onNext = {
             if (index < steps.size - 1) {
                 index += 1
-                renderStep()
+                showStep()
             } else {
                 finish()
             }
         }
-        tooltipSkipText.setOnClickListener { finish() }
+        tooltip.onSkip = { finish() }
         overlay.setOnClickListener { /* swallow taps outside the tooltip */ }
 
-        root.addView(overlay)
-        root.addView(tooltip)
-        renderStep()
+        root.addView(overlay, MATCH_MATCH)
+        root.addView(tooltip.root, tooltip.root.layoutParams)
+        showStep()
     }
 
     /**
-     * Scrolls the nearest scrollable ancestor (the dashboard's
-     * NestedScrollView) so the target view has clearance on the side
-     * where the tooltip is currently docked. No-ops if the target has no
-     * scrollable ancestor (e.g. the bottom nav tabs, which are always on
-     * screen at a fixed position regardless of scroll state).
+     * Scrolls target's nearest NestedScrollView ancestor, if any, so the
+     * target isn't hidden behind the fixed tooltip dock. No-op for
+     * targets with no scrollable ancestor (e.g. bottom nav tabs, which
+     * are always on screen regardless of scroll position).
      */
-    private fun scrollTargetClearOfDock(target: View, root: View, clearTop: Boolean) {
+    private fun scrollIntoClearView(target: View, dockAtBottom: Boolean) {
+        val scrollView = findScrollViewAncestor(target) ?: return
         val density = target.resources.displayMetrics.density
-        val dockClearance = (170 * density).toInt() // tooltip card + margins
+        val clearance = (170 * density).toInt() // tooltip card height + margins
 
-        var scrollView: androidx.core.widget.NestedScrollView? = null
-        var parent = target.parent
-        while (parent is View) {
-            if (parent is androidx.core.widget.NestedScrollView) {
-                scrollView = parent
-                break
-            }
-            parent = parent.parent
-        }
-        if (scrollView == null) return
-
-        var offset = 0
-        var v: View = target
-        while (v !== scrollView) {
-            offset += v.top
-            v = v.parent as View
-        }
-        val targetTop = offset
+        val targetTop = sumOffsetsUpTo(target, scrollView)
         val targetBottom = targetTop + target.height
 
-        if (clearTop) {
-            // Tooltip is docked at the top - make sure the target isn't
-            // hidden underneath it by ensuring enough scroll-space above.
-            val visibleTop = scrollView.scrollY + dockClearance
+        if (dockAtBottom) {
+            val visibleBottom = scrollView.scrollY + scrollView.height - clearance
+            when {
+                targetBottom > visibleBottom ->
+                    scrollView.scrollTo(0, (targetBottom - scrollView.height + clearance).coerceAtLeast(0))
+                targetTop < scrollView.scrollY ->
+                    scrollView.scrollTo(0, targetTop)
+            }
+        } else {
+            val visibleTop = scrollView.scrollY + clearance
             if (targetTop < visibleTop) {
-                scrollView.scrollTo(0, (targetTop - dockClearance).coerceAtLeast(0))
-            }
-        } else {
-            // Tooltip is docked at the bottom - make sure the target sits
-            // above that zone.
-            val visibleBottom = scrollView.scrollY + scrollView.height - dockClearance
-            if (targetBottom > visibleBottom) {
-                scrollView.scrollTo(0, (targetBottom - scrollView.height + dockClearance).coerceAtLeast(0))
-            } else if (targetTop < scrollView.scrollY) {
-                scrollView.scrollTo(0, targetTop)
+                scrollView.scrollTo(0, (targetTop - clearance).coerceAtLeast(0))
             }
         }
     }
 
-    /**
-     * Returns the target's bounds in the *overlay's own coordinate space*
-     * (i.e. relative to `root`, the content view the overlay is a child
-     * of) rather than raw window coordinates.
-     *
-     * getLocationInWindow() returns coordinates relative to the top-left
-     * of the whole window, which includes the status bar. But the overlay
-     * view is added as a child of android.R.id.content, whose local (0,0)
-     * already starts *below* the status bar. Drawing at the raw window
-     * coordinate on the overlay's canvas therefore places the hole too
-     * high by exactly the status bar's height. Subtracting root's own
-     * window position converts the target's coordinate into root/overlay-
-     * local space so the two line up.
-     */
-    private fun rectOf(view: View, root: View): Rect {
-        val location = IntArray(2)
-        view.getLocationInWindow(location)
-        val rootLocation = IntArray(2)
-        root.getLocationInWindow(rootLocation)
-        val left = location[0] - rootLocation[0]
-        val top = location[1] - rootLocation[1]
-        return Rect(left, top, left + view.width, top + view.height)
-    }
-
-    /**
-     * Docks the tooltip at a fixed spot - either just below the status
-     * bar or just above the floating bottom nav bar - and nowhere else.
-     * Only ever snaps between these two positions between steps; never
-     * follows a target's exact position.
-     */
-    private fun dockTooltip(activity: Activity, tooltip: View, top: Boolean) {
-        val params = tooltip.layoutParams as FrameLayout.LayoutParams
-        val density = activity.resources.displayMetrics.density
-        val margin = (16 * density).toInt()
-        // Clear space for the floating bottom nav bar (56dp-ish tall pill +
-        // its own 14dp bottom margin) so a bottom-docked tooltip sits just
-        // above it instead of covering it.
-        val navBarClearance = (86 * density).toInt()
-        // Clear space below the status bar for a top-docked tooltip.
-        val statusBarClearance = (24 * density).toInt()
-
-        params.leftMargin = margin
-        params.rightMargin = margin
-        if (top) {
-            params.gravity = Gravity.TOP
-            params.topMargin = statusBarClearance
-            params.bottomMargin = 0
-        } else {
-            params.gravity = Gravity.BOTTOM
-            params.topMargin = 0
-            params.bottomMargin = navBarClearance
+    private fun findScrollViewAncestor(view: View): NestedScrollView? {
+        var p = view.parent
+        while (p != null) {
+            if (p is NestedScrollView) return p
+            p = p.parent
         }
-        tooltip.layoutParams = params
+        return null
     }
 
-    private fun buildTooltip(activity: Activity): LinearLayout {
-        val density = activity.resources.displayMetrics.density
-        val container = LinearLayout(activity)
-        container.orientation = LinearLayout.VERTICAL
-        container.background = activity.getDrawable(R.drawable.coach_mark_tooltip_background)
-        // Slightly tighter padding than before (16/14 vs 20/18) - this
-        // card needs to stay compact since, in the top-docked case, it now
-        // sits close above content like step 2's contact-limit card, and a
-        // shorter card leaves more breathing room before it could ever
-        // reach far enough down to overlap that content.
-        container.setPadding((20 * density).toInt(), (14 * density).toInt(), (20 * density).toInt(), (14 * density).toInt())
-        container.layoutParams = FrameLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT,
-            ViewGroup.LayoutParams.WRAP_CONTENT
-        )
-        container.elevation = 12 * density
-
-        val counter = TextView(activity)
-        counter.id = 1003
-        counter.textSize = 12f
-        counter.setTextColor(activity.getColor(R.color.text_muted))
-        container.addView(counter)
-
-        val title = TextView(activity)
-        title.id = 1001
-        title.textSize = 16f
-        title.setTextColor(activity.getColor(R.color.vg_dark))
-        title.setTypeface(title.typeface, android.graphics.Typeface.BOLD)
-        val titleParams = LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.WRAP_CONTENT,
-            ViewGroup.LayoutParams.WRAP_CONTENT
-        )
-        titleParams.topMargin = (6 * density).toInt()
-        title.layoutParams = titleParams
-        container.addView(title)
-
-        val message = TextView(activity)
-        message.id = 1002
-        message.textSize = 14f
-        message.setTextColor(activity.getColor(R.color.text_secondary))
-        val msgParams = LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.WRAP_CONTENT,
-            ViewGroup.LayoutParams.WRAP_CONTENT
-        )
-        msgParams.topMargin = (6 * density).toInt()
-        message.layoutParams = msgParams
-        container.addView(message)
-
-        val actionsRow = LinearLayout(activity)
-        actionsRow.orientation = LinearLayout.HORIZONTAL
-        actionsRow.gravity = Gravity.CENTER_VERTICAL
-        val actionsParams = LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT,
-            ViewGroup.LayoutParams.WRAP_CONTENT
-        )
-        actionsParams.topMargin = (14 * density).toInt()
-        actionsRow.layoutParams = actionsParams
-
-        val skip = TextView(activity)
-        skip.id = 1005
-        skip.text = "Skip"
-        skip.textSize = 14f
-        skip.setTextColor(activity.getColor(R.color.text_muted))
-        skip.setPadding((8 * density).toInt(), (8 * density).toInt(), (8 * density).toInt(), (8 * density).toInt())
-        val skipParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-        skip.layoutParams = skipParams
-        actionsRow.addView(skip)
-
-        val next = Button(activity)
-        next.id = 1004
-        next.text = "Next"
-        next.textSize = 14f
-        next.setTextColor(android.graphics.Color.WHITE)
-        next.isAllCaps = false
-        next.background = activity.getDrawable(R.drawable.coach_mark_button_background)
-        next.stateListAnimator = null
-        next.setPadding((20 * density).toInt(), (10 * density).toInt(), (20 * density).toInt(), (10 * density).toInt())
-        actionsRow.addView(next)
-
-        container.addView(actionsRow)
-        return container
+    private fun sumOffsetsUpTo(view: View, ancestor: View): Int {
+        var offset = 0
+        var v: View = view
+        while (v !== ancestor) {
+            offset += v.top
+            val nextParent = v.parent
+            if (nextParent !is View) break
+            v = nextParent
+        }
+        return offset
     }
 
     /**
-     * Draws a dark scrim over the whole screen with a rounded-rect hole cut
-     * out around the current target, so that view (and only that view)
-     * stays visible and tappable-looking underneath.
+     * Target's bounds converted into root's local coordinate space.
+     * getLocationInWindow() is window-relative (includes the status bar);
+     * root's own top-left, subtracted here, is not at (0,0) in that same
+     * space - it starts below the status bar. Without this conversion the
+     * hole is drawn a status-bar's-height too high.
+     */
+    private fun boundsInWindow(target: View, root: View): Rect {
+        val t = IntArray(2)
+        target.getLocationInWindow(t)
+        val r = IntArray(2)
+        root.getLocationInWindow(r)
+        val left = t[0] - r[0]
+        val top = t[1] - r[1]
+        return Rect(left, top, left + target.width, top + target.height)
+    }
+
+    private val MATCH_MATCH = FrameLayout.LayoutParams(
+        ViewGroup.LayoutParams.MATCH_PARENT,
+        ViewGroup.LayoutParams.MATCH_PARENT
+    )
+
+    /**
+     * Dark scrim covering the screen with a rounded-rect hole cut around
+     * the current target. Hardware-accelerated (no forced software
+     * layer) so its elevation is compared normally against the floating
+     * bottom nav bar's own elevation - the hole is punched via an
+     * offscreen saveLayer() instead, which keeps that comparison intact.
      */
     private class HighlightView(activity: Activity) : View(activity) {
-        private var targetRect: RectF? = null
-        private val scrimPaint = Paint().apply {
-            color = Color.parseColor("#CC000000")
-        }
-        private val holePaint = Paint().apply {
+        private var target: RectF? = null
+        private val scrim = Paint().apply { color = Color.parseColor("#CC000000") }
+        private val hole = Paint().apply {
             xfermode = PorterDuffXfermode(PorterDuff.Mode.CLEAR)
             isAntiAlias = true
         }
-        private val strokePaint = Paint().apply {
+        private val ring = Paint().apply {
             style = Paint.Style.STROKE
             strokeWidth = 4f
             color = Color.parseColor("#1FAA59")
@@ -340,49 +199,153 @@ object CoachMarkOverlay {
         }
 
         init {
-            // NOTE: deliberately NOT using LAYER_TYPE_SOFTWARE here. Forcing
-            // a software layer on the whole view takes it out of the normal
-            // hardware-accelerated RenderNode pipeline, which is what
-            // Android actually uses to compare `elevation` between sibling
-            // views. The floating bottom nav bar (bottom_nav_bar.xml) draws
-            // at elevation 10dp using a hardware layer; a software-layer
-            // overlay can't be reliably Z-compared against it, so the nav
-            // bar kept winning and painting over the punched-out hole.
-            // Instead we punch the hole into an offscreen layer via
-            // saveLayer() below and composite that onto this (still
-            // hardware-accelerated) view's canvas, so elevation ordering
-            // against the nav bar works normally.
             elevation = 12 * resources.displayMetrics.density
         }
 
-        fun setTargetRect(rect: Rect) {
-            val padding = 6f
-            targetRect = RectF(
-                rect.left - padding,
-                rect.top - padding,
-                rect.right + padding,
-                rect.bottom + padding
-            )
+        fun highlight(rect: Rect) {
+            val pad = 6f
+            target = RectF(rect.left - pad, rect.top - pad, rect.right + pad, rect.bottom + pad)
             invalidate()
         }
 
         override fun onDraw(canvas: Canvas) {
             super.onDraw(canvas)
-            // Composite the scrim + hole on an offscreen layer instead of
-            // drawing PorterDuff.CLEAR straight onto the view's own canvas.
-            // saveLayer() gives us a transparent buffer to punch a real
-            // hole into; that buffer is then drawn as a single bitmap onto
-            // the (hardware-accelerated) view canvas, so this view's
-            // elevation is compared normally against sibling views like
-            // the bottom nav bar instead of being defeated by a software
-            // layer.
-            val layerId = canvas.saveLayer(0f, 0f, width.toFloat(), height.toFloat(), null)
-            canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), scrimPaint)
-            targetRect?.let { rect ->
-                canvas.drawRoundRect(rect, 16f, 16f, holePaint)
-                canvas.drawRoundRect(rect, 16f, 16f, strokePaint)
+            val layer = canvas.saveLayer(0f, 0f, width.toFloat(), height.toFloat(), null)
+            canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), scrim)
+            target?.let {
+                canvas.drawRoundRect(it, 16f, 16f, hole)
+                canvas.drawRoundRect(it, 16f, 16f, ring)
             }
-            canvas.restoreToCount(layerId)
+            canvas.restoreToCount(layer)
+        }
+    }
+
+    /**
+     * The tooltip card. Docks at a fixed spot - top or bottom - and only
+     * ever snaps between those two; never follows the target.
+     */
+    private class TooltipView(private val activity: Activity) {
+        var onNext: (() -> Unit)? = null
+        var onSkip: (() -> Unit)? = null
+
+        val root: LinearLayout = build()
+        private val titleView = root.findViewById<TextView>(TOOLTIP_TITLE_ID)
+        private val messageView = root.findViewById<TextView>(TOOLTIP_MESSAGE_ID)
+        private val counterView = root.findViewById<TextView>(TOOLTIP_COUNTER_ID)
+        private val nextButton = root.findViewById<Button>(TOOLTIP_NEXT_ID)
+        private val skipView = root.findViewById<TextView>(TOOLTIP_SKIP_ID)
+
+        init {
+            nextButton.setOnClickListener { onNext?.invoke() }
+            skipView.setOnClickListener { onSkip?.invoke() }
+        }
+
+        fun bind(title: String, message: String, counter: String, nextLabel: String) {
+            titleView.text = title
+            messageView.text = message
+            counterView.text = counter
+            nextButton.text = nextLabel
+        }
+
+        fun dockAt(top: Boolean) {
+            val density = activity.resources.displayMetrics.density
+            val sideMargin = (16 * density).toInt()
+            val statusBarClearance = (24 * density).toInt()
+            val navBarClearance = (86 * density).toInt() // nav pill height + its own margin
+
+            val params = root.layoutParams as FrameLayout.LayoutParams
+            params.leftMargin = sideMargin
+            params.rightMargin = sideMargin
+            if (top) {
+                params.gravity = Gravity.TOP
+                params.topMargin = statusBarClearance
+                params.bottomMargin = 0
+            } else {
+                params.gravity = Gravity.BOTTOM
+                params.topMargin = 0
+                params.bottomMargin = navBarClearance
+            }
+            root.layoutParams = params
+        }
+
+        private fun build(): LinearLayout {
+            val density = activity.resources.displayMetrics.density
+            fun dp(v: Int) = (v * density).toInt()
+
+            val container = LinearLayout(activity).apply {
+                orientation = LinearLayout.VERTICAL
+                background = activity.getDrawable(R.drawable.coach_mark_tooltip_background)
+                setPadding(dp(20), dp(14), dp(20), dp(14))
+                layoutParams = FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+                )
+                elevation = dp(12).toFloat()
+            }
+
+            val counter = TextView(activity).apply {
+                id = TOOLTIP_COUNTER_ID
+                textSize = 12f
+                setTextColor(activity.getColor(R.color.text_muted))
+            }
+            container.addView(counter)
+
+            val title = TextView(activity).apply {
+                id = TOOLTIP_TITLE_ID
+                textSize = 16f
+                setTextColor(activity.getColor(R.color.vg_dark))
+                setTypeface(typeface, android.graphics.Typeface.BOLD)
+                layoutParams = LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+                ).apply { topMargin = dp(6) }
+            }
+            container.addView(title)
+
+            val message = TextView(activity).apply {
+                id = TOOLTIP_MESSAGE_ID
+                textSize = 14f
+                setTextColor(activity.getColor(R.color.text_secondary))
+                layoutParams = LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+                ).apply { topMargin = dp(6) }
+            }
+            container.addView(message)
+
+            val actionsRow = LinearLayout(activity).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                layoutParams = LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+                ).apply { topMargin = dp(14) }
+            }
+
+            val skip = TextView(activity).apply {
+                id = TOOLTIP_SKIP_ID
+                text = "Skip"
+                textSize = 14f
+                setTextColor(activity.getColor(R.color.text_muted))
+                setPadding(dp(8), dp(8), dp(8), dp(8))
+                layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+            }
+            actionsRow.addView(skip)
+
+            val next = Button(activity).apply {
+                id = TOOLTIP_NEXT_ID
+                text = "Next"
+                textSize = 14f
+                setTextColor(Color.WHITE)
+                isAllCaps = false
+                background = activity.getDrawable(R.drawable.coach_mark_button_background)
+                stateListAnimator = null
+                setPadding(dp(20), dp(10), dp(20), dp(10))
+            }
+            actionsRow.addView(next)
+
+            container.addView(actionsRow)
+            return container
         }
     }
 }
