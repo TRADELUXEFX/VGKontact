@@ -222,10 +222,26 @@ class HistoryActivity : AppCompatActivity() {
         renderMyReferralsPager()
     }
 
+    /**
+     * Converts a Nigerian phone number (local "0..." or already-international
+     * "234...") into the bare international digits wa.me expects, e.g.
+     * "08108709629" -> "2348108709629". Same digit-stripping approach as
+     * SheetSync.normalizePhone, but re-prefixed with "234" instead of bare
+     * local digits, since wa.me requires the full international number.
+     */
+    private fun toWhatsAppNumber(raw: String): String {
+        var digits = raw.filter { it.isDigit() }
+        if (digits.startsWith("234")) {
+            return digits
+        }
+        digits = digits.removePrefix("0")
+        return "234$digits"
+    }
+
     /** Opens WhatsApp to [number] with a pre-filled nudge message, same intent pattern as ProfileActivity.openWhatsAppContactUs. */
     private fun openWhatsAppNudge(number: String) {
         val message = Uri.encode("Hi, have you synced your VG Kontact yet?")
-        val uri = Uri.parse("https://wa.me/$number?text=$message")
+        val uri = Uri.parse("https://wa.me/${toWhatsAppNumber(number)}?text=$message")
         try {
             startActivity(Intent(Intent.ACTION_VIEW, uri))
         } catch (e: Exception) {
