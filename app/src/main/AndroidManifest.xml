@@ -79,6 +79,11 @@
             android:name=".NotificationSettingsActivity"
             android:exported="false" />
 
+        <!-- Activity feed - opened from the dashboard bell -->
+        <activity
+            android:name=".ActivityLogActivity"
+            android:exported="false" />
+
         <!-- Profile View -->
         <activity
             android:name=".ProfileActivity"
