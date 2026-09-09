@@ -271,7 +271,7 @@ class HistoryActivity : AppCompatActivity() {
             val textRow = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = android.view.Gravity.CENTER_VERTICAL
-                setPadding(0, 20, 0, 20)
+                setPadding(0, 10, 0, 10)
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT
@@ -279,20 +279,26 @@ class HistoryActivity : AppCompatActivity() {
             }
 
             val textColumn = LinearLayout(this).apply {
-                orientation = LinearLayout.VERTICAL
+                orientation = LinearLayout.HORIZONTAL
+                gravity = android.view.Gravity.CENTER_VERTICAL
                 layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
             }
 
             val numberView = TextView(this).apply {
                 text = entry.whatsapp
-                textSize = 14f
+                textSize = 13f
                 setTextColor(ContextCompat.getColor(this@HistoryActivity, R.color.vg_dark))
             }
 
             val timeView = TextView(this).apply {
                 text = formatRelativeTime(entry.createdAt)
-                textSize = 12f
+                textSize = 11f
                 setTextColor(ContextCompat.getColor(this@HistoryActivity, R.color.text_muted))
+                val marginPx = (8 * resources.displayMetrics.density).toInt()
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply { marginStart = marginPx }
             }
 
             textColumn.addView(numberView)
@@ -300,8 +306,8 @@ class HistoryActivity : AppCompatActivity() {
 
             // WhatsApp nudge icon - opens a chat to this referral's
             // number with a pre-filled follow-up message.
-            val iconSizePx = (24 * resources.displayMetrics.density).toInt()
-            val iconMarginPx = (12 * resources.displayMetrics.density).toInt()
+            val iconSizePx = (18 * resources.displayMetrics.density).toInt()
+            val iconMarginPx = (10 * resources.displayMetrics.density).toInt()
             val nudgeIcon = ImageView(this).apply {
                 setImageResource(R.drawable.ic_chat)
                 setColorFilter(ContextCompat.getColor(this@HistoryActivity, R.color.vg_green))
