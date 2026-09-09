@@ -15,7 +15,6 @@ import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
-import androidx.core.view.doOnNextLayout
 import androidx.core.widget.NestedScrollView
 
 /**
@@ -101,17 +100,19 @@ object CoachMarkOverlay {
         overlay.setOnClickListener { /* swallow taps outside the tooltip */ }
 
         root.addView(overlay, MATCH_MATCH)
+        tooltip.dockAt(top = !steps[0].dockAtBottom)
         root.addView(tooltip.root, tooltip.root.layoutParams)
 
-        // HighlightView has just been added and hasn't been through a
-        // layout pass yet - it has no real width/height the instant this
-        // line runs. Calling highlight() before that first layout landed
-        // produced a degenerate, near-zero-size hole (visible as a stray
-        // dot instead of a ring around the real button). Waiting for
-        // overlay's own layout to complete guarantees onDraw has a
-        // correctly sized canvas before the first step ever tries to
-        // draw a hole into it.
-        overlay.doOnNextLayout { showStep() }
+        // Post rather than call directly: overlay and tooltip were just
+        // added and have not been through a layout pass yet, so they have
+        // no real width/height this instant. post{} runs after the
+        // pending layout pass completes, guaranteeing both views are
+        // properly sized before the first step ever draws a hole or docks
+        // the tooltip. (A doOnNextLayout listener was tried here instead
+        // and removed - it could fire synchronously as part of the layout
+        // pass already in flight from addView above, racing ahead of the
+        // tooltip being added at all.)
+        overlay.post { showStep() }
     }
 
     /**
