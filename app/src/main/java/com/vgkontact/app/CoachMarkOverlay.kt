@@ -60,12 +60,37 @@ object CoachMarkOverlay {
 
         fun renderStep() {
             val step = steps[index]
-            overlay.setTargetRect(rectOf(step.target))
-            tooltipTitle.text = step.title
-            tooltipMessage.text = step.message
-            tooltipCounter.text = "${index + 1} of ${steps.size}"
-            tooltipNextButton.text = if (index == steps.size - 1) "Got it" else "Next"
-            positionTooltip(activity, tooltip, rectOf(step.target))
+
+            // Scroll the target into view first - previously renderStep()
+            // measured the target's position immediately, which only
+            // worked for views already on screen (steps 1-2). For a view
+            // further down the dashboard (e.g. kontactGroupsButton on
+            // step 3), the view could be partially or fully off-screen
+            // when measured, producing a highlight rect that didn't
+            // actually frame the button - it either missed it entirely or
+            // clipped into whatever view happened to be on screen at that
+            // location instead. requestRectangleOnScreen asks every
+            // scrollable ancestor (the dashboard's NestedScrollView) to
+            // bring the target fully into view before we measure or draw
+            // anything.
+            step.target.requestRectangleOnScreen(
+                Rect(0, 0, step.target.width, step.target.height)
+            )
+
+            // The scroll above is not synchronous - it schedules a layout
+            // pass. Measuring on the very next frame (via post) is enough
+            // for a NestedScrollView's fling-free scrollTo to have applied,
+            // matching the same "wait for layout" pattern already used to
+            // call showDashboardTourIfNeeded() in the first place.
+            step.target.post {
+                val rect = rectOf(step.target)
+                overlay.setTargetRect(rect)
+                tooltipTitle.text = step.title
+                tooltipMessage.text = step.message
+                tooltipCounter.text = "${index + 1} of ${steps.size}"
+                tooltipNextButton.text = if (index == steps.size - 1) "Got it" else "Next"
+                positionTooltip(activity, tooltip, rect)
+            }
         }
 
         tooltipNextButton.setOnClickListener {
@@ -132,8 +157,7 @@ object CoachMarkOverlay {
         val density = activity.resources.displayMetrics.density
         val container = LinearLayout(activity)
         container.orientation = LinearLayout.VERTICAL
-        container.background = activity.getDrawable(R.drawable.icon_box_rounded)?.mutate()
-        container.setBackgroundColor(android.graphics.Color.WHITE)
+        container.background = activity.getDrawable(R.drawable.coach_mark_tooltip_background)
         container.setPadding((20 * density).toInt(), (18 * density).toInt(), (20 * density).toInt(), (18 * density).toInt())
         container.layoutParams = FrameLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,
