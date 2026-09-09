@@ -47,6 +47,7 @@ class MainMenuActivity : AppCompatActivity() {
     private lateinit var statsContent: LinearLayout
     private lateinit var statsTodayText: TextView
     private lateinit var notificationIcon: ImageView
+    private lateinit var notificationUnreadDot: View
     private lateinit var syncFrequencyPill: LinearLayout
     private lateinit var syncFrequencyText: TextView
     private lateinit var profileIcon: ImageView
@@ -92,6 +93,7 @@ class MainMenuActivity : AppCompatActivity() {
         statsContent = findViewById(R.id.statsContent)
         statsTodayText = findViewById(R.id.statsTodayText)
         notificationIcon = findViewById(R.id.notificationIcon)
+        notificationUnreadDot = findViewById(R.id.notificationUnreadDot)
         syncFrequencyPill = findViewById(R.id.syncFrequencyPill)
         syncFrequencyText = findViewById(R.id.syncFrequencyText)
         profileIcon = findViewById(R.id.profileIcon)
@@ -147,8 +149,14 @@ class MainMenuActivity : AppCompatActivity() {
         }
 
         notificationIcon.setOnClickListener {
-            startActivity(Intent(this, NotificationSettingsActivity::class.java))
+            // Sync frequency now lives on the dashboard pill, so the bell
+            // no longer needs to open settings - it opens the activity
+            // feed instead. The dot is cleared inside ActivityLogActivity
+            // itself, and renderNotificationDot() re-checks in onResume
+            // below so it's gone by the time the user is back here.
+            startActivity(Intent(this, ActivityLogActivity::class.java))
         }
+        renderNotificationDot()
 
         renderSyncFrequencyPill()
         syncFrequencyPill.setOnClickListener {
@@ -207,6 +215,7 @@ class MainMenuActivity : AppCompatActivity() {
         // setup) - stats should reflect the real on-device numbers.
         loadStats()
         refreshPermissionHealth()
+        renderNotificationDot()
         // Auto-sync every time this screen becomes visible, so newly added
         // kontacts (someone else registering elsewhere) show up without the
         // user needing to tap "Sync Kontact" themselves. Quiet by design -
@@ -224,6 +233,16 @@ class MainMenuActivity : AppCompatActivity() {
      * Notifications/battery missing -> Sync still works, banner shows in amber.
      * Nothing missing -> banner is hidden.
      */
+    /**
+     * Shows/hides the small red dot on the bell based on ActivityLog's
+     * unread count. Called on create, on every resume (so returning from
+     * ActivityLogActivity clears it immediately), and right after any
+     * event is logged from within this activity's own callbacks.
+     */
+    private fun renderNotificationDot() {
+        notificationUnreadDot.visibility = if (ActivityLog.hasUnread(this)) View.VISIBLE else View.GONE
+    }
+
     private fun refreshPermissionHealth() {
         val status = PermissionHealth.check(this)
         latestPermissionStatus = status
@@ -264,6 +283,19 @@ class MainMenuActivity : AppCompatActivity() {
                 permissionWarningBanner.visibility = View.VISIBLE
                 permissionWarningText.text = status.message()
                 setBannerColor(R.color.warning_red)
+            }
+        }
+
+        // Log once per crossing into ADVISORY/BLOCKING, same "only on
+        // change" guard as the contact-limit zone above - see
+        // UserPrefs.getLastPermissionSeverityLogged doc comment.
+        val severityName = status.severity.name
+        val lastLoggedSeverity = UserPrefs.getLastPermissionSeverityLogged(this)
+        if (severityName != lastLoggedSeverity) {
+            UserPrefs.setLastPermissionSeverityLogged(this, severityName)
+            if (status.severity != PermissionHealth.Severity.NONE) {
+                ActivityLog.add(this, ActivityLog.Type.PERMISSION_ISSUE, status.message())
+                renderNotificationDot()
             }
         }
     }
@@ -576,8 +608,12 @@ class MainMenuActivity : AppCompatActivity() {
             UserPrefs.setLastLimitZoneNotified(this, newZone)
             if (newZone == "danger") {
                 NotificationHelper.showLimitReachedNotification(this, current, limit)
+                ActivityLog.add(this, ActivityLog.Type.LIMIT_REACHED, "Contact limit reached ($current/$limit)")
+                renderNotificationDot()
             } else if (newZone == "warning") {
                 NotificationHelper.showLimitWarningNotification(this, current, limit)
+                ActivityLog.add(this, ActivityLog.Type.LIMIT_WARNING, "Approaching contact limit ($current/$limit)")
+                renderNotificationDot()
             }
         }
     }
@@ -617,6 +653,11 @@ class MainMenuActivity : AppCompatActivity() {
                     Toast.makeText(this, "$submitted new added, $failed failed - tap to retry", Toast.LENGTH_LONG).show()
                 }
                 NotificationHelper.showSyncCompleteNotification(this, submitted, failed, errorDetail)
+                if (submitted > 0) {
+                    val label = if (submitted == 1) "contact" else "contacts"
+                    ActivityLog.add(this, ActivityLog.Type.CONTACT_SYNCED, "Synced $submitted new $label")
+                    renderNotificationDot()
+                }
                 loadStats()
             }
         }
@@ -677,6 +718,9 @@ class MainMenuActivity : AppCompatActivity() {
                     val label = if (submitted == 1) "number" else "numbers"
                     Toast.makeText(this, "$submitted new $label added", Toast.LENGTH_LONG).show()
                     NotificationHelper.showSyncCompleteNotification(this, submitted, failed, errorDetail)
+                    val contactLabel = if (submitted == 1) "contact" else "contacts"
+                    ActivityLog.add(this, ActivityLog.Type.CONTACT_SYNCED, "Synced $submitted new $contactLabel")
+                    renderNotificationDot()
                     loadStats()
                 }
                 // submitted == 0 -> nothing new, stay quiet, no toast.
