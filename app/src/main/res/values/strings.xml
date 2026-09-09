@@ -73,6 +73,7 @@
     <!-- Profile -->
     <string name="title_profile">My Profile</string>
     <string name="profile_label_number">Number</string>
+    <string name="profile_label_username">Username</string>
     <string name="profile_label_referral">Referred By</string>
     <string name="profile_label_date_registered">Date Registered</string>
     <string name="profile_label_sync_status">Sync Status</string>
