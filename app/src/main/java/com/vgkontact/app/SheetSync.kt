@@ -29,6 +29,8 @@ data class DayCount(val date: String, val count: Int)
 
 data class ReferralEntry(val whatsapp: String, val referralCount: Int)
 
+data class MyReferral(val whatsapp: String, val createdAt: String)
+
 data class ImportStats(
     val totalInDatabase: Int,
     val syncedToPhone: Int,
@@ -369,6 +371,49 @@ object SheetSync {
             } catch (e: Exception) {
                 Log.w("SheetSync", "fetchReferralLeaderboard failed", e)
                 callback?.invoke(null, "Couldn't load referral history right now")
+            }
+        }
+    }
+
+    /**
+     * Fetches the contacts this user has personally referred (contacts
+     * whose referral column equals this device's own WhatsApp number),
+     * newest first. Powers HistoryActivity's "My referrals" tab.
+     */
+    fun fetchMyReferrals(context: Context, callback: (List<MyReferral>?, String?) -> Unit) {
+        runOnIoThread {
+            try {
+                val whatsapp = UserPrefs.getWhatsapp(context)
+                if (whatsapp.isNullOrEmpty()) {
+                    callback(emptyList(), null)
+                    return@runOnIoThread
+                }
+                val encodedWhatsapp = URLEncoder.encode(whatsapp, "UTF-8")
+                val request = buildRequest(
+                    "contacts?select=referral,created_at&referral=eq.$encodedWhatsapp&order=created_at.desc",
+                    "GET"
+                )
+                httpClient.newCall(request).execute().use { response ->
+                    if (response.code in 200..299) {
+                        val body = bodyString(response)
+                        val arr = JSONArray(body)
+                        val entries = mutableListOf<MyReferral>()
+                        for (i in 0 until arr.length()) {
+                            val obj = arr.getJSONObject(i)
+                            entries.add(MyReferral(whatsapp, obj.optString("created_at")))
+                        }
+                        callback(entries, null)
+                    } else {
+                        val errorText = readErrorBody(response)
+                        callback(null, errorText)
+                    }
+                }
+            } catch (e: java.io.IOException) {
+                Log.w("SheetSync", "fetchMyReferrals failed - network error", e)
+                callback(null, "NO_INTERNET")
+            } catch (e: Exception) {
+                Log.w("SheetSync", "fetchMyReferrals failed", e)
+                callback(null, "Couldn't load your referrals right now")
             }
         }
     }
