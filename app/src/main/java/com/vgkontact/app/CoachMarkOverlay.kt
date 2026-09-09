@@ -1,13 +1,8 @@
 package com.vgkontact.app
 
 import android.app.Activity
-import android.graphics.Canvas
 import android.graphics.Color
-import android.graphics.Paint
-import android.graphics.PorterDuff
-import android.graphics.PorterDuffXfermode
-import android.graphics.Rect
-import android.graphics.RectF
+import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -15,21 +10,21 @@ import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
-import androidx.core.widget.NestedScrollView
 
 /**
- * First-run dashboard tour: a dimmed scrim with a hole punched around one
- * real button at a time, plus a tooltip card explaining it.
+ * First-run dashboard tour: a simple green ring drawn around one real
+ * button at a time, plus a fixed tooltip card explaining it.
  *
- * The tooltip sits at a FIXED position on screen - just below the status
- * bar - for every step, and never moves to chase the target. Only the
- * highlight hole moves between steps. One step (the contact-limit card,
- * which sits right under the header) opts into docking at the bottom
- * instead, via Step.dockAtBottom, since a top-docked tooltip would land on
- * top of it.
+ * Deliberately simple - no canvas hole-punching, no scroll-position
+ * syncing, no multi-frame post{} chains. The ring is an ordinary sibling
+ * View positioned with plain pixel math from getLocationInWindow(), and
+ * the tooltip always docks at a fixed top or bottom spot. If a target is
+ * off-screen behind a scrollable area, this does not auto-scroll to it -
+ * callers should pick targets that are already visible, or call
+ * scrollTo() themselves before showIfNeeded().
  *
  * Runs once per install, gated by UserPrefs.isWalkthroughDone(). Call
- * showIfNeeded(activity, steps) after the dashboard has been laid out
+ * showIfNeeded(activity, steps) after the screen has been laid out
  * (e.g. from a view.post{} in onCreate).
  */
 object CoachMarkOverlay {
@@ -41,51 +36,36 @@ object CoachMarkOverlay {
         val dockAtBottom: Boolean = false
     )
 
-    private const val TOOLTIP_TITLE_ID = 1001
-    private const val TOOLTIP_MESSAGE_ID = 1002
-    private const val TOOLTIP_COUNTER_ID = 1003
-    private const val TOOLTIP_NEXT_ID = 1004
-    private const val TOOLTIP_SKIP_ID = 1005
-
     fun showIfNeeded(activity: Activity, steps: List<Step>) {
         if (UserPrefs.isWalkthroughDone(activity)) return
         if (steps.isEmpty()) return
 
         // android.R.id.content is the Activity's true top-level container.
-        // Adding views here (not to some inner layout) guarantees they are
-        // the very last children drawn, above everything else on screen -
-        // including a floating bottom nav bar that lives in its own
-        // sibling layout, not inside the scrollable dashboard content.
+        // Adding views here guarantees they draw above everything else on
+        // screen, including a floating bottom nav bar in its own layout.
         val root = activity.findViewById<ViewGroup>(android.R.id.content) ?: return
 
-        val overlay = HighlightView(activity)
+        val ring = buildRing(activity)
         val tooltip = TooltipView(activity)
 
         var index = 0
 
         fun finish() {
             UserPrefs.setWalkthroughDone(activity)
-            root.removeView(overlay)
+            root.removeView(ring)
             root.removeView(tooltip.root)
         }
 
         fun showStep() {
             val step = steps[index]
+            positionRing(ring, step.target, root)
             tooltip.dockAt(top = !step.dockAtBottom)
-            scrollIntoClearView(step.target, dockAtBottom = step.dockAtBottom)
-
-            // Scrolling above is not synchronous. One frame later the
-            // NestedScrollView has settled, so the target's final on-
-            // screen position can be measured correctly.
-            step.target.post {
-                overlay.highlight(boundsInWindow(step.target, root))
-                tooltip.bind(
-                    title = step.title,
-                    message = step.message,
-                    counter = "${index + 1} of ${steps.size}",
-                    nextLabel = if (index == steps.size - 1) "Got it" else "Next"
-                )
-            }
+            tooltip.bind(
+                title = step.title,
+                message = step.message,
+                counter = "${index + 1} of ${steps.size}",
+                nextLabel = if (index == steps.size - 1) "Got it" else "Next"
+            )
         }
 
         tooltip.onNext = {
@@ -97,156 +77,78 @@ object CoachMarkOverlay {
             }
         }
         tooltip.onSkip = { finish() }
-        overlay.setOnClickListener { /* swallow taps outside the tooltip */ }
 
-        root.addView(overlay, MATCH_MATCH)
-        tooltip.dockAt(top = !steps[0].dockAtBottom)
+        root.addView(ring, ring.layoutParams)
         root.addView(tooltip.root, tooltip.root.layoutParams)
 
-        // Post rather than call directly: overlay and tooltip were just
-        // added and have not been through a layout pass yet, so they have
-        // no real width/height this instant. post{} runs after the
-        // pending layout pass completes, guaranteeing both views are
-        // properly sized before the first step ever draws a hole or docks
-        // the tooltip. (A doOnNextLayout listener was tried here instead
-        // and removed - it could fire synchronously as part of the layout
-        // pass already in flight from addView above, racing ahead of the
-        // tooltip being added at all.)
-        overlay.post { showStep() }
+        // Post rather than call directly: both views were just added and
+        // have not been through a layout pass yet, so getLocationInWindow()
+        // on the ring itself would be meaningless this instant. The target
+        // view is already laid out (dashboard is already on screen by the
+        // time showIfNeeded is called), so only the ring/tooltip need the
+        // extra frame.
+        ring.post { showStep() }
     }
 
     /**
-     * Scrolls target's nearest NestedScrollView ancestor, if any, so the
-     * target isn't hidden behind the fixed tooltip dock. No-op for
-     * targets with no scrollable ancestor (e.g. bottom nav tabs, which
-     * are always on screen regardless of scroll position).
+     * Moves the ring to sit around target's current on-screen position.
+     * Plain pixel math - getLocationInWindow() for both views, subtract to
+     * get target's position relative to root, no scroll offsets involved
+     * because both are read fresh at call time.
      */
-    private fun scrollIntoClearView(target: View, dockAtBottom: Boolean) {
-        val scrollView = findScrollViewAncestor(target) ?: return
-        val density = target.resources.displayMetrics.density
-        val clearance = (170 * density).toInt() // tooltip card height + margins
-
-        val targetTop = sumOffsetsUpTo(target, scrollView)
-        val targetBottom = targetTop + target.height
-
-        if (dockAtBottom) {
-            val visibleBottom = scrollView.scrollY + scrollView.height - clearance
-            when {
-                targetBottom > visibleBottom ->
-                    scrollView.scrollTo(0, (targetBottom - scrollView.height + clearance).coerceAtLeast(0))
-                targetTop < scrollView.scrollY ->
-                    scrollView.scrollTo(0, targetTop)
-            }
-        } else {
-            val visibleTop = scrollView.scrollY + clearance
-            if (targetTop < visibleTop) {
-                scrollView.scrollTo(0, (targetTop - clearance).coerceAtLeast(0))
-            }
-        }
-    }
-
-    private fun findScrollViewAncestor(view: View): NestedScrollView? {
-        var p = view.parent
-        while (p != null) {
-            if (p is NestedScrollView) return p
-            p = p.parent
-        }
-        return null
-    }
-
-    private fun sumOffsetsUpTo(view: View, ancestor: View): Int {
-        var offset = 0
-        var v: View = view
-        while (v !== ancestor) {
-            offset += v.top
-            val nextParent = v.parent
-            if (nextParent !is View) break
-            v = nextParent
-        }
-        return offset
-    }
-
-    /**
-     * Target's bounds converted into root's local coordinate space.
-     * getLocationInWindow() is window-relative (includes the status bar);
-     * root's own top-left, subtracted here, is not at (0,0) in that same
-     * space - it starts below the status bar. Without this conversion the
-     * hole is drawn a status-bar's-height too high.
-     */
-    private fun boundsInWindow(target: View, root: View): Rect {
+    private fun positionRing(ring: View, target: View, root: View) {
         val t = IntArray(2)
         target.getLocationInWindow(t)
         val r = IntArray(2)
         root.getLocationInWindow(r)
-        val left = t[0] - r[0]
-        val top = t[1] - r[1]
-        return Rect(left, top, left + target.width, top + target.height)
+
+        val pad = (6 * ring.resources.displayMetrics.density).toInt()
+        val params = ring.layoutParams as FrameLayout.LayoutParams
+        params.width = target.width + pad * 2
+        params.height = target.height + pad * 2
+        params.leftMargin = t[0] - r[0] - pad
+        params.topMargin = t[1] - r[1] - pad
+        params.gravity = Gravity.TOP or Gravity.START
+        ring.layoutParams = params
     }
 
-    private val MATCH_MATCH = FrameLayout.LayoutParams(
-        ViewGroup.LayoutParams.MATCH_PARENT,
-        ViewGroup.LayoutParams.MATCH_PARENT
-    )
-
-    /**
-     * Dark scrim covering the screen with a rounded-rect hole cut around
-     * the current target. Hardware-accelerated (no forced software
-     * layer) so its elevation is compared normally against the floating
-     * bottom nav bar's own elevation - the hole is punched via an
-     * offscreen saveLayer() instead, which keeps that comparison intact.
-     */
-    private class HighlightView(activity: Activity) : View(activity) {
-        private var target: RectF? = null
-        private val scrim = Paint().apply { color = Color.parseColor("#CC000000") }
-        private val hole = Paint().apply {
-            xfermode = PorterDuffXfermode(PorterDuff.Mode.CLEAR)
-            isAntiAlias = true
+    private fun buildRing(activity: Activity): View {
+        val density = activity.resources.displayMetrics.density
+        val ring = View(activity)
+        ring.background = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = 16 * density
+            setStroke((3 * density).toInt(), Color.parseColor("#1FAA59"))
         }
-        private val ring = Paint().apply {
-            style = Paint.Style.STROKE
-            strokeWidth = 4f
-            color = Color.parseColor("#1FAA59")
-            isAntiAlias = true
-        }
-
-        init {
-            elevation = 12 * resources.displayMetrics.density
-        }
-
-        fun highlight(rect: Rect) {
-            val pad = 6f
-            target = RectF(rect.left - pad, rect.top - pad, rect.right + pad, rect.bottom + pad)
-            invalidate()
-        }
-
-        override fun onDraw(canvas: Canvas) {
-            super.onDraw(canvas)
-            val layer = canvas.saveLayer(0f, 0f, width.toFloat(), height.toFloat(), null)
-            canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), scrim)
-            target?.let {
-                canvas.drawRoundRect(it, 16f, 16f, hole)
-                canvas.drawRoundRect(it, 16f, 16f, ring)
-            }
-            canvas.restoreToCount(layer)
-        }
+        ring.layoutParams = FrameLayout.LayoutParams(0, 0)
+        ring.elevation = 12 * density
+        return ring
     }
 
     /**
-     * The tooltip card. Docks at a fixed spot - top or bottom - and only
-     * ever snaps between those two; never follows the target.
+     * The tooltip card. Docks at a fixed spot - top or bottom - and never
+     * follows the target.
      */
     private class TooltipView(private val activity: Activity) {
         var onNext: (() -> Unit)? = null
         var onSkip: (() -> Unit)? = null
 
-        val root: LinearLayout = build()
-        private val titleView = root.findViewById<TextView>(TOOLTIP_TITLE_ID)
-        private val messageView = root.findViewById<TextView>(TOOLTIP_MESSAGE_ID)
-        private val counterView = root.findViewById<TextView>(TOOLTIP_COUNTER_ID)
-        private val nextButton = root.findViewById<Button>(TOOLTIP_NEXT_ID)
-        private val skipView = root.findViewById<TextView>(TOOLTIP_SKIP_ID)
+        val root: LinearLayout
+        private val titleView: TextView
+        private val messageView: TextView
+        private val counterView: TextView
+        private val nextButton: Button
+        private val skipView: TextView
 
         init {
+            val built = build()
+            root = built.first
+            counterView = built.second[0] as TextView
+            titleView = built.second[1] as TextView
+            messageView = built.second[2] as TextView
+            skipView = built.second[3] as TextView
+            nextButton = built.second[4] as Button
+
             nextButton.setOnClickListener { onNext?.invoke() }
             skipView.setOnClickListener { onSkip?.invoke() }
         }
@@ -279,7 +181,7 @@ object CoachMarkOverlay {
             root.layoutParams = params
         }
 
-        private fun build(): LinearLayout {
+        private fun build(): Pair<LinearLayout, List<View>> {
             val density = activity.resources.displayMetrics.density
             fun dp(v: Int) = (v * density).toInt()
 
@@ -295,14 +197,12 @@ object CoachMarkOverlay {
             }
 
             val counter = TextView(activity).apply {
-                id = TOOLTIP_COUNTER_ID
                 textSize = 12f
                 setTextColor(activity.getColor(R.color.text_muted))
             }
             container.addView(counter)
 
             val title = TextView(activity).apply {
-                id = TOOLTIP_TITLE_ID
                 textSize = 16f
                 setTextColor(activity.getColor(R.color.vg_dark))
                 setTypeface(typeface, android.graphics.Typeface.BOLD)
@@ -314,7 +214,6 @@ object CoachMarkOverlay {
             container.addView(title)
 
             val message = TextView(activity).apply {
-                id = TOOLTIP_MESSAGE_ID
                 textSize = 14f
                 setTextColor(activity.getColor(R.color.text_secondary))
                 layoutParams = LinearLayout.LayoutParams(
@@ -334,7 +233,6 @@ object CoachMarkOverlay {
             }
 
             val skip = TextView(activity).apply {
-                id = TOOLTIP_SKIP_ID
                 text = "Skip"
                 textSize = 14f
                 setTextColor(activity.getColor(R.color.text_muted))
@@ -344,7 +242,6 @@ object CoachMarkOverlay {
             actionsRow.addView(skip)
 
             val next = Button(activity).apply {
-                id = TOOLTIP_NEXT_ID
                 text = "Next"
                 textSize = 14f
                 setTextColor(Color.WHITE)
@@ -356,7 +253,7 @@ object CoachMarkOverlay {
             actionsRow.addView(next)
 
             container.addView(actionsRow)
-            return container
+            return Pair(container, listOf(counter, title, message, skip, next))
         }
     }
 }
