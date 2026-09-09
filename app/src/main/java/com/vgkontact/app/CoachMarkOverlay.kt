@@ -95,6 +95,16 @@ object CoachMarkOverlay {
         ))
         root.addView(tooltip.root, tooltip.root.layoutParams)
 
+        // The floating "Contact Us" bubble (FloatingContactHelper) sets its
+        // own elevation (12dp) so it can float above scrolling content.
+        // Elevation wins over add-order when siblings are compared, so
+        // without this the FAB would still poke through the dimmed scrim
+        // and stay tappable during the tour. Give the scrim/tooltip more
+        // elevation than the FAB so the tour always sits on top of it.
+        val density = activity.resources.displayMetrics.density
+        scrim.elevation = 14 * density
+        tooltip.root.elevation = 16 * density
+
         // A single post{} isn't enough: on first run the dashboard's stats
         // card is still reflowing (sync stats/limit numbers populate async
         // after onCreate), so the very first target can still measure 0x0
