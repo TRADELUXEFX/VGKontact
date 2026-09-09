@@ -7,15 +7,16 @@ import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Bundle
+import android.view.LayoutInflater
 import android.view.View
 import android.widget.Button
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.PopupWindow
 import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.widget.PopupMenu
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 
@@ -387,21 +388,36 @@ class MainMenuActivity : AppCompatActivity() {
      */
     private fun showSyncFrequencyMenu() {
         val options = listOf(1, 6, 12, 24)
-        val popup = PopupMenu(this, syncFrequencyPill)
-        // Menu item IDs double as the hours value itself, so the click
-        // handler can read the selection straight off item.itemId with no
-        // separate lookup table to keep in sync with menu order.
-        options.forEach { hours ->
-            popup.menu.add(0, hours, 0, "Every ${hours}h")
-        }
-        popup.setOnMenuItemClickListener { item ->
-            val selectedHours = item.itemId
-            UserPrefs.setNotificationFrequencyHours(this, selectedHours)
-            SheetCheckWorker.schedule(this, selectedHours)
-            renderSyncFrequencyPill()
+
+        val container = LayoutInflater.from(this)
+            .inflate(R.layout.popup_sync_frequency_menu, null) as LinearLayout
+
+        val popup = PopupWindow(
+            container,
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT,
             true
+        )
+        // Lets outside taps dismiss the popup instead of falling through to
+        // whatever's behind it - PopupMenu did this automatically, a plain
+        // PopupWindow needs it set explicitly.
+        popup.isOutsideTouchable = true
+        popup.elevation = 6 * resources.displayMetrics.density
+
+        options.forEach { hours ->
+            val row = LayoutInflater.from(this)
+                .inflate(R.layout.item_sync_frequency_option, container, false)
+            row.findViewById<TextView>(R.id.syncFrequencyOptionText).text = "Every ${hours}h"
+            row.setOnClickListener {
+                UserPrefs.setNotificationFrequencyHours(this, hours)
+                SheetCheckWorker.schedule(this, hours)
+                renderSyncFrequencyPill()
+                popup.dismiss()
+            }
+            container.addView(row)
         }
-        popup.show()
+
+        popup.showAsDropDown(syncFrequencyPill)
     }
 
     /**
