@@ -214,9 +214,9 @@
                     android:fontFamily="@font/baloo2" />
 
                 <ImageView
-                    android:layout_width="8dp"
-                    android:layout_height="8dp"
-                    android:layout_marginStart="4dp"
+                    android:layout_width="10dp"
+                    android:layout_height="10dp"
+                    android:layout_marginStart="5dp"
                     android:src="@drawable/ic_arrow_forward"
                     android:rotation="90"
                     app:tint="@color/white" />
