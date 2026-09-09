@@ -169,6 +169,25 @@
 
                 </LinearLayout>
 
+                <!-- Search field - filters this user's own referral list
+                     by WhatsApp number, same style/drawable as the
+                     Leaderboard panel's historySearchInput. -->
+                <EditText
+                    android:id="@+id/myReferralsSearchInput"
+                    android:layout_width="match_parent"
+                    android:layout_height="46dp"
+                    android:hint="Search by WhatsApp number..."
+                    android:inputType="number"
+                    android:paddingStart="14dp"
+                    android:paddingEnd="14dp"
+                    android:background="@drawable/referral_code_background"
+                    android:textSize="13sp"
+                    android:textColor="@color/vg_dark"
+                    android:textColorHint="@color/text_muted"
+                    android:fontFamily="@font/manrope"
+                    android:imeOptions="actionDone"
+                    android:layout_marginBottom="16dp" />
+
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -202,6 +221,18 @@
                     android:textSize="13sp"
                     android:textColor="@color/text_muted"
                     android:text="No referrals yet."
+                    android:visibility="gone" />
+
+                <!-- Shown instead of myReferralsListContainer rows when a
+                     search query matches nothing. -->
+                <TextView
+                    android:id="@+id/myReferralsNoResultsText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:padding="24dp"
+                    android:gravity="center"
+                    android:textSize="13sp"
+                    android:textColor="@color/text_muted"
                     android:visibility="gone" />
 
                 <!-- Numbered page row for myReferralsListContainer,
