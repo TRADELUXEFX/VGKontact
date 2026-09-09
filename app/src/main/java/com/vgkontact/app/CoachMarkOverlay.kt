@@ -88,7 +88,7 @@ object CoachMarkOverlay {
             // matching the same "wait for layout" pattern already used to
             // call showDashboardTourIfNeeded() in the first place.
             step.target.post {
-                val rect = rectOf(step.target)
+                val rect = rectOf(step.target, root)
                 overlay.setTargetRect(rect)
                 tooltipTitle.text = step.title
                 tooltipMessage.text = step.message
@@ -114,10 +114,29 @@ object CoachMarkOverlay {
         renderStep()
     }
 
-    private fun rectOf(view: View): Rect {
+    /**
+     * Returns the target's bounds in the *overlay's own coordinate space*
+     * (i.e. relative to `root`, the content view the overlay is a child
+     * of) rather than raw window coordinates.
+     *
+     * getLocationInWindow() returns coordinates relative to the top-left
+     * of the whole window, which includes the status bar. But the overlay
+     * view is added as a child of android.R.id.content, whose local (0,0)
+     * already starts *below* the status bar. Drawing at the raw window
+     * coordinate on the overlay's canvas therefore places the hole too
+     * high by exactly the status bar's height - the cutout consistently
+     * landed above the real button instead of framing it. Subtracting
+     * root's own window position converts the target's coordinate into
+     * root/overlay-local space so the two line up.
+     */
+    private fun rectOf(view: View, root: View): Rect {
         val location = IntArray(2)
         view.getLocationInWindow(location)
-        return Rect(location[0], location[1], location[0] + view.width, location[1] + view.height)
+        val rootLocation = IntArray(2)
+        root.getLocationInWindow(rootLocation)
+        val left = location[0] - rootLocation[0]
+        val top = location[1] - rootLocation[1]
+        return Rect(left, top, left + view.width, top + view.height)
     }
 
     private fun positionTooltip(activity: Activity, tooltip: View, targetRect: Rect) {
