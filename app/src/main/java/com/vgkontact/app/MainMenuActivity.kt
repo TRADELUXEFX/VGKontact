@@ -192,7 +192,12 @@ class MainMenuActivity : AppCompatActivity() {
                 CoachMarkOverlay.Step(
                     limitBlock,
                     "Your contact limit",
-                    "You can only add a few contacts for free. Check your limit here."
+                    "You can only add a few contacts for free. Check your limit here.",
+                    // The only step whose target sits high enough (right
+                    // under the header) that the default top-docked
+                    // tooltip would land on or overlap it - every other
+                    // step stays top-docked.
+                    dockAtBottom = true
                 ),
                 CoachMarkOverlay.Step(
                     kontactGroupsButton,
