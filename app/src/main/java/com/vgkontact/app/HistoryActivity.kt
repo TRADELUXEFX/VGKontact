@@ -20,6 +20,7 @@ import androidx.core.content.ContextCompat
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.TimeZone
 import java.util.concurrent.TimeUnit
 
 /**
@@ -420,7 +421,12 @@ class HistoryActivity : AppCompatActivity() {
         val diffMs = Date().time - date.time
         val days = TimeUnit.MILLISECONDS.toDays(diffMs)
         return when {
-            days <= 0 -> "Today"
+            days <= 0 -> {
+                val timeFormat = SimpleDateFormat("h:mm a", Locale.US).apply {
+                    timeZone = TimeZone.getTimeZone("Africa/Lagos")
+                }
+                "Today at ${timeFormat.format(date)}"
+            }
             days == 1L -> "Yesterday"
             else -> "$days days ago"
         }
