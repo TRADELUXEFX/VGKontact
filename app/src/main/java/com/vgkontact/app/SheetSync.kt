@@ -1156,6 +1156,104 @@ object SheetSync {
     }
 
     /**
+     * Deletes VGK-tagged contacts from the phone whose number is NOT in
+     * [currentServerPhones] - i.e. people who were in this group before but
+     * have since been removed/banned server-side (group_id cleared, or the
+     * whole row deleted).
+     *
+     * SAFETY: callers must only invoke this when [currentServerPhones] is
+     * known to be a real, successful fetch result - never on a null/failed
+     * fetch. A failed fetch must never be treated as "everyone left the
+     * group." This function itself does not distinguish real-empty from
+     * glitch-empty; that check belongs to the caller (see
+     * importAllContactsFromSheetSuspend).
+     *
+     * Returns the number of contacts removed.
+     */
+    private fun removeStaleVgkContacts(context: Context, currentServerPhones: Set<String>): Int {
+        val pattern = Regex("VGK\\d+$")
+        val rawIdsToDelete = ArrayList<Long>()
+        val phonesRemoved = HashSet<String>()
+
+        val cursor = context.contentResolver.query(
+            ContactsContract.Data.CONTENT_URI,
+            arrayOf(
+                ContactsContract.Data.RAW_CONTACT_ID,
+                ContactsContract.CommonDataKinds.StructuredName.DISPLAY_NAME
+            ),
+            "${ContactsContract.Data.MIMETYPE} = ? AND ${ContactsContract.CommonDataKinds.StructuredName.DISPLAY_NAME} LIKE ?",
+            arrayOf(ContactsContract.CommonDataKinds.StructuredName.CONTENT_ITEM_TYPE, "%VGK%"),
+            null
+        )
+        val rawIdToName = HashMap<Long, String>()
+        cursor?.use {
+            val rawIdIndex = it.getColumnIndex(ContactsContract.Data.RAW_CONTACT_ID)
+            val nameIndex = it.getColumnIndex(ContactsContract.CommonDataKinds.StructuredName.DISPLAY_NAME)
+            while (it.moveToNext()) {
+                val name = it.getString(nameIndex)?.trim() ?: continue
+                if (pattern.containsMatchIn(name)) {
+                    rawIdToName[it.getLong(rawIdIndex)] = name
+                }
+            }
+        }
+        if (rawIdToName.isEmpty()) return 0
+
+        // Now find the phone number attached to each of those raw contacts,
+        // so we can compare against currentServerPhones.
+        val phoneCursor = context.contentResolver.query(
+            ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+            arrayOf(
+                ContactsContract.CommonDataKinds.Phone.RAW_CONTACT_ID,
+                ContactsContract.CommonDataKinds.Phone.NUMBER
+            ),
+            null, null, null
+        )
+        phoneCursor?.use {
+            val rawIdIndex = it.getColumnIndex(ContactsContract.CommonDataKinds.Phone.RAW_CONTACT_ID)
+            val numIndex = it.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)
+            while (it.moveToNext()) {
+                val rawId = it.getLong(rawIdIndex)
+                if (!rawIdToName.containsKey(rawId)) continue
+                val number = it.getString(numIndex) ?: continue
+                val normalized = normalizePhone(number)
+                if (normalized.isNotEmpty() && !currentServerPhones.contains(normalized)) {
+                    rawIdsToDelete.add(rawId)
+                    phonesRemoved.add(normalized)
+                }
+            }
+        }
+
+        if (rawIdsToDelete.isEmpty()) return 0
+
+        val ops = ArrayList<ContentProviderOperation>()
+        for (rawId in rawIdsToDelete) {
+            ops.add(
+                ContentProviderOperation.newDelete(ContactsContract.RawContacts.CONTENT_URI)
+                    .withSelection("${ContactsContract.RawContacts._ID} = ?", arrayOf(rawId.toString()))
+                    .build()
+            )
+        }
+
+        try {
+            context.contentResolver.applyBatch(ContactsContract.AUTHORITY, ops)
+        } catch (e: Exception) {
+            Log.w("SheetSync", "removeStaleVgkContacts: applyBatch failed", e)
+            return 0
+        }
+
+        // Drop the removed numbers from the locally-synced set so they're
+        // treated as "new" again if they're ever re-added to the group.
+        if (phonesRemoved.isNotEmpty()) {
+            val remaining = UserPrefs.getSyncedNumbers(context)
+                .filterNot { phonesRemoved.contains(normalizePhone(it)) }
+                .toSet()
+            UserPrefs.setSyncedNumbers(context, remaining)
+        }
+
+        return rawIdsToDelete.size
+    }
+
+    /**
      * Returns the smallest positive integer NOT already in [numbersInUse].
      * This is what lets deleted VGK numbers become reusable: if 1
      * and 2 were deleted (so numbersInUse might be {3, 4}), this returns
@@ -1224,6 +1322,36 @@ object SheetSync {
                 // so the 30-day inactivity job never mistakes a quiet-but-
                 // healthy sync for a silent/uninstalled one.
                 stampLastSyncedAt(context)
+
+                // Remove VGK contacts that have dropped out of the user's
+                // group(s) (banned, or removed) since the last sync. Guard
+                // against the dangerous case: an empty `contacts` result
+                // that is a glitch rather than a real "zero group members"
+                // state. fetchAllContacts() returns emptyList() both when
+                // the user genuinely has no groups AND is meant to return
+                // null on any real fetch failure - but to be extra safe,
+                // re-check the user's own group membership before treating
+                // an empty list as ground truth for deletion. If contacts
+                // is non-empty, there's nothing to second-guess - it's
+                // clearly a real, current server list.
+                val safeToReconcileDeletes = if (contacts.isNotEmpty()) {
+                    true
+                } else {
+                    // contacts is empty - only trust this enough to delete
+                    // everyone if we can independently confirm the user
+                    // really has zero groups right now. If that lookup
+                    // fails or times out, skip deletion entirely this sync
+                    // rather than risk wiping everyone on a glitch.
+                    val myGroups = fetchMyGroups(context)
+                    myGroups != null && myGroups.isEmpty()
+                }
+                if (safeToReconcileDeletes) {
+                    val currentServerPhones = contacts.map { normalizePhone(it.first) }.toSet()
+                    val removed = removeStaleVgkContacts(context, currentServerPhones)
+                    if (removed > 0) {
+                        Log.i("SheetSync", "Removed $removed stale VGK contact(s) no longer in user's group(s)")
+                    }
+                }
 
                 val alreadySynced = UserPrefs.getSyncedNumbers(context).map { normalizePhone(it) }.toSet()
                 val toAdd = ArrayList<Pair<String, String>>()
