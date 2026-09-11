@@ -6,6 +6,12 @@
     screen/app) so it sits visually identical to the contact-limit card
     above it. Pure listing + redirect: no progress, no claim state -
     the button just opens the campaign's destination link.
+
+    Layout: header row (campaign name + rate pill) - divider -
+    requirements text - button. Uses card_background's own 20dp
+    corner radius/border, so the outer LinearLayout stays unclipped
+    and the divider is a separate 1dp View instead of a second
+    background drawable.
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -14,55 +20,79 @@
     android:layout_height="wrap_content"
     android:orientation="vertical"
     android:background="@drawable/card_background"
-    android:padding="18dp"
     android:layout_marginBottom="12dp">
 
-    <!-- Top row: requirements/description on the left, rate pill on
-         the right (e.g. "₦500 per 1000 views"). Both come straight
-         from the admin panel's campaign fields. -->
+    <!-- Header row: campaign name on the left, rate on the right. -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:layout_marginBottom="14dp">
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:paddingTop="14dp"
+        android:paddingBottom="14dp">
 
         <TextView
-            android:id="@+id/campaignDescriptionText"
+            android:id="@+id/campaignNameText"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:textSize="15sp"
+            android:textSize="13sp"
+            android:textStyle="bold"
             android:textColor="@color/vg_dark"
-            tools:text="Repost our status daily for 7 days" />
+            tools:text="Campaign" />
 
         <TextView
             android:id="@+id/campaignRewardBadge"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:paddingStart="14dp"
-            android:paddingEnd="14dp"
-            android:paddingTop="6dp"
-            android:paddingBottom="6dp"
-            android:background="@drawable/reward_badge_background"
-            android:textSize="13sp"
+            android:layout_marginStart="8dp"
+            android:textSize="12sp"
             android:textStyle="bold"
-            android:textColor="@color/vg_dark"
-            tools:text="₦500 per 1000 views" />
+            android:textColor="@color/vg_green"
+            tools:text="500 viewers" />
 
     </LinearLayout>
 
-    <Button
-        android:id="@+id/campaignClaimButton"
+    <View
         android:layout_width="match_parent"
-        android:layout_height="48dp"
-        android:text="@string/btn_campaign_interested"
-        android:textAllCaps="true"
-        android:letterSpacing="0.02"
-        android:textSize="12.5sp"
-        android:textStyle="bold"
-        android:backgroundTint="@color/vg_green"
-        android:textColor="@color/white"
-        app:cornerRadius="16dp" />
+        android:layout_height="1dp"
+        android:background="@color/stats_card_border" />
+
+    <!-- Requirements/description + button. -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:paddingTop="14dp"
+        android:paddingBottom="14dp">
+
+        <TextView
+            android:id="@+id/campaignDescriptionText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            android:textSize="13sp"
+            android:lineSpacingMultiplier="1.3"
+            android:textColor="@color/text_secondary"
+            tools:text="Repost our video on your WhatsApp status for 7 days" />
+
+        <Button
+            android:id="@+id/campaignClaimButton"
+            android:layout_width="match_parent"
+            android:layout_height="40dp"
+            android:text="@string/btn_campaign_interested"
+            android:textAllCaps="true"
+            android:letterSpacing="0.02"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:backgroundTint="@color/vg_green"
+            android:textColor="@color/white"
+            app:cornerRadius="12dp" />
+
+    </LinearLayout>
 
 </LinearLayout>
