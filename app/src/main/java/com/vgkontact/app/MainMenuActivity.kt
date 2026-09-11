@@ -10,10 +10,12 @@ import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Bundle
+import android.view.LayoutInflater
 import android.view.View
 import android.widget.Button
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.PopupWindow
 import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
@@ -61,6 +63,7 @@ class MainMenuActivity : AppCompatActivity() {
     private lateinit var copyReferralCodeButton: Button
     private lateinit var profileIcon: ImageView
     private lateinit var planPreviewText: TextView
+    private lateinit var syncFrequencyAlarmIcon: ImageView
     private lateinit var permissionWarningBanner: LinearLayout
     private lateinit var permissionWarningText: TextView
 
@@ -108,6 +111,8 @@ class MainMenuActivity : AppCompatActivity() {
         copyReferralCodeButton = findViewById(R.id.copyReferralCodeButton)
         profileIcon = findViewById(R.id.profileIcon)
         planPreviewText = findViewById(R.id.planPreviewText)
+        syncFrequencyAlarmIcon = findViewById(R.id.syncFrequencyAlarmIcon)
+        syncFrequencyAlarmIcon.setOnClickListener { showSyncFrequencyPopup() }
         permissionWarningBanner = findViewById(R.id.permissionWarningBanner)
         permissionWarningText = findViewById(R.id.permissionWarningText)
 
@@ -453,6 +458,55 @@ class MainMenuActivity : AppCompatActivity() {
         planPreviewText.setTextColor(
             if (isVerified) Color.parseColor("#FFFFFF") else Color.parseColor("#FFD1D1")
         )
+    }
+
+    /**
+     * Alarm-icon shortcut next to the VERIFIED/UNVERIFIED badge - lists
+     * the same four sync-frequency presets (1/6/12/24 hours) as
+     * NotificationSettingsActivity's tiles, so the schedule can be
+     * previewed and changed right from the dashboard without a trip to
+     * that screen. Reuses the same popup_sync_frequency_menu.xml /
+     * item_sync_frequency_option.xml layouts and the same
+     * UserPrefs/SheetCheckWorker/ActivityLog calls
+     * NotificationSettingsActivity.saveFrequencyButton makes, so the
+     * schedule stays in sync regardless of which screen changed it.
+     */
+    private fun showSyncFrequencyPopup() {
+        val presetHours = listOf(1, 6, 12, 24)
+        val currentHours = UserPrefs.getNotificationFrequencyHours(this)
+        val selectedHours = presetHours.minByOrNull { kotlin.math.abs(it - currentHours) } ?: 24
+
+        val inflater = LayoutInflater.from(this)
+        val popupView = inflater.inflate(R.layout.popup_sync_frequency_menu, null)
+        val optionsContainer = popupView.findViewById<LinearLayout>(R.id.syncFrequencyOptionsContainer)
+
+        val popupWindow = PopupWindow(
+            popupView,
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+            true
+        )
+
+        presetHours.forEach { hours ->
+            val optionRow = inflater.inflate(R.layout.item_sync_frequency_option, optionsContainer, false)
+            val optionText = optionRow.findViewById<TextView>(R.id.syncFrequencyOptionText)
+            val label = if (hours == 1) "hour" else "hours"
+            optionText.text = "Every $hours $label"
+            if (hours == selectedHours) {
+                optionText.setTextColor(ContextCompat.getColor(this, R.color.vg_green_dark))
+            }
+            optionText.setOnClickListener {
+                UserPrefs.setNotificationFrequencyHours(this, hours)
+                SheetCheckWorker.schedule(this, hours)
+                ActivityLog.add(this, ActivityLog.Type.SYNC_FREQUENCY_CHANGED, "Sync frequency set to every $hours $label")
+                Toast.makeText(this, "Notification frequency updated to $hours $label", Toast.LENGTH_SHORT).show()
+                popupWindow.dismiss()
+            }
+            optionsContainer.addView(optionRow)
+        }
+
+        popupWindow.isOutsideTouchable = true
+        popupWindow.showAsDropDown(syncFrequencyAlarmIcon, 0, 8)
     }
 
     private fun fixWorstPermissionIssue(status: PermissionHealth.Status) {
