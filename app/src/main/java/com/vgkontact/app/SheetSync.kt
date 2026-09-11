@@ -48,23 +48,13 @@ data class GroupSummary(
     val extraCount: Long
 )
 
-data class CampaignStatus(
-    val campaignId: Long,
-    val campaignName: String,
-    val referralsPerMilestone: Int,
-    val slotsPerMilestone: Int,
-    val triggerStage: Int,
-    val repeats: Boolean,
-    val milestonesClaimed: Int,
-    val qualifyingReferrals: Int
-) {
-    val nextTarget: Int get() = (milestonesClaimed + 1) * referralsPerMilestone
-
-    val readyToClaim: Boolean get() =
-        (repeats || milestonesClaimed == 0) && qualifyingReferrals >= nextTarget
-
-    val fullyClaimed: Boolean get() = !repeats && milestonesClaimed >= 1
-}
+data class PaidCampaign(
+    val id: Long,
+    val name: String,
+    val rate: String,
+    val requirements: String?,
+    val destinationUrl: String
+)
 
 data class GroupCap(
     val groupId: Long,
@@ -419,23 +409,19 @@ object SheetSync {
     }
 
     /**
-     * Fetches this user's live progress on every active campaign from
-     * campaign_progress_live, filtered to rows where referrer_whatsapp
-     * is this user.
+     * Fetches all active paid campaigns from paid_campaigns. These are
+     * pure listing data - name, rate, requirements, and a destination
+     * link (WhatsApp group or DM) - managed entirely from the admin
+     * panel. Nothing here is tracked or claimed in-app; tapping a
+     * campaign's button just opens destinationUrl.
      */
-    fun fetchMyCampaignStatus(context: Context, callback: (List<CampaignStatus>?, String?) -> Unit) {
+    fun fetchPaidCampaigns(context: Context, callback: (List<PaidCampaign>?, String?) -> Unit) {
         runOnIoThread {
             try {
-                val whatsapp = UserPrefs.getWhatsapp(context)
-                if (whatsapp.isNullOrEmpty()) {
-                    callback(null, "No user registered yet")
-                    return@runOnIoThread
-                }
-
-                val encoded = URLEncoder.encode(whatsapp, "UTF-8")
                 val request = buildRequest(
-                    "campaign_progress_live?referrer_whatsapp=eq.$encoded" +
-                        "&select=campaign_id,campaign_name,referrals_per_milestone,slots_per_milestone,trigger_stage,repeats,milestones_claimed,qualifying_referrals",
+                    "paid_campaigns?active=eq.true" +
+                        "&select=id,name,rate,requirements,destination_url" +
+                        "&order=created_at.desc",
                     "GET"
                 )
                 httpClient.newCall(request).execute().use { response ->
@@ -446,73 +432,27 @@ object SheetSync {
                     }
                     val body = bodyString(response)
                     val arr = JSONArray(body)
-                    val results = mutableListOf<CampaignStatus>()
+                    val results = mutableListOf<PaidCampaign>()
                     for (i in 0 until arr.length()) {
                         val obj = arr.getJSONObject(i)
                         results.add(
-                            CampaignStatus(
-                                campaignId = obj.optLong("campaign_id"),
-                                campaignName = obj.optString("campaign_name"),
-                                referralsPerMilestone = obj.optInt("referrals_per_milestone"),
-                                slotsPerMilestone = obj.optInt("slots_per_milestone"),
-                                triggerStage = obj.optInt("trigger_stage"),
-                                repeats = obj.optBoolean("repeats"),
-                                milestonesClaimed = obj.optInt("milestones_claimed"),
-                                qualifyingReferrals = obj.optInt("qualifying_referrals")
+                            PaidCampaign(
+                                id = obj.optLong("id"),
+                                name = obj.optString("name"),
+                                rate = obj.optString("rate"),
+                                requirements = if (obj.isNull("requirements")) null else obj.optString("requirements"),
+                                destinationUrl = obj.optString("destination_url")
                             )
                         )
                     }
                     callback(results, null)
                 }
             } catch (e: java.io.IOException) {
-                Log.w("SheetSync", "fetchMyCampaignStatus failed - network error", e)
+                Log.w("SheetSync", "fetchPaidCampaigns failed - network error", e)
                 callback(null, "NO_INTERNET")
             } catch (e: Exception) {
-                Log.w("SheetSync", "fetchMyCampaignStatus failed", e)
+                Log.w("SheetSync", "fetchPaidCampaigns failed", e)
                 callback(null, "Couldn't load campaigns right now")
-            }
-        }
-    }
-
-    /**
-     * Called when the user taps "Unlock reward" on a card that's
-     * readyToClaim. Calls the claim_campaign_milestone() RPC.
-     */
-    fun claimCampaignMilestone(context: Context, campaignId: Long, callback: (List<Long>?) -> Unit) {
-        runOnIoThread {
-            try {
-                val whatsapp = UserPrefs.getWhatsapp(context)
-                if (whatsapp.isNullOrEmpty()) {
-                    callback(null)
-                    return@runOnIoThread
-                }
-
-                val body = JSONObject()
-                body.put("p_campaign_id", campaignId)
-                body.put("p_whatsapp", whatsapp)
-                val request = buildRequest("rpc/claim_campaign_milestone", "POST", body.toString())
-
-                httpClient.newCall(request).execute().use { response ->
-                    if (response.code !in 200..299) {
-                        callback(null)
-                        return@runOnIoThread
-                    }
-
-                    val trimmed = bodyString(response).trim()
-                    if (trimmed == "null" || trimmed.isEmpty()) {
-                        callback(null)
-                        return@runOnIoThread
-                    }
-                    val arr = JSONArray(trimmed)
-                    val unlocked = ArrayList<Long>()
-                    for (i in 0 until arr.length()) {
-                        unlocked.add(arr.getLong(i))
-                    }
-                    callback(unlocked)
-                }
-            } catch (e: Exception) {
-                Log.e("SheetSync", "claimCampaignMilestone failed", e)
-                callback(null)
             }
         }
     }
