@@ -98,12 +98,6 @@ class IncreaseLimitActivity : AppCompatActivity() {
     private lateinit var contactsTotalPriceText: TextView
     private var selectedContacts: Int = STEP_CONTACTS
 
-    // Paid campaigns are only fetched once, the first time this tab is
-    // shown - not re-fetched every time the user switches back to it,
-    // since these are managed entirely from the admin panel and don't
-    // change just from tab-switching.
-    private var campaignsLoaded = false
-
     private val CONTACT_US_WHATSAPP_NUMBER = "09110321143"
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -174,9 +168,9 @@ class IncreaseLimitActivity : AppCompatActivity() {
         // this, the screen's initial look depended on whatever was left
         // in the XML defaults, which could drift out of sync with what
         // showReferralTab()/showKeyTab() consider "inactive".
-        // showReferralTab() also triggers the first loadCampaigns() call
-        // (guarded by campaignsLoaded), so it isn't called separately
-        // when that's the tab being opened.
+        // showReferralTab() also triggers loadCampaigns() on every call,
+        // so it isn't called separately here when that's the tab being
+        // opened.
         if (intent.getStringExtra(EXTRA_INITIAL_TAB) == TAB_KEY) {
             showKeyTab()
         } else {
@@ -190,11 +184,9 @@ class IncreaseLimitActivity : AppCompatActivity() {
         tabReferralButton.backgroundTintList = ContextCompat.getColorStateList(this, R.color.white)
         tabReferralButton.setTextColor(ContextCompat.getColor(this, R.color.vg_green))
         tabKeyButton.backgroundTintList = ContextCompat.getColorStateList(this, android.R.color.transparent)
-        tabKeyButton.setTextColor(ContextCompat.getColor(this, R.color.text_muted))
+        tabKeyButton.setTextColor(ContextCompat.getColor(this, R.color.white))
 
-        if (!campaignsLoaded) {
-            loadCampaigns()
-        }
+        loadCampaigns()
     }
 
     private fun showKeyTab() {
@@ -203,7 +195,7 @@ class IncreaseLimitActivity : AppCompatActivity() {
         tabKeyButton.backgroundTintList = ContextCompat.getColorStateList(this, R.color.white)
         tabKeyButton.setTextColor(ContextCompat.getColor(this, R.color.vg_green))
         tabReferralButton.backgroundTintList = ContextCompat.getColorStateList(this, android.R.color.transparent)
-        tabReferralButton.setTextColor(ContextCompat.getColor(this, R.color.text_muted))
+        tabReferralButton.setTextColor(ContextCompat.getColor(this, R.color.white))
     }
 
     // ==================== Paid campaigns ====================
@@ -232,7 +224,6 @@ class IncreaseLimitActivity : AppCompatActivity() {
                     campaignsEmptyText.text = message
                     return@runOnUiThread
                 }
-                campaignsLoaded = true
                 if (list.isEmpty()) {
                     noCampaignsText.visibility = View.VISIBLE
                     return@runOnUiThread
