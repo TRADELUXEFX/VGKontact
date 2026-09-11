@@ -57,8 +57,8 @@ class NotificationSettingsActivity : AppCompatActivity() {
         saveFrequencyButton.setOnClickListener {
             UserPrefs.setNotificationFrequencyHours(this, selectedHours)
             SheetCheckWorker.schedule(this, selectedHours)
-            Toast.makeText(this, "Notification frequency updated to $selectedHours hours", Toast.LENGTH_SHORT).show()
             val label = if (selectedHours == 1) "hour" else "hours"
+            Toast.makeText(this, "Imports new contacts every $selectedHours $label", Toast.LENGTH_SHORT).show()
             ActivityLog.add(this, ActivityLog.Type.SYNC_FREQUENCY_CHANGED, "Sync frequency set to every $selectedHours $label")
             finish()
         }
