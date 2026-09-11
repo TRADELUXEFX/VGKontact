@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    One campaign's card - inflated once per active CampaignProgress row
-    in GrowYourViewsActivity.renderCampaignCards(). Copies card_background
+    One paid campaign's card - inflated once per active row in
+    IncreaseLimitActivity.renderCampaignCards(). Copies card_background
     for the outer card (same drawable as every other card on this
     screen/app) so it sits visually identical to the contact-limit card
-    above it.
+    above it. Pure listing + redirect: no progress, no claim state -
+    the button just opens the campaign's destination link.
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -16,10 +17,9 @@
     android:padding="18dp"
     android:layout_marginBottom="12dp">
 
-    <!-- Top row: "Refer N friends" on the left, reward pill on the right
-         (e.g. "+20 viewers"). Both built in Kotlin from the campaign's
-         required_referrals and reward group size - never shows the
-         campaign's internal name, group id, or trigger stage. -->
+    <!-- Top row: requirements/description on the left, rate pill on
+         the right (e.g. "₦500 per 1000 views"). Both come straight
+         from the admin panel's campaign fields. -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -34,7 +34,7 @@
             android:layout_weight="1"
             android:textSize="15sp"
             android:textColor="@color/vg_dark"
-            tools:text="Refer 5 friends" />
+            tools:text="Repost our status daily for 7 days" />
 
         <TextView
             android:id="@+id/campaignRewardBadge"
@@ -48,54 +48,15 @@
             android:textSize="13sp"
             android:textStyle="bold"
             android:textColor="@color/vg_dark"
-            tools:text="+20 viewers" />
+            tools:text="₦500 per 1000 views" />
 
     </LinearLayout>
-
-    <!-- Big progress number, e.g. "3" + "of 5 friends registered" -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="bottom"
-        android:layout_marginBottom="10dp">
-
-        <TextView
-            android:id="@+id/campaignProgressCountText"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textSize="28sp"
-            android:textStyle="bold"
-            android:textColor="@color/vg_dark"
-            tools:text="3" />
-
-        <TextView
-            android:id="@+id/campaignProgressLabelText"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
-            android:layout_marginBottom="3dp"
-            android:textSize="14sp"
-            android:textColor="@color/text_muted"
-            tools:text="of 5 friends registered" />
-
-    </LinearLayout>
-
-    <ProgressBar
-        android:id="@+id/campaignProgressBar"
-        style="?android:attr/progressBarStyleHorizontal"
-        android:layout_width="match_parent"
-        android:layout_height="8dp"
-        android:max="100"
-        android:progress="60"
-        android:progressDrawable="@drawable/limit_meter_progress"
-        android:layout_marginBottom="14dp" />
 
     <Button
         android:id="@+id/campaignClaimButton"
         android:layout_width="match_parent"
         android:layout_height="48dp"
-        android:text="@string/btn_claim_views"
+        android:text="@string/btn_campaign_interested"
         android:textAllCaps="true"
         android:letterSpacing="0.02"
         android:textSize="12.5sp"
