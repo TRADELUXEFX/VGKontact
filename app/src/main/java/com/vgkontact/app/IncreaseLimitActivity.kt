@@ -19,14 +19,23 @@ import android.widget.EditText
 
 /**
  * Increase Contact Limit - merged entry point that replaces both
- * GrowYourViewsActivity (referral milestone campaigns) and
+ * GrowYourViewsActivity (originally referral milestone campaigns, now
+ * a simple listing of manually-run paid campaigns - see below) and
  * UpgradePlanActivity (key code redemption). Both screens existed to do
  * the same underlying thing - raise the user's contact limit - via two
  * different mechanisms, and both already duplicated the same limit-meter
  * fetch/render logic against SheetSync.fetchImportStats(). This activity
  * keeps that fetch in one place, shown in a header that's shared across
- * both tabs, so a claim or redemption on either tab is reflected
- * immediately without the user needing to leave the screen.
+ * both tabs, so a redemption on the key tab is reflected immediately
+ * without the user needing to leave the screen.
+ *
+ * The "Referral Rewards" tab's campaign section used to auto-track
+ * referral counts and auto-unlock a shared reward code. That's gone -
+ * campaigns are now created and managed entirely from the admin panel
+ * (name, rate, requirements, destination link) and the app just lists
+ * them as cards. Tapping a card's button opens the destination link
+ * (a WhatsApp group or DM); nothing is tracked, verified, or claimed
+ * in-app.
  *
  * Launched from two places, which now open on different tabs so they
  * don't look like the same screen twice:
@@ -89,9 +98,10 @@ class IncreaseLimitActivity : AppCompatActivity() {
     private lateinit var contactsTotalPriceText: TextView
     private var selectedContacts: Int = STEP_CONTACTS
 
-    // Campaigns are only fetched once, the first time the Referral Rewards
-    // tab is shown - not re-fetched every time the user switches back to
-    // it, since nothing about them changes just from tab-switching.
+    // Paid campaigns are only fetched once, the first time this tab is
+    // shown - not re-fetched every time the user switches back to it,
+    // since these are managed entirely from the admin panel and don't
+    // change just from tab-switching.
     private var campaignsLoaded = false
 
     private val CONTACT_US_WHATSAPP_NUMBER = "09110321143"
@@ -196,7 +206,12 @@ class IncreaseLimitActivity : AppCompatActivity() {
         tabReferralButton.setTextColor(ContextCompat.getColor(this, R.color.text_muted))
     }
 
-    // ==================== Referral rewards ====================
+    // ==================== Paid campaigns ====================
+    // Pure listing + redirect. Campaigns are created and managed
+    // entirely from the admin panel (name, rate, requirements,
+    // destination link). Tapping a card's button just opens that
+    // link - a WhatsApp group invite or a DM to the team. Nothing
+    // is tracked, verified, or claimed in-app.
 
     private fun loadCampaigns() {
         campaignsProgressBar.visibility = View.VISIBLE
@@ -204,14 +219,14 @@ class IncreaseLimitActivity : AppCompatActivity() {
         campaignCardsContainer.removeAllViews()
         noCampaignsText.visibility = View.GONE
 
-        SheetSync.fetchMyCampaignStatus(this) { list, error ->
+        SheetSync.fetchPaidCampaigns(this) { list, error ->
             runOnUiThread {
                 campaignsProgressBar.visibility = View.GONE
                 if (list == null) {
                     val message = if (error == "NO_INTERNET") {
                         "No internet connection. Check your connection and try again."
                     } else {
-                        "Couldn't load rewards right now."
+                        "Couldn't load campaigns right now."
                     }
                     campaignsEmptyText.visibility = View.VISIBLE
                     campaignsEmptyText.text = message
@@ -227,7 +242,7 @@ class IncreaseLimitActivity : AppCompatActivity() {
         }
     }
 
-    private fun renderCampaignCards(campaigns: List<CampaignStatus>) {
+    private fun renderCampaignCards(campaigns: List<PaidCampaign>) {
         campaignCardsContainer.removeAllViews()
         val inflater = LayoutInflater.from(this)
 
@@ -236,65 +251,26 @@ class IncreaseLimitActivity : AppCompatActivity() {
 
             val descriptionText = card.findViewById<TextView>(R.id.campaignDescriptionText)
             val rewardBadge = card.findViewById<TextView>(R.id.campaignRewardBadge)
-            val progressCountText = card.findViewById<TextView>(R.id.campaignProgressCountText)
-            val progressLabelText = card.findViewById<TextView>(R.id.campaignProgressLabelText)
-            val progressBarView = card.findViewById<ProgressBar>(R.id.campaignProgressBar)
             val actionButton = card.findViewById<Button>(R.id.campaignClaimButton)
 
-            val perMilestone = campaign.referralsPerMilestone
-            val target = campaign.nextTarget
-            descriptionText.text = "Refer $perMilestone friends"
-            rewardBadge.text = "+${campaign.slotsPerMilestone} viewers"
+            descriptionText.text = campaign.requirements?.takeIf { it.isNotBlank() } ?: campaign.name
+            rewardBadge.text = campaign.rate
 
-            progressCountText.text = "${campaign.qualifyingReferrals}"
-            progressLabelText.text = "of $target friends registered"
-            progressBarView.max = target
-            progressBarView.progress = campaign.qualifyingReferrals.coerceAtMost(target)
-
-            when {
-                campaign.fullyClaimed -> {
-                    actionButton.isEnabled = false
-                    actionButton.alpha = 0.5f
-                    actionButton.text = "Claimed"
-                    actionButton.setOnClickListener(null)
-                }
-                campaign.readyToClaim -> {
-                    actionButton.isEnabled = true
-                    actionButton.alpha = 1f
-                    actionButton.text = "Unlock reward"
-                    actionButton.setOnClickListener { claimMilestone(campaign, actionButton) }
-                }
-                else -> {
-                    actionButton.isEnabled = false
-                    actionButton.alpha = 0.5f
-                    actionButton.text = "Keep referring"
-                    actionButton.setOnClickListener(null)
-                }
-            }
+            actionButton.isEnabled = true
+            actionButton.alpha = 1f
+            actionButton.text = "I'm interested"
+            actionButton.setOnClickListener { openCampaignLink(campaign) }
 
             campaignCardsContainer.addView(card)
         }
     }
 
-    private fun claimMilestone(campaign: CampaignStatus, actionButton: Button) {
-        if (!SheetSync.isOnline(this)) {
-            Toast.makeText(this, "No internet connection", Toast.LENGTH_SHORT).show()
-            return
-        }
-        actionButton.isEnabled = false
-        actionButton.text = "Unlocking..."
-
-        SheetSync.claimCampaignMilestone(this, campaign.campaignId) { unlockedGroups ->
-            runOnUiThread {
-                if (unlockedGroups != null && unlockedGroups.isNotEmpty()) {
-                    Toast.makeText(this, "Reward unlocked! Your extra status viewer slots are now active.", Toast.LENGTH_LONG).show()
-                    loadCampaigns()
-                } else {
-                    Toast.makeText(this, "Couldn't unlock right now. Please try again.", Toast.LENGTH_LONG).show()
-                    actionButton.isEnabled = true
-                    actionButton.text = "Unlock reward"
-                }
-            }
+    private fun openCampaignLink(campaign: PaidCampaign) {
+        try {
+            val uri = Uri.parse(campaign.destinationUrl)
+            startActivity(Intent(Intent.ACTION_VIEW, uri))
+        } catch (e: Exception) {
+            Toast.makeText(this, "Couldn't open the link", Toast.LENGTH_SHORT).show()
         }
     }
 
