@@ -48,7 +48,7 @@ class MainMenuActivity : AppCompatActivity() {
     // has no .icon property, only MaterialButton does. The XML <Button> tag
     // still inflates as MaterialButton automatically under this app's
     // MaterialComponents theme, so this cast is safe.
-    private lateinit var deleteContactsButton: com.google.android.material.button.MaterialButton
+    private lateinit var deleteContactsIcon: ImageView
     private lateinit var phoneNumberText: TextView
     private lateinit var statsCard: LinearLayout
     private lateinit var statsProgressBar: ProgressBar
@@ -96,7 +96,7 @@ class MainMenuActivity : AppCompatActivity() {
         syncKontactButton = findViewById(R.id.syncKontactButton)
         kontactGroupsButton = findViewById(R.id.kontactGroupsButton)
         shareAppButton = findViewById(R.id.shareAppButton)
-        deleteContactsButton = findViewById(R.id.deleteContactsButton)
+        deleteContactsIcon = findViewById(R.id.deleteContactsIcon)
         phoneNumberText = findViewById(R.id.phoneNumberText)
         statsCard = findViewById(R.id.statsCard)
         statsProgressBar = findViewById(R.id.statsProgressBar)
@@ -171,7 +171,7 @@ class MainMenuActivity : AppCompatActivity() {
         }
 
         renderSyncPauseButton()
-        deleteContactsButton.setOnClickListener {
+        deleteContactsIcon.setOnClickListener {
             if (UserPrefs.isSyncPaused(this)) {
                 resumeSyncing()
             } else {
@@ -277,11 +277,11 @@ class MainMenuActivity : AppCompatActivity() {
      */
     private fun renderSyncPauseButton() {
         if (UserPrefs.isSyncPaused(this)) {
-            deleteContactsButton.text = getString(R.string.menu_resume_syncing)
-            deleteContactsButton.icon = ContextCompat.getDrawable(this, R.drawable.ic_sync)
+            deleteContactsIcon.setImageDrawable(ContextCompat.getDrawable(this, R.drawable.ic_sync))
+            deleteContactsIcon.contentDescription = getString(R.string.menu_resume_syncing)
         } else {
-            deleteContactsButton.text = getString(R.string.menu_delete_contacts)
-            deleteContactsButton.icon = ContextCompat.getDrawable(this, R.drawable.ic_delete)
+            deleteContactsIcon.setImageDrawable(ContextCompat.getDrawable(this, R.drawable.ic_delete))
+            deleteContactsIcon.contentDescription = getString(R.string.menu_delete_contacts)
         }
     }
 
