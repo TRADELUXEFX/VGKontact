@@ -67,6 +67,12 @@
                     android:layout_marginStart="12dp"
                     android:orientation="vertical">
 
+                    <!-- Shows the user's username (UserPrefs.getName), not
+                         their phone number - the phone number now lives
+                         only in the referral code row below, since it's
+                         the value used for referrals. Id kept as
+                         phoneNumberText to minimize Kotlin churn, but it
+                         now displays the username. -->
                     <TextView
                         android:id="@+id/phoneNumberText"
                         android:layout_width="wrap_content"
@@ -76,7 +82,7 @@
                         android:letterSpacing="0.01"
                         android:textColor="@color/white"
                         android:fontFamily="@font/baloo2"
-                        tools:text="08108709625" />
+                        tools:text="Jay" />
 
                     <!-- Group badge (reference: .group-badge). Shows the user's
                          plan tier today (planPreviewText, existing id/logic
@@ -190,73 +196,50 @@
             <!-- Hairline separating the sync row from the profile row above -
                  a plain 1dp View instead of a background-drawable border, so
                  it doesn't depend on guessing the row's height. -->
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:layout_marginTop="14dp"
-                android:background="#33FFFFFF" />
-
-            <!-- Sync-frequency row - moved out of the cramped inline pill
-                 next to the plan badge (approach 1 of the header redesign).
-                 Full-width, separated from the row above by the hairline
-                 just above, so "Syncs every 24 hours" reads in full instead
-                 of truncating to all-caps "SYNC 24H". Tapping it still opens
-                 the same frequency dropdown as before (see
-                 MainMenuActivity.showSyncFrequencyMenu). Text is set at
-                 runtime from UserPrefs.getNotificationFrequencyHours(). -->
+            <!-- Referral code row (Option B) - shows the user's WhatsApp
+                 number as their referral code, with a Copy action. This
+                 is the same value previously shown as the big header
+                 text; that spot now shows the username instead, so this
+                 row is what surfaces the number for referral purposes.
+                 Text set at runtime from UserPrefs.getWhatsapp(). -->
             <LinearLayout
-                android:id="@+id/syncFrequencyPill"
+                android:id="@+id/referralCodeRow"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
+                android:layout_marginTop="14dp"
                 android:orientation="horizontal"
-                android:gravity="center_vertical">
-
-                <ImageView
-                    android:layout_width="14dp"
-                    android:layout_height="14dp"
-                    android:layout_marginEnd="8dp"
-                    android:src="@drawable/ic_alarm"
-                    app:tint="@color/white" />
+                android:gravity="center_vertical"
+                android:background="@drawable/header_tab_track_background"
+                android:paddingStart="12dp"
+                android:paddingEnd="8dp"
+                android:paddingTop="8dp"
+                android:paddingBottom="8dp">
 
                 <TextView
-                    android:id="@+id/syncFrequencyText"
+                    android:id="@+id/referralCodeLabelText"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:textSize="13sp"
+                    android:textSize="11sp"
                     android:textColor="@color/white"
-                    android:fontFamily="@font/baloo2"
-                    tools:text="Syncs every 24 hours" />
+                    tools:text="Referral code: 08108709625" />
 
-                <!-- Real tappable button (was plain "Change ⌄" text in the
-                     row) - own pill background + ripple so it reads as a
-                     button rather than an inline label. -->
-                <LinearLayout
-                    android:id="@+id/btnChangeSyncFrequency"
+                <Button
+                    android:id="@+id/copyReferralCodeButton"
                     android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="8dp"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:paddingStart="12dp"
-                    android:paddingEnd="12dp"
-                    android:paddingTop="6dp"
-                    android:paddingBottom="6dp"
-                    android:background="@drawable/change_sync_button_background"
-                    android:clickable="true"
-                    android:focusable="true">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/label_change_sync_frequency"
-                        android:textSize="12sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/white"
-                        android:fontFamily="@font/baloo2" />
-
-                </LinearLayout>
+                    android:layout_height="24dp"
+                    android:minWidth="0dp"
+                    android:minHeight="0dp"
+                    android:paddingStart="10dp"
+                    android:paddingEnd="10dp"
+                    android:text="@string/btn_copy"
+                    android:textSize="10sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/vg_green_dark"
+                    android:backgroundTint="@color/white"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    app:cornerRadius="12dp" />
 
             </LinearLayout>
 
