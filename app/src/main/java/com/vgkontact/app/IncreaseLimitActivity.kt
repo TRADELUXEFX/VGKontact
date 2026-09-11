@@ -1,7 +1,5 @@
 package com.vgkontact.app
 
-import android.content.ClipData
-import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -72,9 +70,6 @@ class IncreaseLimitActivity : AppCompatActivity() {
     private lateinit var keyPanel: LinearLayout
 
     // Referral rewards panel
-    private lateinit var myReferralCodeText: TextView
-    private lateinit var copyReferralCodeButton: Button
-    private lateinit var shareInviteButton: Button
     private lateinit var campaignsProgressBar: ProgressBar
     private lateinit var campaignsEmptyText: TextView
     private lateinit var campaignCardsContainer: LinearLayout
@@ -113,9 +108,6 @@ class IncreaseLimitActivity : AppCompatActivity() {
         referralPanel = findViewById(R.id.referralPanel)
         keyPanel = findViewById(R.id.keyPanel)
 
-        myReferralCodeText = findViewById(R.id.myReferralCodeText)
-        copyReferralCodeButton = findViewById(R.id.copyReferralCodeButton)
-        shareInviteButton = findViewById(R.id.shareInviteButton)
         campaignsProgressBar = findViewById(R.id.campaignsProgressBar)
         campaignsEmptyText = findViewById(R.id.campaignsEmptyText)
         campaignCardsContainer = findViewById(R.id.campaignCardsContainer)
@@ -134,18 +126,8 @@ class IncreaseLimitActivity : AppCompatActivity() {
 
         upgradeSubtitleText.text = getString(R.string.upgrade_plan_coming_soon)
 
-        // My Referral Code - same as ProfileActivity: this is simply the
-        // user's own WhatsApp number, no separate generated code.
-        val myCode = UserPrefs.getWhatsapp(this) ?: "N/A"
-        myReferralCodeText.text = myCode
-        copyReferralCodeButton.setOnClickListener {
-            copyToClipboard(myCode)
-        }
-
         tabReferralButton.setOnClickListener { showReferralTab() }
         tabKeyButton.setOnClickListener { showKeyTab() }
-
-        shareInviteButton.setOnClickListener { shareInviteLink() }
 
         redeemKeyButton.setOnClickListener { redeemKey() }
         noCodeContactUsButton.setOnClickListener { openWhatsAppForUnlockCode() }
@@ -265,37 +247,6 @@ class IncreaseLimitActivity : AppCompatActivity() {
         } catch (e: Exception) {
             Toast.makeText(this, "Couldn't open the link", Toast.LENGTH_SHORT).show()
         }
-    }
-
-    /**
-     * Same real invite link and message pattern as
-     * MainMenuActivity.shareReferralLink() (https://vgkontact.netlify.app,
-     * not a Play Store link) so the user isn't shown two different invite
-     * links depending on which screen they share from.
-     */
-    private fun shareInviteLink() {
-        val myCode = UserPrefs.getWhatsapp(this)
-        if (myCode.isNullOrEmpty()) {
-            Toast.makeText(this, "Referral code unavailable", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        val link = "https://vgkontact.netlify.app?ref=$myCode"
-        val message = "Get more WhatsApp status views with VGKontact! " +
-            "Download here: $link\n\nUse my code $myCode when you sign up."
-
-        val shareIntent = Intent(Intent.ACTION_SEND).apply {
-            type = "text/plain"
-            putExtra(Intent.EXTRA_TEXT, message)
-        }
-        startActivity(Intent.createChooser(shareIntent, "Share invite"))
-    }
-
-    private fun copyToClipboard(text: String) {
-        val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-        val clip = ClipData.newPlainText("VGKontact Referral Code", text)
-        clipboard.setPrimaryClip(clip)
-        Toast.makeText(this, "Referral code copied", Toast.LENGTH_SHORT).show()
     }
 
     // ==================== Contact amount picker ====================
