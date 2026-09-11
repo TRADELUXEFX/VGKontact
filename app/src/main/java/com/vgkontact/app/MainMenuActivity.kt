@@ -55,7 +55,6 @@ class MainMenuActivity : AppCompatActivity() {
     private lateinit var statsContent: LinearLayout
     private lateinit var statsTodayText: TextView
     private lateinit var notificationIcon: ImageView
-    private lateinit var recoverAccountIcon: ImageView
     private lateinit var notificationUnreadDot: View
     private lateinit var syncFrequencyPill: LinearLayout
     private lateinit var btnChangeSyncFrequency: LinearLayout
@@ -104,7 +103,6 @@ class MainMenuActivity : AppCompatActivity() {
         statsContent = findViewById(R.id.statsContent)
         statsTodayText = findViewById(R.id.statsTodayText)
         notificationIcon = findViewById(R.id.notificationIcon)
-        recoverAccountIcon = findViewById(R.id.recoverAccountIcon)
         notificationUnreadDot = findViewById(R.id.notificationUnreadDot)
         syncFrequencyPill = findViewById(R.id.syncFrequencyPill)
         btnChangeSyncFrequency = findViewById(R.id.btnChangeSyncFrequency)
@@ -190,10 +188,6 @@ class MainMenuActivity : AppCompatActivity() {
             startActivity(Intent(this, ActivityLogActivity::class.java))
         }
         renderNotificationDot()
-
-        recoverAccountIcon.setOnClickListener {
-            startActivity(Intent(this, RecoverAccountActivity::class.java))
-        }
 
         renderSyncFrequencyPill()
         btnChangeSyncFrequency.setOnClickListener {
@@ -292,12 +286,25 @@ class MainMenuActivity : AppCompatActivity() {
     }
 
     private fun confirmAndDeleteContacts() {
-        androidx.appcompat.app.AlertDialog.Builder(this)
-            .setTitle("Delete My Contacts?")
-            .setMessage("This stops new contacts from syncing and removes the numbers VG Kontact added to your phone. You can turn syncing back on anytime.")
-            .setPositiveButton("Delete") { _, _ -> performDeleteContacts() }
-            .setNegativeButton("Cancel", null)
-            .show()
+        // Custom-themed dialog instead of the stock AlertDialog - the
+        // default Material dialog renders with a dark scrim and generic
+        // system styling that clashes with the rest of the app's white
+        // card / green-accent look.
+        val dialogView = layoutInflater.inflate(R.layout.dialog_delete_contacts, null)
+        val dialog = androidx.appcompat.app.AlertDialog.Builder(this)
+            .setView(dialogView)
+            .create()
+        dialog.window?.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT))
+
+        dialogView.findViewById<android.widget.Button>(R.id.dialogDeleteButton).setOnClickListener {
+            performDeleteContacts()
+            dialog.dismiss()
+        }
+        dialogView.findViewById<android.widget.Button>(R.id.dialogCancelButton).setOnClickListener {
+            dialog.dismiss()
+        }
+
+        dialog.show()
     }
 
     private fun performDeleteContacts() {
