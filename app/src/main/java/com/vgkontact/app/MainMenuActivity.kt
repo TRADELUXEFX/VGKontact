@@ -151,10 +151,11 @@ class MainMenuActivity : AppCompatActivity() {
 
         syncKontactButton.setOnClickListener {
             if (UserPrefs.isSyncPaused(this)) {
-                // Manual tap while paused shouldn't bypass the pause -
-                // same rule the background worker follows in
-                // SheetCheckWorker, applied here for the manual trigger too.
-                Toast.makeText(this, "Syncing is paused. Tap \"Resume Syncing\" to turn it back on.", Toast.LENGTH_LONG).show()
+                // Previously this dead-ended with a "syncing is paused"
+                // toast, forcing the user to find the separate resume
+                // icon first. Tapping the main sync button while paused
+                // should just resume and sync immediately instead.
+                resumeSyncing()
                 return@setOnClickListener
             }
             if (checkContactsPermission()) {
@@ -330,11 +331,17 @@ class MainMenuActivity : AppCompatActivity() {
     private fun resumeSyncing() {
         UserPrefs.setSyncPaused(this, false)
         renderSyncPauseButton()
-        Toast.makeText(this, "Syncing resumed.", Toast.LENGTH_SHORT).show()
         SheetSync.reportSyncPauseStatus(this, paused = false)
-        // Pick up any contacts added elsewhere while paused, same as a
-        // normal resume-triggered check.
-        autoSyncQuietly()
+        // A deliberate resume tap should sync right away and show the
+        // normal visible toasts/progress - not the silent, count-check-
+        // gated autoSyncQuietly() used for passive app-open/return
+        // refreshes, which can skip the actual sync entirely if the
+        // server's contact count hasn't changed since it was paused.
+        if (checkContactsPermission()) {
+            startSync()
+        } else {
+            requestContactsPermission()
+        }
     }
 
     /**
