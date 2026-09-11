@@ -341,13 +341,18 @@ class IncreaseLimitActivity : AppCompatActivity() {
                 setRedeemLoading(false)
                 if (unlockedGroups != null && unlockedGroups.isNotEmpty()) {
                     keyCodeInput.text?.clear()
+                    val groupLabel = if (unlockedGroups.size == 1) "group" else "groups"
+                    Toast.makeText(
+                        this,
+                        "Key redeemed! ${unlockedGroups.size} $groupLabel unlocked.",
+                        Toast.LENGTH_LONG
+                    ).show()
                     // Newly unlocked groups just raised contactLimit
                     // server-side - refresh the shared header immediately
                     // so the effect is visible without leaving this screen.
                     // Pull in the newly-unlocked group's contacts right
                     // away, instead of making the user go back to the
                     // dashboard and tap Sync manually.
-                    val groupLabel = if (unlockedGroups.size == 1) "group" else "groups"
                     ActivityLog.add(
                         this,
                         ActivityLog.Type.LIMIT_INCREASED,
