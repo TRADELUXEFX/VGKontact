@@ -103,7 +103,7 @@
     <string name="tab_redeem_key">Unlock views</string>
     <string name="label_your_status_viewers">Your status viewers</string>
     <string name="btn_share_invite_link">Share invite link</string>
-    <string name="label_earn_more_views">Paid campaigns</string>
+    <string name="label_earn_more_views">Available tasks</string>
     <string name="empty_no_active_campaigns">No active campaigns right now — check back soon.</string>
     <string name="label_friends_registered">Friends registered</string>
     <string name="btn_campaign_interested">I\'m interested</string>
