@@ -99,8 +99,8 @@
 
     <string name="title_increase_limit">Increase Status Viewers</string>
     <string name="subtitle_increase_limit">Redeem a key or refer friends to grow status viewers</string>
-    <string name="tab_referral_rewards">Referral rewards</string>
-    <string name="tab_redeem_key">Redeem a key</string>
+    <string name="tab_referral_rewards">By tasks</string>
+    <string name="tab_redeem_key">Unlock views</string>
     <string name="label_your_status_viewers">Your status viewers</string>
     <string name="btn_share_invite_link">Share invite link</string>
     <string name="label_earn_more_views">Paid campaigns</string>
