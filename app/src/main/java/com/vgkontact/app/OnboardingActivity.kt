@@ -24,6 +24,7 @@ class OnboardingActivity : AppCompatActivity() {
     private lateinit var continueButton: android.widget.Button
     private lateinit var progressBar: ProgressBar
     private lateinit var creditText: TextView
+    private lateinit var recoverAccountLink: TextView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -52,6 +53,11 @@ class OnboardingActivity : AppCompatActivity() {
         continueButton = findViewById(R.id.continueButton)
         progressBar = findViewById(R.id.progressBar)
         creditText = findViewById(R.id.creditText)
+        recoverAccountLink = findViewById(R.id.recoverAccountLink)
+
+        recoverAccountLink.setOnClickListener {
+            startActivity(Intent(this, RecoverAccountActivity::class.java))
+        }
 
         PhoneNumberFormatter.attachTo(whatsappInput)
         // referralInput no longer gets the phone-digit formatter attached -
