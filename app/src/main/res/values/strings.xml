@@ -36,6 +36,8 @@
     <string name="menu_kontact_groups">Kontact Groups</string>
     <string name="menu_increase_contact_limit">Grow WhatsApp Views</string>
     <string name="menu_share_app">Share App</string>
+    <string name="menu_delete_contacts">Delete My Contacts</string>
+    <string name="menu_resume_syncing">Resume Syncing</string>
     <string name="contact_limit_label">Contact Limit</string>
     <string name="label_free_plan">Contact limit</string>
     <string name="label_change_sync_frequency">Change</string>
