@@ -84,44 +84,65 @@
                         android:fontFamily="@font/baloo2"
                         tools:text="Jay" />
 
-                    <!-- Group badge (reference: .group-badge). Shows the user's
-                         plan tier today (planPreviewText, existing id/logic
-                         preserved) inside the same pill styling the reference
-                         uses for its "GROUP 1 - 5 MEMBERS" badge. The sync-
-                         frequency pill that used to sit next to this has moved
-                         to its own full-width row below (syncFrequencyRow) -
-                         it was unreadable crammed in here at 10sp, truncating
-                         to "SYNC 24H" instead of the intended "Syncs every
-                         24h". -->
                     <LinearLayout
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="5dp"
                         android:orientation="horizontal"
-                        android:gravity="center_vertical"
-                        android:background="@drawable/group_badge_background"
-                        android:paddingStart="8dp"
-                        android:paddingEnd="10dp"
-                        android:paddingTop="3dp"
-                        android:paddingBottom="3dp">
+                        android:gravity="center_vertical">
 
-                        <View
-                            android:layout_width="6dp"
-                            android:layout_height="6dp"
-                            android:layout_marginEnd="6dp"
-                            android:background="@drawable/badge_dot" />
-
-                        <TextView
-                            android:id="@+id/planPreviewText"
+                        <LinearLayout
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:textSize="11sp"
-                            android:textStyle="bold"
-                            android:textAllCaps="true"
-                            android:letterSpacing="0.04"
-                            android:textColor="@color/white"
-                            android:fontFamily="@font/baloo2"
-                            tools:text="FREE PLAN" />
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:background="@drawable/group_badge_background"
+                            android:paddingStart="8dp"
+                            android:paddingEnd="10dp"
+                            android:paddingTop="3dp"
+                            android:paddingBottom="3dp">
+
+                            <View
+                                android:layout_width="6dp"
+                                android:layout_height="6dp"
+                                android:layout_marginEnd="6dp"
+                                android:background="@drawable/badge_dot" />
+
+                            <TextView
+                                android:id="@+id/planPreviewText"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:textSize="11sp"
+                                android:textStyle="bold"
+                                android:textAllCaps="true"
+                                android:letterSpacing="0.04"
+                                android:textColor="@color/white"
+                                android:fontFamily="@font/baloo2"
+                                tools:text="FREE PLAN" />
+
+                        </LinearLayout>
+
+                        <!-- Alarm icon shortcut to the sync-frequency
+                             preview popup (1/6/12/24 hours), placed next
+                             to the VERIFIED/UNVERIFIED badge per request -
+                             this is where the old syncFrequencyRow pill
+                             used to sit before it was pulled for space
+                             (see removed comment above). Opens the same
+                             popup_sync_frequency_menu.xml/
+                             item_sync_frequency_option.xml used on the
+                             Notification Settings screen; see
+                             MainMenuActivity.showSyncFrequencyPopup(). -->
+                        <ImageView
+                            android:id="@+id/syncFrequencyAlarmIcon"
+                            android:layout_width="26dp"
+                            android:layout_height="26dp"
+                            android:padding="4dp"
+                            android:layout_marginStart="8dp"
+                            android:src="@drawable/ic_alarm"
+                            app:tint="@color/white"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:background="?android:attr/selectableItemBackgroundBorderless" />
 
                     </LinearLayout>
 
