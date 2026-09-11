@@ -158,25 +158,29 @@
 
                 </FrameLayout>
 
-                <!-- "Recover Account" entry point - reachable proactively
-                     from the dashboard, unlike DeviceBlockedActivity which
-                     only ever appears automatically after a blocked signup.
-                     Same 48dp circular styling as the notification bell
-                     beside it, just without an unread-dot equivalent. -->
+                <!-- "Delete My Contacts" / "Resume Syncing" toggle - moved
+                     here from a full-width outlined button at the bottom of
+                     the screen so it sits with the other account-level
+                     controls (bell) instead of competing with the primary
+                     action buttons in the actions section below. Icon and
+                     content-description swap at runtime in
+                     MainMenuActivity.renderSyncPauseButton(), same as the
+                     button it replaces. -->
                 <FrameLayout
                     android:layout_width="48dp"
                     android:layout_height="48dp"
                     android:layout_marginStart="6dp">
 
                     <ImageView
-                        android:id="@+id/recoverAccountIcon"
+                        android:id="@+id/deleteContactsIcon"
                         android:layout_width="48dp"
                         android:layout_height="48dp"
                         android:padding="12dp"
-                        android:src="@drawable/ic_recover_account"
+                        android:src="@drawable/ic_delete"
                         android:background="@drawable/notification_circle_background"
                         android:clickable="true"
                         android:focusable="true"
+                        android:contentDescription="@string/menu_delete_contacts"
                         app:tint="@color/white" />
 
                 </FrameLayout>
@@ -602,27 +606,6 @@
                 android:textColor="@color/primary_light"
                 app:icon="@drawable/ic_share"
                 app:iconTint="@color/primary_light"
-                app:iconGravity="textStart"
-                app:cornerRadius="16dp" />
-
-            <!-- Toggles between "Delete My Contacts" and "Resume Syncing"
-                 depending on UserPrefs.isSyncPaused() - see
-                 MainMenuActivity.renderSyncPauseButton(). Text/icon are set
-                 in code rather than as separate buttons, since only one of
-                 the two states is ever visible at a time. -->
-            <Button
-                android:id="@+id/deleteContactsButton"
-                android:layout_width="match_parent"
-                android:layout_height="56dp"
-                android:layout_marginTop="12dp"
-                android:textAllCaps="true"
-                android:letterSpacing="0.02"
-                android:textStyle="bold"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                app:strokeColor="@color/text_muted"
-                android:textColor="@color/text_muted"
-                app:icon="@drawable/ic_delete"
-                app:iconTint="@color/text_muted"
                 app:iconGravity="textStart"
                 app:cornerRadius="16dp" />
 
