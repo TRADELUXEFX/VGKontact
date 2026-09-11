@@ -1,18 +1,19 @@
 package com.vgkontact.app
 
 import android.Manifest
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Bundle
-import android.view.LayoutInflater
 import android.view.View
 import android.widget.Button
 import android.widget.ImageView
 import android.widget.LinearLayout
-import android.widget.PopupWindow
 import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
@@ -56,9 +57,8 @@ class MainMenuActivity : AppCompatActivity() {
     private lateinit var statsTodayText: TextView
     private lateinit var notificationIcon: ImageView
     private lateinit var notificationUnreadDot: View
-    private lateinit var syncFrequencyPill: LinearLayout
-    private lateinit var btnChangeSyncFrequency: LinearLayout
-    private lateinit var syncFrequencyText: TextView
+    private lateinit var referralCodeLabelText: TextView
+    private lateinit var copyReferralCodeButton: Button
     private lateinit var profileIcon: ImageView
     private lateinit var planPreviewText: TextView
     private lateinit var permissionWarningBanner: LinearLayout
@@ -104,9 +104,8 @@ class MainMenuActivity : AppCompatActivity() {
         statsTodayText = findViewById(R.id.statsTodayText)
         notificationIcon = findViewById(R.id.notificationIcon)
         notificationUnreadDot = findViewById(R.id.notificationUnreadDot)
-        syncFrequencyPill = findViewById(R.id.syncFrequencyPill)
-        btnChangeSyncFrequency = findViewById(R.id.btnChangeSyncFrequency)
-        syncFrequencyText = findViewById(R.id.syncFrequencyText)
+        referralCodeLabelText = findViewById(R.id.referralCodeLabelText)
+        copyReferralCodeButton = findViewById(R.id.copyReferralCodeButton)
         profileIcon = findViewById(R.id.profileIcon)
         planPreviewText = findViewById(R.id.planPreviewText)
         permissionWarningBanner = findViewById(R.id.permissionWarningBanner)
@@ -127,7 +126,19 @@ class MainMenuActivity : AppCompatActivity() {
             }
         }
 
-        phoneNumberText.text = UserPrefs.getWhatsapp(this) ?: "N/A"
+        // Header now shows the username, not the phone number - the
+        // number moved to the referral code row below (referralCodeRow
+        // in the layout), since it's the value used for referrals.
+        phoneNumberText.text = UserPrefs.getName(this) ?: "N/A"
+
+        val myReferralCode = UserPrefs.getWhatsapp(this) ?: "N/A"
+        referralCodeLabelText.text = "Referral code: $myReferralCode"
+        copyReferralCodeButton.setOnClickListener {
+            val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+            val clip = ClipData.newPlainText("VGKontact Referral Code", myReferralCode)
+            clipboard.setPrimaryClip(clip)
+            Toast.makeText(this, "Referral code copied", Toast.LENGTH_SHORT).show()
+        }
 
         // VERIFIED/UNVERIFIED is no longer a stored flag we fetch once - it's
         // derived live from PermissionHealth.check() every time the dashboard
@@ -189,11 +200,6 @@ class MainMenuActivity : AppCompatActivity() {
             startActivity(Intent(this, ActivityLogActivity::class.java))
         }
         renderNotificationDot()
-
-        renderSyncFrequencyPill()
-        btnChangeSyncFrequency.setOnClickListener {
-            showSyncFrequencyMenu()
-        }
 
         BottomNavHelper.setup(this, BottomNavHelper.Tab.HOME)
 
@@ -482,68 +488,6 @@ class MainMenuActivity : AppCompatActivity() {
             arrayOf(Manifest.permission.POST_NOTIFICATIONS),
             NOTIFICATION_PERMISSION_REQUEST_CODE
         )
-    }
-
-    /**
-     * Reflects the current auto-sync frequency (default 24h, same default
-     * NotificationSettingsActivity/UserPrefs already use) on the
-     * full-width sync row in the header, below the profile/bell row.
-     */
-    private fun renderSyncFrequencyPill() {
-        val hours = UserPrefs.getNotificationFrequencyHours(this)
-        val label = if (hours == 1) "hour" else "hours"
-        syncFrequencyText.text = "Contact syncs every $hours $label"
-    }
-
-    /**
-     * Quick-access dropdown for changing sync frequency right from the
-     * dashboard, without going into NotificationSettingsActivity. Reuses
-     * the same UserPrefs storage and SheetCheckWorker rescheduling that
-     * screen already uses, so both entry points stay in sync.
-     */
-    private fun showSyncFrequencyMenu() {
-        val options = listOf(1, 6, 12, 24)
-
-        val container = LayoutInflater.from(this)
-            .inflate(R.layout.popup_sync_frequency_menu, null) as LinearLayout
-
-        val popup = PopupWindow(
-            container,
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-            true
-        )
-        // Lets outside taps dismiss the popup instead of falling through to
-        // whatever's behind it - PopupMenu did this automatically, a plain
-        // PopupWindow needs it set explicitly.
-        popup.isOutsideTouchable = true
-        popup.elevation = 6 * resources.displayMetrics.density
-
-        options.forEach { hours ->
-            val row = LayoutInflater.from(this)
-                .inflate(R.layout.item_sync_frequency_option, container, false)
-            row.findViewById<TextView>(R.id.syncFrequencyOptionText).text = "Every ${hours}h"
-            row.setOnClickListener {
-                UserPrefs.setNotificationFrequencyHours(this, hours)
-                SheetCheckWorker.schedule(this, hours)
-                renderSyncFrequencyPill()
-                popup.dismiss()
-            }
-            container.addView(row)
-        }
-
-        // showAsDropDown's default (x=0) left-aligns the popup's left edge
-        // to the anchor's left edge. btnChangeSyncFrequency sits near the
-        // right side of the header, and the popup is wider than the
-        // button, so a zero offset pushes the popup's right edge off the
-        // screen. Measure the popup first so we can shift it left by
-        // (popup width - anchor width), right-aligning the two instead.
-        container.measure(
-            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
-            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
-        )
-        val xOffset = btnChangeSyncFrequency.width - container.measuredWidth
-        popup.showAsDropDown(btnChangeSyncFrequency, xOffset, 0)
     }
 
     /**
