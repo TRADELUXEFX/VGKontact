@@ -30,6 +30,13 @@ class SheetCheckWorker(context: Context, params: WorkerParameters) : CoroutineWo
                 return Result.success()
             }
 
+            if (UserPrefs.isSyncPaused(applicationContext)) {
+                // User tapped "Delete My Contacts" - checked locally, so
+                // this blocks syncing instantly and even offline, without
+                // depending on any server round-trip to take effect.
+                return Result.success()
+            }
+
             val (submitted, failed, errorDetail) = SheetSync.importAllContactsFromSheetSuspend(applicationContext)
             
             if (submitted > 0) {
