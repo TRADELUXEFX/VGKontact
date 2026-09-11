@@ -23,51 +23,68 @@
         android:orientation="vertical"
         android:background="@drawable/header_gradient"
         android:paddingTop="48dp"
-        android:paddingBottom="36dp"
+        android:paddingBottom="28dp"
         android:paddingStart="24dp"
         android:paddingEnd="24dp"
         android:gravity="center">
 
         <TextView
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="@string/title_history"
             android:textSize="22sp"
             android:textStyle="bold"
-            android:textColor="@color/white" />
+            android:textColor="@color/white"
+            android:textAlignment="center" />
 
-        <!-- Total-referrals pill, shown only while the My referrals
-             tab is active (toggled alongside myReferralsPanel in
-             HistoryActivity.showMyReferralsTab/showLeaderboardTab). -->
+        <!-- ============ TAB SWITCHER (segmented control) ============
+             Moved up into the header, replacing the total-referrals
+             pill, per request - same pattern as IncreaseLimitActivity's
+             tabReferralButton/tabKeyButton in its header. -->
         <LinearLayout
-            android:id="@+id/headerTotalPill"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:background="@drawable/header_total_pill_background"
-            android:paddingStart="14dp"
-            android:paddingEnd="14dp"
-            android:paddingTop="6dp"
-            android:paddingBottom="6dp"
-            android:layout_marginTop="12dp">
+            android:background="@drawable/header_tab_track_background"
+            android:padding="4dp"
+            android:layout_marginTop="16dp">
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Total referrals"
-                android:textSize="12sp"
-                android:textColor="@color/vg_green_tint" />
-
-            <TextView
-                android:id="@+id/myReferralsTotalText"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="0"
-                android:textSize="14sp"
+            <Button
+                android:id="@+id/tabMyReferralsButton"
+                android:layout_width="0dp"
+                android:layout_height="44dp"
+                android:layout_weight="1"
+                android:text="@string/tab_my_referrals"
+                android:textAllCaps="false"
+                android:textSize="13sp"
                 android:textStyle="bold"
+                android:backgroundTint="@android:color/transparent"
                 android:textColor="@color/white"
-                android:layout_marginStart="6dp" />
+                app:cornerRadius="12dp"
+                app:elevation="0dp"
+                app:rippleColor="@color/vg_green_tint"
+                android:stateListAnimator="@null"
+                android:insetTop="0dp"
+                android:insetBottom="0dp" />
+
+            <Button
+                android:id="@+id/tabLeaderboardButton"
+                android:layout_width="0dp"
+                android:layout_height="44dp"
+                android:layout_weight="1"
+                android:layout_marginStart="4dp"
+                android:text="@string/tab_leaderboard"
+                android:textAllCaps="false"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:backgroundTint="@android:color/transparent"
+                android:textColor="@color/white"
+                app:cornerRadius="12dp"
+                app:elevation="0dp"
+                app:rippleColor="@color/vg_green_tint"
+                android:stateListAnimator="@null"
+                android:insetTop="0dp"
+                android:insetBottom="0dp" />
 
         </LinearLayout>
 
@@ -109,59 +126,6 @@
             android:paddingTop="24dp"
             android:paddingBottom="24dp">
 
-            <!-- ============ TAB SWITCHER (segmented control) ============
-                 Same tab_track_background pattern as
-                 IncreaseLimitActivity's tabReferralButton/tabKeyButton.
-                 No outer card wrapper here (matches IncreaseLimitActivity's
-                 layout - tabs and panels sit directly in the 20dp scroll
-                 padding, not nested inside a second card). -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:background="@drawable/tab_track_background"
-                android:padding="4dp"
-                android:layout_marginBottom="16dp">
-
-                <Button
-                    android:id="@+id/tabMyReferralsButton"
-                    android:layout_width="0dp"
-                    android:layout_height="44dp"
-                    android:layout_weight="1"
-                    android:text="@string/tab_my_referrals"
-                    android:textAllCaps="false"
-                    android:textSize="13sp"
-                    android:textStyle="bold"
-                    android:backgroundTint="@android:color/transparent"
-                    android:textColor="@color/text_muted"
-                    app:cornerRadius="12dp"
-                    app:elevation="0dp"
-                    app:rippleColor="@color/vg_green_tint"
-                    android:stateListAnimator="@null"
-                    android:insetTop="0dp"
-                    android:insetBottom="0dp" />
-
-                <Button
-                    android:id="@+id/tabLeaderboardButton"
-                    android:layout_width="0dp"
-                    android:layout_height="44dp"
-                    android:layout_weight="1"
-                    android:layout_marginStart="4dp"
-                    android:text="@string/tab_leaderboard"
-                    android:textAllCaps="false"
-                    android:textSize="13sp"
-                    android:textStyle="bold"
-                    android:backgroundTint="@android:color/transparent"
-                    android:textColor="@color/text_muted"
-                    app:cornerRadius="12dp"
-                    app:elevation="0dp"
-                    app:rippleColor="@color/vg_green_tint"
-                    android:stateListAnimator="@null"
-                    android:insetTop="0dp"
-                    android:insetBottom="0dp" />
-
-            </LinearLayout>
-
             <!-- ============ MY REFERRALS PANEL ============
                  Own card wrapper (not nested inside a second outer card),
                  matching how IncreaseLimitActivity wraps its individual
@@ -194,15 +158,61 @@
                     android:imeOptions="actionDone"
                     android:layout_marginBottom="16dp" />
 
-                <TextView
+                <!-- RECENT REFERRALS label + total-referrals pill, same
+                     row, pill right-aligned opposite the label. Pill was
+                     previously in the header (headerTotalPill); moved
+                     here per request, using the same
+                     freq_summary_pill_background (opaque vg_green_tint,
+                     26dp corners) as GroupsActivity's frequency-summary
+                     pill. -->
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="RECENT REFERRALS"
-                    android:textSize="11sp"
-                    android:textAllCaps="true"
-                    android:letterSpacing="0.05"
-                    android:textColor="@color/text_muted"
-                    android:paddingBottom="8dp" />
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:paddingBottom="8dp">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="RECENT REFERRALS"
+                        android:textSize="11sp"
+                        android:textAllCaps="true"
+                        android:letterSpacing="0.05"
+                        android:textColor="@color/text_muted" />
+
+                    <LinearLayout
+                        android:id="@+id/headerTotalPill"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:background="@drawable/freq_summary_pill_background"
+                        android:paddingStart="12dp"
+                        android:paddingEnd="12dp"
+                        android:paddingTop="5dp"
+                        android:paddingBottom="5dp">
+
+                        <TextView
+                            android:id="@+id/myReferralsTotalText"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="0"
+                            android:textSize="12sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/vg_green_dark" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text=" Total Referrals"
+                            android:textSize="11sp"
+                            android:textColor="@color/vg_green_dark" />
+
+                    </LinearLayout>
+
+                </LinearLayout>
 
                 <View
                     android:layout_width="match_parent"
