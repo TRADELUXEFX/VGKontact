@@ -17,6 +17,7 @@
     <string name="onboarding_lead">Get Access to</string>
     <string name="onboarding_hook">1000+ Status Viewers</string>
     <string name="onboarding_credit">Powered by VGKontact</string>
+    <string name="onboarding_recover_account">Already have an account? Recover it</string>
     <string name="btn_sync_kontact">Claim Free Viewers</string>
     <string name="btn_upgrade_plan">Upgrade Plan</string>
     <string name="btn_save">Save</string>
@@ -38,6 +39,10 @@
     <string name="menu_share_app">Share App</string>
     <string name="menu_delete_contacts">Delete My Contacts</string>
     <string name="menu_resume_syncing">Resume Syncing</string>
+    <string name="dialog_delete_contacts_title">Delete My Contacts?</string>
+    <string name="dialog_delete_contacts_message">This stops new contacts from syncing and removes the numbers VG Kontact added to your phone. You can turn syncing back on anytime.</string>
+    <string name="dialog_cancel">Cancel</string>
+    <string name="dialog_delete">Delete</string>
     <string name="contact_limit_label">Contact Limit</string>
     <string name="label_free_plan">Contact limit</string>
     <string name="label_change_sync_frequency">Change</string>
