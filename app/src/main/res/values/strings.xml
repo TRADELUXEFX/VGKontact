@@ -59,7 +59,7 @@
     <string name="label_youll_pay">You\'ll pay</string>
     <string name="groups_more_available_note">There may be more Kontact groups available. Tap below to join with a key code, or contact us if you don\'t have one yet.</string>
     <string name="title_history">Referral History</string>
-    <string name="history_column_number">Number</string>
+    <string name="history_column_number">Affiliate Number</string>
     <string name="history_column_referrals">Referrals</string>
     <string name="tab_my_referrals">My referrals</string>
     <string name="tab_leaderboard">Leaderboard</string>
@@ -109,3 +109,4 @@
     <string name="btn_campaign_interested">I\'m interested</string>
     <string name="menu_grow_your_views">Grow your views</string>
 </resources>
+
