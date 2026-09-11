@@ -499,7 +499,7 @@ class MainMenuActivity : AppCompatActivity() {
                 UserPrefs.setNotificationFrequencyHours(this, hours)
                 SheetCheckWorker.schedule(this, hours)
                 ActivityLog.add(this, ActivityLog.Type.SYNC_FREQUENCY_CHANGED, "Sync frequency set to every $hours $label")
-                Toast.makeText(this, "Notification frequency updated to $hours $label", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Imports new contacts every $hours $label", Toast.LENGTH_SHORT).show()
                 popupWindow.dismiss()
             }
             optionsContainer.addView(optionRow)
