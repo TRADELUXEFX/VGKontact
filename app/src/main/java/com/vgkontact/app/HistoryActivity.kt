@@ -145,7 +145,7 @@ class HistoryActivity : AppCompatActivity() {
         tabMyReferralsButton.backgroundTintList = ContextCompat.getColorStateList(this, R.color.white)
         tabMyReferralsButton.setTextColor(ContextCompat.getColor(this, R.color.vg_green))
         tabLeaderboardButton.backgroundTintList = ContextCompat.getColorStateList(this, android.R.color.transparent)
-        tabLeaderboardButton.setTextColor(ContextCompat.getColor(this, R.color.text_muted))
+        tabLeaderboardButton.setTextColor(ContextCompat.getColor(this, R.color.white))
 
         if (!myReferralsLoaded) {
             loadMyReferrals()
@@ -159,7 +159,7 @@ class HistoryActivity : AppCompatActivity() {
         tabLeaderboardButton.backgroundTintList = ContextCompat.getColorStateList(this, R.color.white)
         tabLeaderboardButton.setTextColor(ContextCompat.getColor(this, R.color.vg_green))
         tabMyReferralsButton.backgroundTintList = ContextCompat.getColorStateList(this, android.R.color.transparent)
-        tabMyReferralsButton.setTextColor(ContextCompat.getColor(this, R.color.text_muted))
+        tabMyReferralsButton.setTextColor(ContextCompat.getColor(this, R.color.white))
 
         if (!leaderboardLoaded) {
             loadReferralLeaderboard()
