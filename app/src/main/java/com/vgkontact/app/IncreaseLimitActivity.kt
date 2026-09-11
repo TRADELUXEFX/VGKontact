@@ -283,22 +283,16 @@ class IncreaseLimitActivity : AppCompatActivity() {
                 setRedeemLoading(false)
                 if (unlockedGroups != null && unlockedGroups.isNotEmpty()) {
                     keyCodeInput.text?.clear()
-                    val groupLabel = if (unlockedGroups.size == 1) "group" else "groups"
-                    Toast.makeText(
-                        this,
-                        "Key redeemed! ${unlockedGroups.size} $groupLabel unlocked.",
-                        Toast.LENGTH_LONG
-                    ).show()
-                    // Newly unlocked groups just raised contactLimit
-                    // server-side - refresh the shared header immediately
-                    // so the effect is visible without leaving this screen.
-                    // Pull in the newly-unlocked group's contacts right
-                    // away, instead of making the user go back to the
-                    // dashboard and tap Sync manually.
+                    // User-facing language never mentions "groups" - that's
+                    // internal database structure. Externally this is always
+                    // framed as unlocked contact capacity. The actual
+                    // contact count/toast is reported by syncAfterRedeem()
+                    // once the sync completes, so we don't show a second,
+                    // separate popup here with a different (group) number.
                     ActivityLog.add(
                         this,
                         ActivityLog.Type.LIMIT_INCREASED,
-                        "Unlocked ${unlockedGroups.size} $groupLabel via key redemption"
+                        "Contact limit increased via key redemption"
                     )
                     syncAfterRedeem()
                 } else {
@@ -346,8 +340,10 @@ class IncreaseLimitActivity : AppCompatActivity() {
         SheetSync.importAllContactsFromSheet(this) { submitted, failed, errorDetail ->
             runOnUiThread {
                 if (errorDetail == null && submitted > 0) {
-                    val label = if (submitted == 1) "contact" else "contacts"
-                    Toast.makeText(this, "$submitted $label added", Toast.LENGTH_LONG).show()
+                    val label = if (submitted == 1) "contact was" else "contacts were"
+                    Toast.makeText(this, "$submitted $label unlocked with your key", Toast.LENGTH_LONG).show()
+                } else if (errorDetail == null) {
+                    Toast.makeText(this, "Contact limit increased with your key", Toast.LENGTH_LONG).show()
                 }
             }
         }
