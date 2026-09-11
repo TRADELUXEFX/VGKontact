@@ -251,8 +251,11 @@
                     android:textColor="@color/text_muted"
                     android:visibility="gone" />
 
-                <!-- Campaign cards inserted at runtime, one per active
-                     campaign - see IncreaseLimitActivity.renderCampaignCards(). -->
+                <!-- Paid campaign cards inserted at runtime, one per
+                     active campaign from the admin panel - see
+                     IncreaseLimitActivity.renderCampaignCards(). Each
+                     card's button just opens the campaign's
+                     WhatsApp/DM link; nothing is tracked in-app. -->
                 <LinearLayout
                     android:id="@+id/campaignCardsContainer"
                     android:layout_width="match_parent"
