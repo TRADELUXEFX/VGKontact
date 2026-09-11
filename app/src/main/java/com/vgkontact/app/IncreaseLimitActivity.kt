@@ -249,10 +249,12 @@ class IncreaseLimitActivity : AppCompatActivity() {
         for (campaign in campaigns) {
             val card = inflater.inflate(R.layout.item_campaign_card, campaignCardsContainer, false)
 
+            val nameText = card.findViewById<TextView>(R.id.campaignNameText)
             val descriptionText = card.findViewById<TextView>(R.id.campaignDescriptionText)
             val rewardBadge = card.findViewById<TextView>(R.id.campaignRewardBadge)
             val actionButton = card.findViewById<Button>(R.id.campaignClaimButton)
 
+            nameText.text = campaign.name
             descriptionText.text = campaign.requirements?.takeIf { it.isNotBlank() } ?: campaign.name
             rewardBadge.text = campaign.rate
 
