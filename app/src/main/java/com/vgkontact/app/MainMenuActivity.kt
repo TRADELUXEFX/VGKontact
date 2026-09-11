@@ -43,12 +43,19 @@ class MainMenuActivity : AppCompatActivity() {
     private lateinit var kontactGroupsButton: Button
     private var contactUsFab: View? = null
     private lateinit var shareAppButton: Button
+    // Declared as MaterialButton (not plain Button) because its icon is
+    // swapped at runtime in renderSyncPauseButton() - android.widget.Button
+    // has no .icon property, only MaterialButton does. The XML <Button> tag
+    // still inflates as MaterialButton automatically under this app's
+    // MaterialComponents theme, so this cast is safe.
+    private lateinit var deleteContactsButton: com.google.android.material.button.MaterialButton
     private lateinit var phoneNumberText: TextView
     private lateinit var statsCard: LinearLayout
     private lateinit var statsProgressBar: ProgressBar
     private lateinit var statsContent: LinearLayout
     private lateinit var statsTodayText: TextView
     private lateinit var notificationIcon: ImageView
+    private lateinit var recoverAccountIcon: ImageView
     private lateinit var notificationUnreadDot: View
     private lateinit var syncFrequencyPill: LinearLayout
     private lateinit var btnChangeSyncFrequency: LinearLayout
@@ -90,12 +97,14 @@ class MainMenuActivity : AppCompatActivity() {
         syncKontactButton = findViewById(R.id.syncKontactButton)
         kontactGroupsButton = findViewById(R.id.kontactGroupsButton)
         shareAppButton = findViewById(R.id.shareAppButton)
+        deleteContactsButton = findViewById(R.id.deleteContactsButton)
         phoneNumberText = findViewById(R.id.phoneNumberText)
         statsCard = findViewById(R.id.statsCard)
         statsProgressBar = findViewById(R.id.statsProgressBar)
         statsContent = findViewById(R.id.statsContent)
         statsTodayText = findViewById(R.id.statsTodayText)
         notificationIcon = findViewById(R.id.notificationIcon)
+        recoverAccountIcon = findViewById(R.id.recoverAccountIcon)
         notificationUnreadDot = findViewById(R.id.notificationUnreadDot)
         syncFrequencyPill = findViewById(R.id.syncFrequencyPill)
         btnChangeSyncFrequency = findViewById(R.id.btnChangeSyncFrequency)
@@ -143,6 +152,13 @@ class MainMenuActivity : AppCompatActivity() {
         SheetCheckWorker.schedule(this)
 
         syncKontactButton.setOnClickListener {
+            if (UserPrefs.isSyncPaused(this)) {
+                // Manual tap while paused shouldn't bypass the pause -
+                // same rule the background worker follows in
+                // SheetCheckWorker, applied here for the manual trigger too.
+                Toast.makeText(this, "Syncing is paused. Tap \"Resume Syncing\" to turn it back on.", Toast.LENGTH_LONG).show()
+                return@setOnClickListener
+            }
             if (checkContactsPermission()) {
                 startSync()
             } else {
@@ -156,6 +172,15 @@ class MainMenuActivity : AppCompatActivity() {
             shareReferralLink()
         }
 
+        renderSyncPauseButton()
+        deleteContactsButton.setOnClickListener {
+            if (UserPrefs.isSyncPaused(this)) {
+                resumeSyncing()
+            } else {
+                confirmAndDeleteContacts()
+            }
+        }
+
         notificationIcon.setOnClickListener {
             // Sync frequency now lives on the dashboard pill, so the bell
             // no longer needs to open settings - it opens the activity
@@ -165,6 +190,10 @@ class MainMenuActivity : AppCompatActivity() {
             startActivity(Intent(this, ActivityLogActivity::class.java))
         }
         renderNotificationDot()
+
+        recoverAccountIcon.setOnClickListener {
+            startActivity(Intent(this, RecoverAccountActivity::class.java))
+        }
 
         renderSyncFrequencyPill()
         btnChangeSyncFrequency.setOnClickListener {
@@ -240,6 +269,64 @@ class MainMenuActivity : AppCompatActivity() {
         // user needing to tap "Sync Kontact" themselves. Quiet by design -
         // no "checking..." toast, since this now fires on every app open/
         // return, not just an explicit user tap.
+        autoSyncQuietly()
+        // Covers coming back from another screen (or a fresh app open)
+        // after the pause state changed, so the label never goes stale.
+        renderSyncPauseButton()
+    }
+
+    /**
+     * Shows "Delete My Contacts" (off state) or "Resume Syncing" (paused
+     * state) depending on UserPrefs.isSyncPaused() - only one is ever
+     * relevant at a time, so this is one button with two labels rather
+     * than two separate buttons.
+     */
+    private fun renderSyncPauseButton() {
+        if (UserPrefs.isSyncPaused(this)) {
+            deleteContactsButton.text = getString(R.string.menu_resume_syncing)
+            deleteContactsButton.icon = ContextCompat.getDrawable(this, R.drawable.ic_sync)
+        } else {
+            deleteContactsButton.text = getString(R.string.menu_delete_contacts)
+            deleteContactsButton.icon = ContextCompat.getDrawable(this, R.drawable.ic_delete)
+        }
+    }
+
+    private fun confirmAndDeleteContacts() {
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("Delete My Contacts?")
+            .setMessage("This stops new contacts from syncing and removes the numbers VG Kontact added to your phone. You can turn syncing back on anytime.")
+            .setPositiveButton("Delete") { _, _ -> performDeleteContacts() }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun performDeleteContacts() {
+        // Set the pause flag first - this is what actually stops syncing,
+        // enforced locally by SheetCheckWorker/autoSyncQuietly/the manual
+        // Sync button, entirely independent of whether the contact
+        // removal below or the backend notice succeed.
+        UserPrefs.setSyncPaused(this, true)
+        renderSyncPauseButton()
+
+        val removedCount = SheetSync.deleteAllSyncedContacts(this)
+        Toast.makeText(
+            this,
+            if (removedCount > 0) "Removed $removedCount contacts. Syncing is paused." else "Syncing is paused.",
+            Toast.LENGTH_LONG
+        ).show()
+
+        // Fire-and-forget: the pause already works regardless of whether
+        // this reaches the server, so no callback handling is needed here.
+        SheetSync.reportSyncPauseStatus(this, paused = true)
+    }
+
+    private fun resumeSyncing() {
+        UserPrefs.setSyncPaused(this, false)
+        renderSyncPauseButton()
+        Toast.makeText(this, "Syncing resumed.", Toast.LENGTH_SHORT).show()
+        SheetSync.reportSyncPauseStatus(this, paused = false)
+        // Pick up any contacts added elsewhere while paused, same as a
+        // normal resume-triggered check.
         autoSyncQuietly()
     }
 
@@ -723,6 +810,12 @@ class MainMenuActivity : AppCompatActivity() {
         if (!checkContactsPermission()) {
             // Don't nag on every resume - the permission banner already
             // covers this. Just skip the auto-sync silently.
+            return
+        }
+        if (UserPrefs.isSyncPaused(this)) {
+            // Same pause the user turned on via "Delete My Contacts" -
+            // quiet resume-triggered syncs respect it exactly like the
+            // background worker and the manual button do.
             return
         }
         if (isSyncing) return
