@@ -260,6 +260,26 @@
 
             </FrameLayout>
 
+            <!-- Entry point for someone who already has an account (e.g.
+                 reinstalled the app, or switched devices) rather than
+                 signing up fresh. Belongs here, before an account exists
+                 locally, rather than on the dashboard which only ever
+                 appears once signup already succeeded. -->
+            <TextView
+                android:id="@+id/recoverAccountLink"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/onboarding_recover_account"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:textColor="@color/vg_green_dark"
+                android:gravity="center"
+                android:clickable="true"
+                android:focusable="true"
+                android:background="?attr/selectableItemBackground"
+                android:padding="8dp"
+                android:layout_marginTop="8dp" />
+
             <TextView
                 android:id="@+id/creditText"
                 android:layout_width="match_parent"
@@ -268,7 +288,7 @@
                 android:textSize="12sp"
                 android:textColor="@color/text_muted"
                 android:gravity="center"
-                android:layout_marginTop="14dp" />
+                android:layout_marginTop="6dp" />
 
         </LinearLayout>
 
