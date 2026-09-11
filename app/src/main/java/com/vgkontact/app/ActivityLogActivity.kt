@@ -62,12 +62,24 @@ class ActivityLogActivity : AppCompatActivity() {
         emptyText.visibility = View.GONE
 
         val inflater = LayoutInflater.from(this)
-        entries.forEach { entry ->
+        entries.forEachIndexed { index, entry ->
             val row = inflater.inflate(R.layout.item_activity_log_row, listContainer, false)
             row.findViewById<TextView>(R.id.rowMessage).text = entry.message
             row.findViewById<TextView>(R.id.rowTime).text = entry.displayTime()
             row.findViewById<ImageView>(R.id.rowIcon).setImageResource(iconFor(entry.type))
             listContainer.addView(row)
+
+            // Hairline divider between rows, skipped after the last entry -
+            // matches the RECENT REFERRALS divider pattern in
+            // activity_history.xml.
+            if (index < entries.lastIndex) {
+                val divider = View(this)
+                divider.layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, 1
+                )
+                divider.setBackgroundColor(ContextCompat.getColor(this, R.color.stats_card_border))
+                listContainer.addView(divider)
+            }
         }
     }
 
