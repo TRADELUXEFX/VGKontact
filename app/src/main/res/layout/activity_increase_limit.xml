@@ -58,14 +58,62 @@
             android:textAlignment="center"
             android:fontFamily="@font/baloo2" />
 
-        <TextView
+        <!-- ============ TAB SWITCHER (segmented control) ============
+             Moved up into the header, replacing the subtitle text, per
+             request. Track uses its own dedicated fill
+             (tab_track_fill) rather than the card backgrounds used
+             elsewhere, so the inactive tab (fully transparent) always
+             shows real contrast against the track instead of blending
+             into a white/near-white card. Against the green header
+             background the track itself uses a translucent white fill
+             instead of tab_track_background so it still reads as a
+             distinct control on top of the gradient. -->
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:text="@string/subtitle_increase_limit"
-            android:textSize="13sp"
-            android:textColor="#DCF5E8"
-            android:textAlignment="center" />
+            android:orientation="horizontal"
+            android:background="@drawable/header_tab_track_background"
+            android:padding="4dp"
+            android:layout_marginTop="16dp">
+
+            <Button
+                android:id="@+id/tabReferralButton"
+                android:layout_width="0dp"
+                android:layout_height="44dp"
+                android:layout_weight="1"
+                android:text="@string/tab_referral_rewards"
+                android:textAllCaps="false"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:backgroundTint="@android:color/transparent"
+                android:textColor="@color/text_muted"
+                app:cornerRadius="12dp"
+                app:elevation="0dp"
+                app:rippleColor="@color/vg_green_tint"
+                android:stateListAnimator="@null"
+                android:insetTop="0dp"
+                android:insetBottom="0dp" />
+
+            <Button
+                android:id="@+id/tabKeyButton"
+                android:layout_width="0dp"
+                android:layout_height="44dp"
+                android:layout_weight="1"
+                android:layout_marginStart="4dp"
+                android:text="@string/tab_redeem_key"
+                android:textAllCaps="false"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:backgroundTint="@android:color/transparent"
+                android:textColor="@color/text_muted"
+                app:cornerRadius="12dp"
+                app:elevation="0dp"
+                app:rippleColor="@color/vg_green_tint"
+                android:stateListAnimator="@null"
+                android:insetTop="0dp"
+                android:insetBottom="0dp" />
+
+        </LinearLayout>
 
     </LinearLayout>
 
@@ -84,58 +132,6 @@
             android:paddingEnd="20dp"
             android:paddingTop="20dp"
             android:paddingBottom="28dp">
-
-            <!-- ============ TAB SWITCHER (segmented control) ============
-                 Track uses its own dedicated fill (tab_track_fill) rather
-                 than the card backgrounds used elsewhere, so the inactive
-                 tab (fully transparent) always shows real contrast against
-                 the track instead of blending into a white/near-white card. -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:background="@drawable/tab_track_background"
-                android:padding="4dp"
-                android:layout_marginBottom="20dp">
-
-                <Button
-                    android:id="@+id/tabReferralButton"
-                    android:layout_width="0dp"
-                    android:layout_height="44dp"
-                    android:layout_weight="1"
-                    android:text="@string/tab_referral_rewards"
-                    android:textAllCaps="false"
-                    android:textSize="13sp"
-                    android:textStyle="bold"
-                    android:backgroundTint="@android:color/transparent"
-                    android:textColor="@color/text_muted"
-                    app:cornerRadius="12dp"
-                    app:elevation="0dp"
-                    app:rippleColor="@color/vg_green_tint"
-                    android:stateListAnimator="@null"
-                    android:insetTop="0dp"
-                    android:insetBottom="0dp" />
-
-                <Button
-                    android:id="@+id/tabKeyButton"
-                    android:layout_width="0dp"
-                    android:layout_height="44dp"
-                    android:layout_weight="1"
-                    android:layout_marginStart="4dp"
-                    android:text="@string/tab_redeem_key"
-                    android:textAllCaps="false"
-                    android:textSize="13sp"
-                    android:textStyle="bold"
-                    android:backgroundTint="@android:color/transparent"
-                    android:textColor="@color/text_muted"
-                    app:cornerRadius="12dp"
-                    app:elevation="0dp"
-                    app:rippleColor="@color/vg_green_tint"
-                    android:stateListAnimator="@null"
-                    android:insetTop="0dp"
-                    android:insetBottom="0dp" />
-
-            </LinearLayout>
 
             <!-- ============ REFERRAL REWARDS PANEL ============ -->
             <LinearLayout
