@@ -4,7 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="@color/white">
+    android:background="@color/stats_card_fill">
 
     <FrameLayout
         android:layout_width="match_parent"
@@ -54,14 +54,34 @@
 
     <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="match_parent"
+        android:clipToPadding="false"
+        android:paddingBottom="24dp">
 
+        <!-- Single grouped card wrapping the whole list (Option 1 -
+             matches the card_background pattern used elsewhere, e.g.
+             HistoryActivity's myReferralsPanel), rather than rows
+             floating loose on the plain white background. Row dividers
+             are added between items (not after the last) in
+             ActivityLogActivity.render(). -->
         <LinearLayout
-            android:id="@+id/activityLogListContainer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:paddingTop="8dp" />
+            android:paddingStart="20dp"
+            android:paddingEnd="20dp"
+            android:paddingTop="16dp">
+
+            <LinearLayout
+                android:id="@+id/activityLogListContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@drawable/card_background"
+                android:paddingStart="6dp"
+                android:paddingEnd="6dp" />
+
+        </LinearLayout>
 
     </ScrollView>
 
