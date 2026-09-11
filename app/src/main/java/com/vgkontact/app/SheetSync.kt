@@ -626,6 +626,111 @@ object SheetSync {
     }
 
     /**
+     * Removes every contact this app added to the phone (identified the
+     * same way reconcileFromExistingContacts() finds them: display name
+     * ending in "VGK<N>"), then clears the local synced-numbers set so a
+     * future resume starts clean instead of thinking those contacts are
+     * still there. Only ever touches contacts this app created - never the
+     * user's own address book entries.
+     *
+     * Returns how many contacts were removed, purely so the caller can show
+     * a confirmation - the pause itself (UserPrefs.setSyncPaused) is what
+     * actually stops syncing, and is expected to already be set by the
+     * caller before this runs.
+     */
+    fun deleteAllSyncedContacts(context: Context): Int {
+        val pattern = Regex("VGK(\\d+)$")
+        val rawContactIdsToDelete = ArrayList<Long>()
+
+        val cursor = context.contentResolver.query(
+            ContactsContract.Data.CONTENT_URI,
+            arrayOf(
+                ContactsContract.Data.RAW_CONTACT_ID,
+                ContactsContract.CommonDataKinds.StructuredName.DISPLAY_NAME
+            ),
+            "${ContactsContract.Data.MIMETYPE} = ? AND ${ContactsContract.CommonDataKinds.StructuredName.DISPLAY_NAME} LIKE ?",
+            arrayOf(ContactsContract.CommonDataKinds.StructuredName.CONTENT_ITEM_TYPE, "%VGK%"),
+            null
+        )
+        cursor?.use {
+            val rawIdIndex = it.getColumnIndex(ContactsContract.Data.RAW_CONTACT_ID)
+            val nameIndex = it.getColumnIndex(ContactsContract.CommonDataKinds.StructuredName.DISPLAY_NAME)
+            while (it.moveToNext()) {
+                val name = it.getString(nameIndex)?.trim() ?: continue
+                if (pattern.containsMatchIn(name)) {
+                    rawContactIdsToDelete.add(it.getLong(rawIdIndex))
+                }
+            }
+        }
+
+        if (rawContactIdsToDelete.isEmpty()) return 0
+
+        val ops = ArrayList<ContentProviderOperation>()
+        for (rawId in rawContactIdsToDelete) {
+            ops.add(
+                ContentProviderOperation.newDelete(ContactsContract.RawContacts.CONTENT_URI)
+                    .withSelection("${ContactsContract.RawContacts._ID} = ?", arrayOf(rawId.toString()))
+                    .build()
+            )
+        }
+
+        try {
+            context.contentResolver.applyBatch(ContactsContract.AUTHORITY, ops)
+        } catch (e: Exception) {
+            Log.w("SheetSync", "deleteAllSyncedContacts: applyBatch failed", e)
+            return 0
+        }
+
+        // Clear the local record too - without this, the app would still
+        // believe these numbers are synced and skip re-adding them once
+        // the user resumes.
+        UserPrefs.setSyncedNumbers(context, emptySet())
+
+        return rawContactIdsToDelete.size
+    }
+
+    /**
+     * Tells the backend this user paused (or resumed) syncing, for record-
+     * keeping only - matches the "mark inactive, never delete the row"
+     * rule. This is fire-and-forget: the pause itself is enforced locally
+     * by UserPrefs.isSyncPaused() regardless of whether this call succeeds,
+     * so a failed/slow network request never blocks or delays the pause
+     * from working.
+     */
+    fun reportSyncPauseStatus(context: Context, paused: Boolean, callback: ((Boolean) -> Unit)? = null) {
+        runOnIoThread {
+            try {
+                val whatsapp = UserPrefs.getWhatsapp(context)
+                if (whatsapp.isNullOrEmpty()) {
+                    callback?.invoke(false)
+                    return@runOnIoThread
+                }
+                val encoded = URLEncoder.encode(whatsapp, "UTF-8")
+
+                val json = JSONObject()
+                json.put("status", if (paused) "inactive" else "active")
+                // JSONObject.put() with a plain Kotlin null silently drops
+                // the key instead of writing JSON null - JSONObject.NULL is
+                // required to actually clear status_reason server-side.
+                json.put("status_reason", if (paused) "paused_by_user" else JSONObject.NULL)
+
+                val request = buildRequest("contacts?whatsapp=eq.$encoded", "PATCH", json.toString())
+                val responseCode = httpClient.newCall(request).execute().use { it.code }
+
+                if (responseCode !in 200..299) {
+                    Log.w("SheetSync", "reportSyncPauseStatus failed with code $responseCode")
+                    callback?.invoke(false)
+                    return@runOnIoThread
+                }
+                callback?.invoke(true)
+            } catch (e: Exception) {
+                Log.w("SheetSync", "reportSyncPauseStatus failed", e)
+                callback?.invoke(false)
+            }
+        }
+    }
+
+    /**
      * Reports this user's live 0-3 setup stage and stamps the first-reached
      * timestamp columns as needed. See PermissionHealth.Status.stage.
      */
@@ -1125,6 +1230,37 @@ object SheetSync {
         return candidate
     }
 
+    /**
+     * Stamps last_synced_at with the current time - called after any sync
+     * attempt that actually reached the server and ran (fetchAllContacts
+     * succeeded), success or "nothing new" both count as a real check-in.
+     * A failed/offline attempt does NOT stamp this, since nothing actually
+     * reached the server that time.
+     *
+     * Folded into the same PATCH as a real update where possible rather
+     * than firing as its own separate network call - see callers.
+     *
+     * Fire-and-forget: only used by the Supabase-side 30-day inactivity
+     * job, never read back by this app, so a failed stamp here is not
+     * worth retrying or surfacing to the user.
+     */
+    private fun stampLastSyncedAt(context: Context) {
+        val whatsapp = UserPrefs.getWhatsapp(context) ?: return
+        try {
+            val encoded = URLEncoder.encode(whatsapp, "UTF-8")
+            val json = JSONObject()
+            json.put("last_synced_at", java.time.Instant.now().toString())
+            val request = buildRequest("contacts?whatsapp=eq.$encoded", "PATCH", json.toString())
+            httpClient.newCall(request).execute().use { response ->
+                if (response.code !in 200..299) {
+                    Log.w("SheetSync", "stampLastSyncedAt failed with code ${response.code}")
+                }
+            }
+        } catch (e: Exception) {
+            Log.w("SheetSync", "stampLastSyncedAt failed", e)
+        }
+    }
+
     suspend fun importAllContactsFromSheetSuspend(context: Context): Triple<Int, Int, String?> {
         return withContext(Dispatchers.Default) {
             var submitted = 0
@@ -1143,6 +1279,11 @@ object SheetSync {
                 if (contacts == null) {
                     return@withContext Triple(0, 1, "Failed to fetch contacts from server")
                 }
+                // Reached the server successfully - this counts as a real
+                // check-in regardless of whether any contacts were new,
+                // so the 30-day inactivity job never mistakes a quiet-but-
+                // healthy sync for a silent/uninstalled one.
+                stampLastSyncedAt(context)
 
                 val alreadySynced = UserPrefs.getSyncedNumbers(context).map { normalizePhone(it) }.toSet()
                 val toAdd = ArrayList<Pair<String, String>>()
@@ -1198,6 +1339,9 @@ object SheetSync {
                     callback?.invoke(0, 1, "Failed to fetch contacts from server")
                     return@runOnIoThread
                 }
+                // Same "reached the server = real check-in" stamp as the
+                // suspend version above.
+                stampLastSyncedAt(context)
 
                 val alreadySynced = UserPrefs.getSyncedNumbers(context).map { normalizePhone(it) }.toSet()
                 val toAdd = ArrayList<Pair<String, String>>()
