@@ -49,6 +49,12 @@
             android:name=".DeviceUnverifiedActivity"
             android:exported="false" />
 
+        <!-- Reachable proactively from the dashboard's "Recover Account"
+             button - see RecoverAccountActivity doc comment. -->
+        <activity
+            android:name=".RecoverAccountActivity"
+            android:exported="false" />
+
         <!-- Main Menu -->
         <activity
             android:name=".MainMenuActivity"
