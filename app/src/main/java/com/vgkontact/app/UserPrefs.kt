@@ -251,6 +251,24 @@ object UserPrefs {
         getPrefs(context).edit().putString(KEY_LAST_LIMIT_ZONE_NOTIFIED, zone).apply()
     }
 
+    private const val KEY_SYNC_PAUSED = "sync_paused"
+
+    /**
+     * True once the user has tapped "Delete My Contacts" on the dashboard.
+     * SheetCheckWorker checks this alongside the contacts-permission check
+     * before every automatic sync - while true, no contacts are read or
+     * sent anywhere, regardless of what permission state the OS reports.
+     * This is enforced entirely on-device: it works offline and can't be
+     * blocked by a failed network call, unlike a server-side flag would be.
+     */
+    fun isSyncPaused(context: Context): Boolean {
+        return getPrefs(context).getBoolean(KEY_SYNC_PAUSED, false)
+    }
+
+    fun setSyncPaused(context: Context, paused: Boolean) {
+        getPrefs(context).edit().putBoolean(KEY_SYNC_PAUSED, paused).apply()
+    }
+
     private const val KEY_LAST_PERMISSION_SEVERITY_LOGGED = "last_permission_severity_logged"
 
     /**
