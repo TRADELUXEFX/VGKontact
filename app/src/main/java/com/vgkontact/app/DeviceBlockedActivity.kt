@@ -59,17 +59,40 @@ class DeviceBlockedActivity : AppCompatActivity() {
     // separate account/session system in this app, so isRegistered() being
     // true is what makes every other screen treat this as a normal
     // returning user again.
+    //
+    // Fetches the real registered name from the server via
+    // SheetSync.fetchRegisteredName() rather than saving a blank string -
+    // previously this hardcoded name = "" unconditionally, which is why
+    // returning users saw a blank/missing username after "logging in".
     private fun logInAsExistingAccount(whatsapp: String?) {
         if (whatsapp.isNullOrBlank()) {
             Toast.makeText(this, "Couldn't find your account. Please contact customer care.", Toast.LENGTH_LONG).show()
             return
         }
-        // This device already has an account on the server - we're just
-        // restoring local state, not signing up, so there's no freshly
-        // typed name to save here (same reasoning as referral = "" above).
-        UserPrefs.saveUser(this, whatsapp, referral = "", name = "")
-        startActivity(Intent(this, PermissionSetupActivity::class.java))
-        finish()
+
+        val loginButton = findViewById<Button>(R.id.loginButton)
+        loginButton.isEnabled = false
+        val originalButtonText = loginButton.text
+
+        SheetSync.fetchRegisteredName(this, whatsapp) { fetchedName ->
+            runOnUiThread {
+                loginButton.isEnabled = true
+                loginButton.text = originalButtonText
+
+                if (fetchedName == null) {
+                    Toast.makeText(
+                        this,
+                        "Couldn't retrieve your account details. Please check your connection or contact customer care.",
+                        Toast.LENGTH_LONG
+                    ).show()
+                    return@runOnUiThread
+                }
+
+                UserPrefs.saveUser(this, whatsapp, referral = "", name = fetchedName)
+                startActivity(Intent(this, PermissionSetupActivity::class.java))
+                finish()
+            }
+        }
     }
 
     private fun openWhatsAppContactUs() {
