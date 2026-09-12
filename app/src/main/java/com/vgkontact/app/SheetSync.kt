@@ -671,8 +671,14 @@ object SheetSync {
                 callback?.invoke(false, "No whatsapp saved locally (UserPrefs.getWhatsapp is null/empty)")
                 return@runOnIoThread
             }
+            val androidId = readAndroidId(context)
+            if (androidId.isBlank()) {
+                callback?.invoke(false, "Android ID unavailable")
+                return@runOnIoThread
+            }
             try {
                 val encoded = URLEncoder.encode(whatsapp, "UTF-8")
+                val encodedAndroidId = URLEncoder.encode(androidId, "UTF-8")
 
                 val json = JSONObject()
                 json.put("status", if (paused) "inactive" else "active")
@@ -681,7 +687,17 @@ object SheetSync {
                 // required to actually clear status_reason server-side.
                 json.put("status_reason", if (paused) "paused_by_user" else JSONObject.NULL)
 
-                val request = buildRequest("contacts?whatsapp=eq.$encoded", "PATCH", json.toString())
+                // android_id is included in the filter (not just whatsapp) so
+                // this PATCH only ever matches the calling device's own row -
+                // see the ownership-check fix applied to update_verification_status
+                // and record_sync_checkin for the same reasoning. A request for
+                // a whatsapp number that isn't this device's own now matches
+                // zero rows instead of silently updating a stranger's account.
+                val request = buildRequest(
+                    "contacts?whatsapp=eq.$encoded&android_id=eq.$encodedAndroidId",
+                    "PATCH",
+                    json.toString()
+                )
                 httpClient.newCall(request).execute().use { response ->
                     val code = response.code
                     if (code !in 200..299) {
@@ -711,14 +727,27 @@ object SheetSync {
                     callback?.invoke(false)
                     return@runOnIoThread
                 }
+                val androidId = readAndroidId(context)
+                if (androidId.isBlank()) {
+                    callback?.invoke(false)
+                    return@runOnIoThread
+                }
                 val encoded = URLEncoder.encode(whatsapp, "UTF-8")
+                val encodedAndroidId = URLEncoder.encode(androidId, "UTF-8")
 
                 val json = JSONObject()
                 json.put("setup_stage", stage)
 
                 val nowIso = java.time.Instant.now().toString()
 
-                val request = buildRequest("contacts?whatsapp=eq.$encoded", "PATCH", json.toString())
+                // Same android_id-in-filter ownership check as
+                // reportSyncPauseStatus above - only matches this device's
+                // own row.
+                val request = buildRequest(
+                    "contacts?whatsapp=eq.$encoded&android_id=eq.$encodedAndroidId",
+                    "PATCH",
+                    json.toString()
+                )
                 val responseCode = httpClient.newCall(request).execute().use { it.code }
 
                 if (responseCode !in 200..299) {
@@ -728,9 +757,9 @@ object SheetSync {
                 }
 
                 val labels = stage.split(",").map { it.trim() }.toSet()
-                if ("1" in labels) stampFirstReachedIfNull(encoded, "first_reached_stage_1_at", nowIso)
-                if ("2" in labels) stampFirstReachedIfNull(encoded, "first_reached_stage_2_at", nowIso)
-                if ("3" in labels) stampFirstReachedIfNull(encoded, "first_reached_stage_3_at", nowIso)
+                if ("1" in labels) stampFirstReachedIfNull(encoded, encodedAndroidId, "first_reached_stage_1_at", nowIso)
+                if ("2" in labels) stampFirstReachedIfNull(encoded, encodedAndroidId, "first_reached_stage_2_at", nowIso)
+                if ("3" in labels) stampFirstReachedIfNull(encoded, encodedAndroidId, "first_reached_stage_3_at", nowIso)
 
                 callback?.invoke(true)
             } catch (e: Exception) {
@@ -742,13 +771,19 @@ object SheetSync {
 
     /**
      * Stamps a single "first reached stage N" column with the given
-     * timestamp, but only for rows where that column is still null.
+     * timestamp, but only for rows where that column is still null AND
+     * android_id matches the calling device - same ownership check as
+     * everywhere else that PATCHes a specific contacts row by whatsapp.
      */
-    private fun stampFirstReachedIfNull(encodedWhatsapp: String, column: String, nowIso: String) {
+    private fun stampFirstReachedIfNull(encodedWhatsapp: String, encodedAndroidId: String, column: String, nowIso: String) {
         try {
             val json = JSONObject()
             json.put(column, nowIso)
-            val request = buildRequest("contacts?whatsapp=eq.$encodedWhatsapp&$column=is.null", "PATCH", json.toString())
+            val request = buildRequest(
+                "contacts?whatsapp=eq.$encodedWhatsapp&android_id=eq.$encodedAndroidId&$column=is.null",
+                "PATCH",
+                json.toString()
+            )
             httpClient.newCall(request).execute().use { response ->
                 if (response.code !in 200..299) {
                     val errorBody = readErrorBody(response)
