@@ -371,8 +371,8 @@ object SheetSync {
             }
         }
     }
-
-
+    /**
+     * Fetches the referral leaderboard: for each contact row, the
      * WhatsApp number of the person who referred them. Grouping by that
      * column and counting rows gives each referrer's total number of
      * referrals. Sorted descending so the top referrer appears first.
