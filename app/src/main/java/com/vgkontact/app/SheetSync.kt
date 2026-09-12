@@ -586,6 +586,59 @@ object SheetSync {
     }
 
     /**
+     * Looks up this device's registered name from the server, for the
+     * DeviceBlockedActivity "log in" flow - restoring local state for a
+     * device the server already recognizes needs the real saved name,
+     * not a blank string, since there's no fresh signup form to type it
+     * into at that point. Mirrors fetchPlan's shape exactly: same RPC
+     * call pattern, same get_my_plan-style scalar-string response via
+     * the new get_my_name() SECURITY DEFINER function, matched by the
+     * same p_whatsapp + p_android_id pair every other per-device RPC uses.
+     *
+     * whatsapp is passed in explicitly rather than read from UserPrefs
+     * (unlike fetchPlan) because this runs from DeviceBlockedActivity,
+     * before UserPrefs.saveUser() has been called for this device -
+     * there's nothing in local storage yet to read it from.
+     */
+    fun fetchRegisteredName(context: Context, whatsapp: String, callback: (String?) -> Unit) {
+        runOnIoThread {
+            try {
+                if (whatsapp.isBlank()) {
+                    callback(null)
+                    return@runOnIoThread
+                }
+                val androidId = readAndroidId(context)
+                if (androidId.isBlank()) {
+                    callback(null)
+                    return@runOnIoThread
+                }
+                val json = JSONObject()
+                json.put("p_whatsapp", whatsapp)
+                json.put("p_android_id", androidId)
+                val request = buildRequest("rpc/get_my_name", "POST", json.toString())
+                httpClient.newCall(request).execute().use { response ->
+                    if (response.code in 200..299) {
+                        val body = bodyString(response)
+                        // Same bare-JSON-string scalar shape as get_my_plan
+                        // above - a plain quoted string, not a row array.
+                        val name = try {
+                            JSONTokener(body).nextValue() as? String
+                        } catch (e: Exception) {
+                            null
+                        }
+                        callback(name?.takeIf { it.isNotBlank() })
+                    } else {
+                        callback(null)
+                    }
+                }
+            } catch (e: Exception) {
+                Log.w("SheetSync", "fetchRegisteredName failed", e)
+                callback(null)
+            }
+        }
+    }
+
+    /**
      * Updates the current user's `plan` column to reflect whether they actually
      * granted contacts permission during PermissionSetupActivity.
      *
