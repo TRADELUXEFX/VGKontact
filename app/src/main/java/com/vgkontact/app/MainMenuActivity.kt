@@ -195,6 +195,23 @@ class MainMenuActivity : AppCompatActivity() {
                 confirmAndDeleteContacts()
             }
         }
+        // TEMPORARY - Phase 2 isolation test only. Long-press the delete/
+        // resume icon to fire ONLY stampLastSyncedAt, with the real
+        // result shown on screen. Remove once last_synced_at is confirmed
+        // working end-to-end and the pause/status rebuild moves on.
+        deleteContactsIcon.setOnLongClickListener {
+            Toast.makeText(this, "Testing stampLastSyncedAt...", Toast.LENGTH_SHORT).show()
+            SheetSync.stampLastSyncedAt(this) { success, message ->
+                runOnUiThread {
+                    Toast.makeText(
+                        this,
+                        (if (success) "SUCCESS: " else "FAILED: ") + message,
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            }
+            true
+        }
 
         notificationIcon.setOnClickListener {
             // Sync frequency now lives on the dashboard pill, so the bell
@@ -322,8 +339,7 @@ class MainMenuActivity : AppCompatActivity() {
     private fun performDeleteContacts() {
         // Set the pause flag first - this is what actually stops syncing,
         // enforced locally by SheetCheckWorker/autoSyncQuietly/the manual
-        // Sync button, entirely independent of whether the contact
-        // removal below or the backend notice succeed.
+        // Sync button.
         UserPrefs.setSyncPaused(this, true)
         renderSyncPauseButton()
 
@@ -334,15 +350,16 @@ class MainMenuActivity : AppCompatActivity() {
             Toast.LENGTH_LONG
         ).show()
 
-        // Fire-and-forget: the pause already works regardless of whether
-        // this reaches the server, so no callback handling is needed here.
-        SheetSync.reportSyncPauseStatus(this, paused = true)
+        // Server-side status/status_reason reporting removed for now -
+        // being rebuilt cleanly, one piece at a time. Delete is fully
+        // local/app-side only until that's back.
     }
 
     private fun resumeSyncing() {
         UserPrefs.setSyncPaused(this, false)
         renderSyncPauseButton()
-        SheetSync.reportSyncPauseStatus(this, paused = false)
+        // Server-side status/status_reason reporting removed for now -
+        // being rebuilt cleanly, one piece at a time.
         // A deliberate resume tap should sync right away and show the
         // normal visible toasts/progress - not the silent, count-check-
         // gated autoSyncQuietly() used for passive app-open/return
