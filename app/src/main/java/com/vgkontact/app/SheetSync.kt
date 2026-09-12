@@ -1306,10 +1306,18 @@ object SheetSync {
                 return@runOnIoThread
             }
             try {
-                val encoded = URLEncoder.encode(whatsapp, "UTF-8")
+                // Uses the record_sync_checkin RPC (see accompanying SQL)
+                // rather than a plain PATCH, because this needs to
+                // atomically do two things in one statement: always stamp
+                // last_synced_at, AND flip status back to 'active' only if
+                // the row was auto-flagged 'sync_timeout' by the daily cron
+                // job - never if the person deliberately paused
+                // ('paused_by_user'). A plain PATCH can't express "update
+                // this column conditionally on that column's own current
+                // value" safely without a read-then-write race.
                 val json = JSONObject()
-                json.put("last_synced_at", java.time.Instant.now().toString())
-                val request = buildRequest("contacts?whatsapp=eq.$encoded", "PATCH", json.toString())
+                json.put("p_whatsapp", whatsapp)
+                val request = buildRequest("rpc/record_sync_checkin", "POST", json.toString())
                 httpClient.newCall(request).execute().use { response ->
                     val code = response.code
                     if (code !in 200..299) {
