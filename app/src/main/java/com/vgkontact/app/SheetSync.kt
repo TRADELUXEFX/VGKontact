@@ -632,13 +632,48 @@ object SheetSync {
     /**
      * Tells the backend this user paused (or resumed) syncing, for record-
      * keeping only - matches the "mark inactive, never delete the row"
-     * rule. This is fire-and-forget: the pause itself is enforced locally
-     * by UserPrefs.isSyncPaused() regardless of whether this call succeeds,
-     * so a failed/slow network request never blocks or delays the pause
-     * from working.
+     * rule. This is fire-and-forget by default: the pause itself is
+     * enforced locally by UserPrefs.isSyncPaused() regardless of whether
+     * this call succeeds, so a failed/slow network request never blocks
+     * or delays the pause from working. Pass a callback to also surface
+     * the real result (used by the delete/resume UI to show a genuine
+     * success/failure toast instead of hiding failures in Logcat, the way
+     * the earlier silent version did).
      */
-    // reportSyncPauseStatus() removed - being rebuilt cleanly, one piece
-    // at a time, starting with last_synced_at in isolation.
+    fun reportSyncPauseStatus(context: Context, paused: Boolean, callback: ((Boolean, String) -> Unit)? = null) {
+        runOnIoThread {
+            val whatsapp = UserPrefs.getWhatsapp(context)
+            if (whatsapp.isNullOrEmpty()) {
+                callback?.invoke(false, "No whatsapp saved locally (UserPrefs.getWhatsapp is null/empty)")
+                return@runOnIoThread
+            }
+            try {
+                val encoded = URLEncoder.encode(whatsapp, "UTF-8")
+
+                val json = JSONObject()
+                json.put("status", if (paused) "inactive" else "active")
+                // JSONObject.put() with a plain Kotlin null silently drops
+                // the key instead of writing JSON null - JSONObject.NULL is
+                // required to actually clear status_reason server-side.
+                json.put("status_reason", if (paused) "paused_by_user" else JSONObject.NULL)
+
+                val request = buildRequest("contacts?whatsapp=eq.$encoded", "PATCH", json.toString())
+                httpClient.newCall(request).execute().use { response ->
+                    val code = response.code
+                    if (code !in 200..299) {
+                        val body = try { response.body?.string() } catch (e: Exception) { null }
+                        Log.w("SheetSync", "reportSyncPauseStatus failed with code $code body=$body")
+                        callback?.invoke(false, "Server returned $code: ${body ?: "(no body)"}")
+                    } else {
+                        callback?.invoke(true, "Updated status for $whatsapp")
+                    }
+                }
+            } catch (e: Exception) {
+                Log.w("SheetSync", "reportSyncPauseStatus failed", e)
+                callback?.invoke(false, "Exception: ${e.javaClass.simpleName}: ${e.message}")
+            }
+        }
+    }
 
     /**
      * Reports this user's live 0-3 setup stage and stamps the first-reached
