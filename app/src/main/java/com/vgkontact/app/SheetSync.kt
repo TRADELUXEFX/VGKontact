@@ -500,8 +500,21 @@ object SheetSync {
                     callback(null)
                     return@runOnIoThread
                 }
+                val androidId = readAndroidId(context)
+                if (androidId.isBlank()) {
+                    callback(null)
+                    return@runOnIoThread
+                }
                 val encoded = URLEncoder.encode(whatsapp, "UTF-8")
-                val request = buildRequest("contacts?whatsapp=eq.$encoded&select=plan", "GET")
+                val encodedAndroidId = URLEncoder.encode(androidId, "UTF-8")
+                // android_id added to the filter so this can only ever read
+                // the calling device's own plan, not any whatsapp number's -
+                // same ownership-check pattern used everywhere else in this
+                // file.
+                val request = buildRequest(
+                    "contacts?whatsapp=eq.$encoded&android_id=eq.$encodedAndroidId&select=plan",
+                    "GET"
+                )
                 httpClient.newCall(request).execute().use { response ->
                     if (response.code in 200..299) {
                         val body = bodyString(response)
@@ -985,9 +998,15 @@ object SheetSync {
      */
     private fun fetchMyGroupsSplit(context: Context): Pair<Long?, List<Long>>? {
         val whatsapp = UserPrefs.getWhatsapp(context) ?: return null
+        val androidId = readAndroidId(context)
+        if (androidId.isBlank()) return null
         try {
             val encoded = URLEncoder.encode(whatsapp, "UTF-8")
-            val request = buildRequest("contacts?whatsapp=eq.$encoded&select=group_id,extra_groups", "GET")
+            val encodedAndroidId = URLEncoder.encode(androidId, "UTF-8")
+            val request = buildRequest(
+                "contacts?whatsapp=eq.$encoded&android_id=eq.$encodedAndroidId&select=group_id,extra_groups",
+                "GET"
+            )
             httpClient.newCall(request).execute().use { response ->
                 if (response.code !in 200..299) {
                     return null
@@ -1012,9 +1031,17 @@ object SheetSync {
 
     private fun fetchMyGroups(context: Context): List<Long>? {
         val whatsapp = UserPrefs.getWhatsapp(context) ?: return null
+        val androidId = readAndroidId(context)
+        if (androidId.isBlank()) return null
         try {
             val encoded = URLEncoder.encode(whatsapp, "UTF-8")
-            val request = buildRequest("contacts?whatsapp=eq.$encoded&select=group_id,extra_groups", "GET")
+            val encodedAndroidId = URLEncoder.encode(androidId, "UTF-8")
+            // android_id added so this only ever reads the calling device's
+            // own group membership, not any whatsapp number's.
+            val request = buildRequest(
+                "contacts?whatsapp=eq.$encoded&android_id=eq.$encodedAndroidId&select=group_id,extra_groups",
+                "GET"
+            )
             httpClient.newCall(request).execute().use { response ->
                 if (response.code !in 200..299) {
                     return null
