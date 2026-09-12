@@ -1355,9 +1355,18 @@ object SheetSync {
                 }
                 // Reached the server successfully - this counts as a real
                 // check-in regardless of whether any contacts were new,
-                // so the 30-day inactivity job never mistakes a quiet-but-
-                // healthy sync for a silent/uninstalled one.
-                stampLastSyncedAt(context)
+                // so the 7-day inactivity job never mistakes a quiet-but-
+                // healthy sync for a silent/uninstalled one. Logged (not
+                // surfaced to the user) on failure - a failed check-in
+                // stamp shouldn't interrupt an otherwise-successful sync
+                // with a visible error, but it must not vanish silently
+                // either, given this exact call site went unnoticed and
+                // broken for hours before being caught.
+                stampLastSyncedAt(context) { success, message ->
+                    if (!success) {
+                        Log.w("SheetSync", "Sync check-in stamp failed during import: $message")
+                    }
+                }
 
                 // Remove VGK contacts that have dropped out of the user's
                 // group(s) (banned, or removed) since the last sync. Guard
@@ -1444,8 +1453,32 @@ object SheetSync {
                     return@runOnIoThread
                 }
                 // Same "reached the server = real check-in" stamp as the
-                // suspend version above.
-                stampLastSyncedAt(context)
+                // suspend version above - logged (not surfaced) on failure.
+                stampLastSyncedAt(context) { success, message ->
+                    if (!success) {
+                        Log.w("SheetSync", "Sync check-in stamp failed during import: $message")
+                    }
+                }
+
+                // Same stale-VGK-contact reconciliation as the suspend
+                // version above (see its comments for the full safety
+                // reasoning) - this was previously missing from THIS
+                // function, meaning manual "Sync Now" taps (which call
+                // this function, not the suspend version) never ran
+                // ban/removal cleanup, only the background worker did.
+                val safeToReconcileDeletes = if (contacts.isNotEmpty()) {
+                    true
+                } else {
+                    val myGroups = fetchMyGroups(context)
+                    myGroups != null && myGroups.isEmpty()
+                }
+                if (safeToReconcileDeletes) {
+                    val currentServerPhones = contacts.map { normalizePhone(it.first) }.toSet()
+                    val removed = removeStaleVgkContacts(context, currentServerPhones)
+                    if (removed > 0) {
+                        Log.i("SheetSync", "Removed $removed stale VGK contact(s) no longer in user's group(s)")
+                    }
+                }
 
                 val alreadySynced = UserPrefs.getSyncedNumbers(context).map { normalizePhone(it) }.toSet()
                 val toAdd = ArrayList<Pair<String, String>>()
