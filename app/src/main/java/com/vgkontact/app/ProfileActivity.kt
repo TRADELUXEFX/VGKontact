@@ -73,9 +73,16 @@ class ProfileActivity : AppCompatActivity() {
         // Number
         profileNumberText.text = whatsapp ?: "N/A"
 
-        // Referred By - the number that referred *this* user (if any)
-        val referredBy = UserPrefs.getReferral(this)
-        profileReferralText.text = if (referredBy.isNullOrEmpty()) "None" else referredBy
+        // Referred By - the number that referred *this* user (if any).
+        // Fetched live from the database rather than the local cache so
+        // this can never drift out of sync with the real row - e.g. if
+        // it's ever corrected or edited directly in Supabase later.
+        profileReferralText.text = "..."
+        SheetSync.fetchMyProfile(this) { referral, error ->
+            runOnUiThread {
+                profileReferralText.text = if (referral.isNullOrEmpty()) "None" else referral
+            }
+        }
 
         // Date Registered
         profileDateRegisteredText.text = UserPrefs.getDateRegistered(this) ?: "N/A"
