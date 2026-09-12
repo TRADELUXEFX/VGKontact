@@ -207,14 +207,18 @@ class OnboardingActivity : AppCompatActivity() {
         // device has already registered, so the check happens inside the
         // same request that creates the account - not a separate step
         // that could fail independently of it.
-        SheetSync.submit(whatsapp, referral, name, this, androidId) { success, message, registeredNumber ->
+        SheetSync.submit(whatsapp, referral, name, this, androidId) { success, message, registeredNumber, savedReferral ->
             runOnUiThread {
                 progressBar.visibility = View.GONE
                 continueButton.isEnabled = true
                 continueButton.text = getString(R.string.btn_continue)
                 when {
                     success -> {
-                        UserPrefs.saveUser(this, whatsapp, referral, name)
+                        // Save the referral the server actually accepted, not the
+                        // raw text the user typed - the server nulls it out when
+                        // it doesn't match a real registered contact, and the
+                        // profile screen must reflect that, not the input box.
+                        UserPrefs.saveUser(this, whatsapp, savedReferral ?: "", name)
                         startActivity(Intent(this, PermissionSetupActivity::class.java))
                         finish()
                     }
