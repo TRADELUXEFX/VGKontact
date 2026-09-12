@@ -195,23 +195,6 @@ class MainMenuActivity : AppCompatActivity() {
                 confirmAndDeleteContacts()
             }
         }
-        // TEMPORARY - Phase 2 isolation test only. Long-press the delete/
-        // resume icon to fire ONLY stampLastSyncedAt, with the real
-        // result shown on screen. Remove once last_synced_at is confirmed
-        // working end-to-end and the pause/status rebuild moves on.
-        deleteContactsIcon.setOnLongClickListener {
-            Toast.makeText(this, "Testing stampLastSyncedAt...", Toast.LENGTH_SHORT).show()
-            SheetSync.stampLastSyncedAt(this) { success, message ->
-                runOnUiThread {
-                    Toast.makeText(
-                        this,
-                        (if (success) "SUCCESS: " else "FAILED: ") + message,
-                        Toast.LENGTH_LONG
-                    ).show()
-                }
-            }
-            true
-        }
 
         notificationIcon.setOnClickListener {
             // Sync frequency now lives on the dashboard pill, so the bell
