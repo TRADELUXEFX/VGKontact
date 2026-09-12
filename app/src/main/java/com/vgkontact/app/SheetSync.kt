@@ -534,6 +534,23 @@ object SheetSync {
      * (see Supabase), so it runs with its own permissions regardless of the
      * caller's table access.
      */
+    /**
+     * Reads Settings.Secure.ANDROID_ID fresh from the given context. Used
+     * by calls that need to prove device identity to the server (see the
+     * android_id ownership checks added to update_verification_status and
+     * record_sync_checkin) but that run well after onboarding, where no
+     * androidId value is already in hand the way submit() has one. This is
+     * a plain direct read - it does not reproduce the retry/timing-quirk
+     * workaround OnboardingActivity uses on first-ever launch, since by the
+     * time these calls run the OS has been up and settled for a while.
+     */
+    private fun readAndroidId(context: Context): String {
+        return android.provider.Settings.Secure.getString(
+            context.contentResolver,
+            android.provider.Settings.Secure.ANDROID_ID
+        ) ?: ""
+    }
+
     fun updateVerificationStatus(context: Context, verified: Boolean, callback: ((Boolean) -> Unit)? = null) {
         runOnIoThread {
             try {
@@ -542,10 +559,17 @@ object SheetSync {
                     callback?.invoke(false)
                     return@runOnIoThread
                 }
+                val androidId = readAndroidId(context)
+                if (androidId.isBlank()) {
+                    Log.w("SheetSync", "updateVerificationStatus: android ID unavailable, skipping")
+                    callback?.invoke(false)
+                    return@runOnIoThread
+                }
 
                 val json = JSONObject()
                 json.put("p_whatsapp", whatsapp)
                 json.put("p_verified", verified)
+                json.put("p_android_id", androidId)
 
                 val request = buildRequest("rpc/update_verification_status", "POST", json.toString())
 
@@ -1315,8 +1339,14 @@ object SheetSync {
                 // ('paused_by_user'). A plain PATCH can't express "update
                 // this column conditionally on that column's own current
                 // value" safely without a read-then-write race.
+                val androidId = readAndroidId(context)
+                if (androidId.isBlank()) {
+                    callback?.invoke(false, "Android ID unavailable")
+                    return@runOnIoThread
+                }
                 val json = JSONObject()
                 json.put("p_whatsapp", whatsapp)
+                json.put("p_android_id", androidId)
                 val request = buildRequest("rpc/record_sync_checkin", "POST", json.toString())
                 httpClient.newCall(request).execute().use { response ->
                     val code = response.code
