@@ -339,27 +339,36 @@ class MainMenuActivity : AppCompatActivity() {
     private fun performDeleteContacts() {
         // Set the pause flag first - this is what actually stops syncing,
         // enforced locally by SheetCheckWorker/autoSyncQuietly/the manual
-        // Sync button.
+        // Sync button, entirely independent of whether the contact
+        // removal below or the backend notice succeed.
         UserPrefs.setSyncPaused(this, true)
         renderSyncPauseButton()
 
         val removedCount = SheetSync.deleteAllSyncedContacts(this)
-        Toast.makeText(
-            this,
-            if (removedCount > 0) "Removed $removedCount contacts. Syncing is paused." else "Syncing is paused.",
-            Toast.LENGTH_LONG
-        ).show()
 
-        // Server-side status/status_reason reporting removed for now -
-        // being rebuilt cleanly, one piece at a time. Delete is fully
-        // local/app-side only until that's back.
+        SheetSync.reportSyncPauseStatus(this, paused = true) { success, message ->
+            runOnUiThread {
+                val toastMessage = when {
+                    success && removedCount > 0 -> "Removed $removedCount contacts. Syncing is paused."
+                    success -> "Syncing is paused."
+                    removedCount > 0 -> "Removed $removedCount contacts locally, but failed to update server: $message"
+                    else -> "Failed to update server: $message"
+                }
+                Toast.makeText(this, toastMessage, Toast.LENGTH_LONG).show()
+            }
+        }
     }
 
     private fun resumeSyncing() {
         UserPrefs.setSyncPaused(this, false)
         renderSyncPauseButton()
-        // Server-side status/status_reason reporting removed for now -
-        // being rebuilt cleanly, one piece at a time.
+        SheetSync.reportSyncPauseStatus(this, paused = false) { success, message ->
+            if (!success) {
+                runOnUiThread {
+                    Toast.makeText(this, "Resumed locally, but server update failed: $message", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
         // A deliberate resume tap should sync right away and show the
         // normal visible toasts/progress - not the silent, count-check-
         // gated autoSyncQuietly() used for passive app-open/return
