@@ -207,7 +207,7 @@ object SheetSync {
      * the submission itself. callback's third value carries that number
      * when this happens, or null otherwise.
      */
-    fun submit(whatsapp: String, referral: String = "", name: String, context: Context? = null, androidId: String, callback: ((Boolean, String?, String?) -> Unit)? = null) {
+    fun submit(whatsapp: String, referral: String = "", name: String, context: Context? = null, androidId: String, callback: ((Boolean, String?, String?, String?) -> Unit)? = null) {
         runOnIoThread {
             for (attempt in 0 until MAX_RETRIES) {
                 try {
@@ -229,7 +229,7 @@ object SheetSync {
                     // value all the way through removes the second unreliable read
                     // entirely.
                     if (androidId.isBlank()) {
-                        callback?.invoke(false, "DEVICE_ID_UNAVAILABLE", null)
+                        callback?.invoke(false, "DEVICE_ID_UNAVAILABLE", null, null)
                         return@runOnIoThread
                     }
 
@@ -246,26 +246,26 @@ object SheetSync {
                         if (responseCode in 200..299) {
                             val body = bodyString(response)
 
-                            val (contactId, groupId) = try {
+                            val (contactId, groupId, savedReferral) = try {
                                 val arr = JSONArray(body)
                                 if (arr.length() > 0) {
                                     val row = arr.getJSONObject(0)
-                                    Pair(row.optLong("id", -1L), row.optLong("group_id", -1L))
+                                    Triple(row.optLong("id", -1L), row.optLong("group_id", -1L), row.optString("referral", "").ifBlank { null })
                                 } else {
-                                    Pair(-1L, -1L)
+                                    Triple(-1L, -1L, null)
                                 }
                             } catch (e: Exception) {
                                 Log.e("SheetSync", "submit: failed to parse signup_and_assign_group response: $body", e)
-                                Pair(-1L, -1L)
+                                Triple(-1L, -1L, null)
                             }
 
                             if (contactId <= 0 || groupId <= 0) {
                                 val debugInfo = "id=$contactId group=$groupId resp=${body.take(150)}"
-                                callback?.invoke(false, "Signed up, but couldn't join a group. [$debugInfo]", null)
+                                callback?.invoke(false, "Signed up, but couldn't join a group. [$debugInfo]", null, null)
                                 return@runOnIoThread
                             }
 
-                            callback?.invoke(true, null, null)
+                            callback?.invoke(true, null, null, savedReferral)
                             return@runOnIoThread
                         } else if (!isRetryable(responseCode)) {
                             val rawMessage = rawErrorMessage(response)
@@ -274,11 +274,11 @@ object SheetSync {
                                     .substringAfter(DEVICE_ALREADY_REGISTERED_MARKER)
                                     .trim()
                                     .ifBlank { null }
-                                callback?.invoke(false, null, existingWhatsapp)
+                                callback?.invoke(false, null, existingWhatsapp, null)
                                 return@runOnIoThread
                             }
                             val errorText = rawMessage?.let { friendlyErrorMessage(it) } ?: GENERIC_ERROR
-                            callback?.invoke(false, errorText, null)
+                            callback?.invoke(false, errorText, null, null)
                             return@runOnIoThread
                         }
                         Log.w("SheetSync", "submit attempt ${attempt + 1} failed with code $responseCode, retrying...")
@@ -291,7 +291,7 @@ object SheetSync {
                     delayBeforeRetry(attempt)
                 }
             }
-            callback?.invoke(false, "Failed after $MAX_RETRIES attempts", null)
+            callback?.invoke(false, "Failed after $MAX_RETRIES attempts", null, null)
         }
     }
 
