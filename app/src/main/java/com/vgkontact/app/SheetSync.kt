@@ -637,38 +637,8 @@ object SheetSync {
      * so a failed/slow network request never blocks or delays the pause
      * from working.
      */
-    fun reportSyncPauseStatus(context: Context, paused: Boolean, callback: ((Boolean) -> Unit)? = null) {
-        runOnIoThread {
-            try {
-                val whatsapp = UserPrefs.getWhatsapp(context)
-                if (whatsapp.isNullOrEmpty()) {
-                    callback?.invoke(false)
-                    return@runOnIoThread
-                }
-                val encoded = URLEncoder.encode(whatsapp, "UTF-8")
-
-                val json = JSONObject()
-                json.put("status", if (paused) "inactive" else "active")
-                // JSONObject.put() with a plain Kotlin null silently drops
-                // the key instead of writing JSON null - JSONObject.NULL is
-                // required to actually clear status_reason server-side.
-                json.put("status_reason", if (paused) "paused_by_user" else JSONObject.NULL)
-
-                val request = buildRequest("contacts?whatsapp=eq.$encoded", "PATCH", json.toString())
-                val responseCode = httpClient.newCall(request).execute().use { it.code }
-
-                if (responseCode !in 200..299) {
-                    Log.w("SheetSync", "reportSyncPauseStatus failed with code $responseCode")
-                    callback?.invoke(false)
-                    return@runOnIoThread
-                }
-                callback?.invoke(true)
-            } catch (e: Exception) {
-                Log.w("SheetSync", "reportSyncPauseStatus failed", e)
-                callback?.invoke(false)
-            }
-        }
-    }
+    // reportSyncPauseStatus() removed - being rebuilt cleanly, one piece
+    // at a time, starting with last_synced_at in isolation.
 
     /**
      * Reports this user's live 0-3 setup stage and stamps the first-reached
@@ -1282,20 +1252,43 @@ object SheetSync {
      * job, never read back by this app, so a failed stamp here is not
      * worth retrying or surfacing to the user.
      */
-    private fun stampLastSyncedAt(context: Context) {
-        val whatsapp = UserPrefs.getWhatsapp(context) ?: return
-        try {
-            val encoded = URLEncoder.encode(whatsapp, "UTF-8")
-            val json = JSONObject()
-            json.put("last_synced_at", java.time.Instant.now().toString())
-            val request = buildRequest("contacts?whatsapp=eq.$encoded", "PATCH", json.toString())
-            httpClient.newCall(request).execute().use { response ->
-                if (response.code !in 200..299) {
-                    Log.w("SheetSync", "stampLastSyncedAt failed with code ${response.code}")
-                }
+    /**
+     * Stamps last_synced_at = now() for this device's whatsapp row.
+     * This is the ONLY thing this function does - no status, no
+     * status_reason, nothing else - by design, so it can be verified
+     * working in total isolation before anything else is layered back on.
+     *
+     * callback reports exactly what happened: true on a confirmed 2xx,
+     * false with the real reason otherwise - so a caller (or a temporary
+     * test button) can show the person what actually occurred instead of
+     * it disappearing into Logcat only.
+     */
+    fun stampLastSyncedAt(context: Context, callback: ((Boolean, String) -> Unit)? = null) {
+        runOnIoThread {
+            val whatsapp = UserPrefs.getWhatsapp(context)
+            if (whatsapp.isNullOrEmpty()) {
+                callback?.invoke(false, "No whatsapp saved locally (UserPrefs.getWhatsapp is null/empty)")
+                return@runOnIoThread
             }
-        } catch (e: Exception) {
-            Log.w("SheetSync", "stampLastSyncedAt failed", e)
+            try {
+                val encoded = URLEncoder.encode(whatsapp, "UTF-8")
+                val json = JSONObject()
+                json.put("last_synced_at", java.time.Instant.now().toString())
+                val request = buildRequest("contacts?whatsapp=eq.$encoded", "PATCH", json.toString())
+                httpClient.newCall(request).execute().use { response ->
+                    val code = response.code
+                    if (code !in 200..299) {
+                        val body = try { response.body?.string() } catch (e: Exception) { null }
+                        Log.w("SheetSync", "stampLastSyncedAt failed with code $code body=$body")
+                        callback?.invoke(false, "Server returned $code: ${body ?: "(no body)"}")
+                    } else {
+                        callback?.invoke(true, "Updated last_synced_at for $whatsapp")
+                    }
+                }
+            } catch (e: Exception) {
+                Log.w("SheetSync", "stampLastSyncedAt failed", e)
+                callback?.invoke(false, "Exception: ${e.javaClass.simpleName}: ${e.message}")
+            }
         }
     }
 
