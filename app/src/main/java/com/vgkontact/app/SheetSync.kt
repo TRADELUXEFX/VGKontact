@@ -11,6 +11,7 @@ import android.util.Log
 import androidx.core.content.ContextCompat
 import org.json.JSONArray
 import org.json.JSONObject
+import org.json.JSONTokener
 import java.net.URLEncoder
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CoroutineScope
@@ -298,7 +299,7 @@ object SheetSync {
     fun fetchHistory(context: Context? = null, callback: ((List<DayCount>?, String?) -> Unit)? = null) {
         runOnIoThread {
             try {
-                val request = buildRequest("contacts?select=created_at", "GET")
+                val request = buildRequest("contacts_public?select=created_at", "GET")
                 httpClient.newCall(request).execute().use { response ->
                     if (response.code in 200..299) {
                         val body = bodyString(response)
@@ -327,7 +328,51 @@ object SheetSync {
      * network hiccup never locks a genuine new user out of signing up).
      */
     /**
-     * Fetches the referral leaderboard: for each contact row, the
+     * Fetches this device's own contact row live from the database -
+     * currently just the referral column. Profile screen uses this instead
+     * of the locally cached UserPrefs value so it can never drift out of
+     * sync with whatever the database actually holds, even if the row
+     * gets edited directly (e.g. by an admin) after signup.
+     */
+    fun fetchMyProfile(context: Context, callback: (referral: String?, error: String?) -> Unit) {
+        runOnIoThread {
+            try {
+                val whatsapp = UserPrefs.getWhatsapp(context)
+                if (whatsapp.isNullOrEmpty()) {
+                    callback(null, null)
+                    return@runOnIoThread
+                }
+                val encodedWhatsapp = URLEncoder.encode(whatsapp, "UTF-8")
+                val request = buildRequest(
+                    "contacts_public?select=referral&whatsapp=eq.$encodedWhatsapp&limit=1",
+                    "GET"
+                )
+                httpClient.newCall(request).execute().use { response ->
+                    if (response.code in 200..299) {
+                        val body = bodyString(response)
+                        val arr = JSONArray(body)
+                        if (arr.length() > 0) {
+                            val referral = arr.getJSONObject(0).optString("referral", "").ifBlank { null }
+                            callback(referral, null)
+                        } else {
+                            callback(null, null)
+                        }
+                    } else {
+                        val errorText = readErrorBody(response)
+                        callback(null, errorText)
+                    }
+                }
+            } catch (e: java.io.IOException) {
+                Log.w("SheetSync", "fetchMyProfile failed - network error", e)
+                callback(null, "NO_INTERNET")
+            } catch (e: Exception) {
+                Log.w("SheetSync", "fetchMyProfile failed", e)
+                callback(null, "Couldn't load profile right now")
+            }
+        }
+    }
+
+
      * WhatsApp number of the person who referred them. Grouping by that
      * column and counting rows gives each referrer's total number of
      * referrals. Sorted descending so the top referrer appears first.
@@ -335,7 +380,7 @@ object SheetSync {
     fun fetchReferralLeaderboard(context: Context? = null, callback: ((List<ReferralEntry>?, String?) -> Unit)? = null) {
         runOnIoThread {
             try {
-                val request = buildRequest("contacts?select=referral&referral=not.is.null", "GET")
+                val request = buildRequest("contacts_public?select=referral&referral=not.is.null", "GET")
                 httpClient.newCall(request).execute().use { response ->
                     if (response.code in 200..299) {
                         val body = bodyString(response)
@@ -380,7 +425,7 @@ object SheetSync {
                 }
                 val encodedWhatsapp = URLEncoder.encode(whatsapp, "UTF-8")
                 val request = buildRequest(
-                    "contacts?select=whatsapp,created_at&referral=eq.$encodedWhatsapp&order=created_at.desc",
+                    "contacts_public?select=whatsapp,created_at&referral=eq.$encodedWhatsapp&order=created_at.desc",
                     "GET"
                 )
                 httpClient.newCall(request).execute().use { response ->
@@ -505,26 +550,30 @@ object SheetSync {
                     callback(null)
                     return@runOnIoThread
                 }
-                val encoded = URLEncoder.encode(whatsapp, "UTF-8")
-                val encodedAndroidId = URLEncoder.encode(androidId, "UTF-8")
-                // android_id added to the filter so this can only ever read
-                // the calling device's own plan, not any whatsapp number's -
-                // same ownership-check pattern used everywhere else in this
-                // file.
-                val request = buildRequest(
-                    "contacts?whatsapp=eq.$encoded&android_id=eq.$encodedAndroidId&select=plan",
-                    "GET"
-                )
+                val json = JSONObject()
+                json.put("p_whatsapp", whatsapp)
+                json.put("p_android_id", androidId)
+                // Now goes through the get_my_plan() RPC (SECURITY DEFINER)
+                // instead of a direct GET filtered by whatsapp+android_id -
+                // the base contacts table has RLS enabled with no SELECT
+                // policy now (the old "Allow anon read"/"Allow select for
+                // anon" policies were both unrestricted, qual: true, so
+                // they were dropped). plan isn't exposed via the
+                // contacts_public view either since it's not something
+                // other users should ever see, only the row's own device.
+                val request = buildRequest("rpc/get_my_plan", "POST", json.toString())
                 httpClient.newCall(request).execute().use { response ->
                     if (response.code in 200..299) {
                         val body = bodyString(response)
-                        val arr = JSONArray(body)
-                        if (arr.length() > 0) {
-                            val plan = arr.getJSONObject(0).optString("plan", "FREE")
-                            callback(if (plan.isEmpty()) "FREE" else plan)
-                        } else {
-                            callback(null)
+                        // get_my_plan returns a bare JSON string (RPC scalar
+                        // return), e.g. "FREE" including the quotes - not a
+                        // row array like the old PostgREST table GET did.
+                        val plan = try {
+                            JSONTokener(body).nextValue() as? String
+                        } catch (e: Exception) {
+                            null
                         }
+                        callback(if (plan.isNullOrEmpty()) "FREE" else plan)
                     } else {
                         callback(null)
                     }
@@ -690,27 +739,21 @@ object SheetSync {
                 return@runOnIoThread
             }
             try {
-                val encoded = URLEncoder.encode(whatsapp, "UTF-8")
-                val encodedAndroidId = URLEncoder.encode(androidId, "UTF-8")
-
                 val json = JSONObject()
-                json.put("status", if (paused) "inactive" else "active")
-                // JSONObject.put() with a plain Kotlin null silently drops
-                // the key instead of writing JSON null - JSONObject.NULL is
-                // required to actually clear status_reason server-side.
-                json.put("status_reason", if (paused) "paused_by_user" else JSONObject.NULL)
+                json.put("p_whatsapp", whatsapp)
+                json.put("p_android_id", androidId)
+                json.put("p_paused", paused)
 
-                // android_id is included in the filter (not just whatsapp) so
-                // this PATCH only ever matches the calling device's own row -
-                // see the ownership-check fix applied to update_verification_status
-                // and record_sync_checkin for the same reasoning. A request for
-                // a whatsapp number that isn't this device's own now matches
-                // zero rows instead of silently updating a stranger's account.
-                val request = buildRequest(
-                    "contacts?whatsapp=eq.$encoded&android_id=eq.$encodedAndroidId",
-                    "PATCH",
-                    json.toString()
-                )
+                // Now goes through the report_sync_pause_status() RPC
+                // (SECURITY DEFINER) instead of a direct PATCH on contacts -
+                // the open "Allow limited update for anon" policy that made
+                // the PATCH work was actually unrestricted (qual: true, no
+                // real per-row check), so it was removed. The RPC itself
+                // still verifies whatsapp+android_id match before writing,
+                // same ownership check as before, just enforced server-side
+                // now instead of relying on an RLS policy that didn't
+                // actually enforce it.
+                val request = buildRequest("rpc/report_sync_pause_status", "POST", json.toString())
                 httpClient.newCall(request).execute().use { response ->
                     val code = response.code
                     if (code !in 200..299) {
@@ -745,22 +788,20 @@ object SheetSync {
                     callback?.invoke(false)
                     return@runOnIoThread
                 }
-                val encoded = URLEncoder.encode(whatsapp, "UTF-8")
-                val encodedAndroidId = URLEncoder.encode(androidId, "UTF-8")
-
                 val json = JSONObject()
-                json.put("setup_stage", stage)
+                json.put("p_whatsapp", whatsapp)
+                json.put("p_android_id", androidId)
+                json.put("p_stage", stage)
 
-                val nowIso = java.time.Instant.now().toString()
-
-                // Same android_id-in-filter ownership check as
-                // reportSyncPauseStatus above - only matches this device's
-                // own row.
-                val request = buildRequest(
-                    "contacts?whatsapp=eq.$encoded&android_id=eq.$encodedAndroidId",
-                    "PATCH",
-                    json.toString()
-                )
+                // Now goes through the report_setup_stage() RPC (SECURITY
+                // DEFINER), same reasoning as reportSyncPauseStatus above -
+                // the direct PATCH relied on an "Allow limited update for
+                // anon" policy that turned out to have no real restriction
+                // (qual: true). The RPC also does the first-reached-stage
+                // stamping atomically in the same statement now, so the
+                // three separate stampFirstReachedIfNull follow-up calls
+                // below are no longer needed.
+                val request = buildRequest("rpc/report_setup_stage", "POST", json.toString())
                 val responseCode = httpClient.newCall(request).execute().use { it.code }
 
                 if (responseCode !in 200..299) {
@@ -769,42 +810,11 @@ object SheetSync {
                     return@runOnIoThread
                 }
 
-                val labels = stage.split(",").map { it.trim() }.toSet()
-                if ("1" in labels) stampFirstReachedIfNull(encoded, encodedAndroidId, "first_reached_stage_1_at", nowIso)
-                if ("2" in labels) stampFirstReachedIfNull(encoded, encodedAndroidId, "first_reached_stage_2_at", nowIso)
-                if ("3" in labels) stampFirstReachedIfNull(encoded, encodedAndroidId, "first_reached_stage_3_at", nowIso)
-
                 callback?.invoke(true)
             } catch (e: Exception) {
                 Log.w("SheetSync", "reportSetupStage failed", e)
                 callback?.invoke(false)
             }
-        }
-    }
-
-    /**
-     * Stamps a single "first reached stage N" column with the given
-     * timestamp, but only for rows where that column is still null AND
-     * android_id matches the calling device - same ownership check as
-     * everywhere else that PATCHes a specific contacts row by whatsapp.
-     */
-    private fun stampFirstReachedIfNull(encodedWhatsapp: String, encodedAndroidId: String, column: String, nowIso: String) {
-        try {
-            val json = JSONObject()
-            json.put(column, nowIso)
-            val request = buildRequest(
-                "contacts?whatsapp=eq.$encodedWhatsapp&android_id=eq.$encodedAndroidId&$column=is.null",
-                "PATCH",
-                json.toString()
-            )
-            httpClient.newCall(request).execute().use { response ->
-                if (response.code !in 200..299) {
-                    val errorBody = readErrorBody(response)
-                    Log.w("SheetSync", "stampFirstReachedIfNull($column) failed with code ${response.code}: $errorBody")
-                }
-            }
-        } catch (e: Exception) {
-            Log.w("SheetSync", "stampFirstReachedIfNull($column) failed", e)
         }
     }
 
@@ -1001,17 +1011,21 @@ object SheetSync {
         val androidId = readAndroidId(context)
         if (androidId.isBlank()) return null
         try {
-            val encoded = URLEncoder.encode(whatsapp, "UTF-8")
-            val encodedAndroidId = URLEncoder.encode(androidId, "UTF-8")
-            val request = buildRequest(
-                "contacts?whatsapp=eq.$encoded&android_id=eq.$encodedAndroidId&select=group_id,extra_groups",
-                "GET"
-            )
+            val json = JSONObject()
+            json.put("p_whatsapp", whatsapp)
+            json.put("p_android_id", androidId)
+            // Now goes through the get_my_groups() RPC (SECURITY DEFINER) -
+            // same reasoning as fetchPlan above. group_id/extra_groups
+            // aren't in the contacts_public view since they're this row's
+            // own membership info, not something other users need to see.
+            val request = buildRequest("rpc/get_my_groups", "POST", json.toString())
             httpClient.newCall(request).execute().use { response ->
                 if (response.code !in 200..299) {
                     return null
                 }
                 val body = bodyString(response)
+                // RPC table-returning functions come back as a row array,
+                // same shape as a PostgREST table GET.
                 val arr = JSONArray(body)
                 if (arr.length() == 0) return null
                 val obj = arr.getJSONObject(0)
@@ -1029,44 +1043,18 @@ object SheetSync {
         }
     }
 
+    /**
+     * Same group membership as fetchMyGroupsSplit, flattened into one
+     * list. Delegates to fetchMyGroupsSplit rather than making its own
+     * separate network call, since both were reading identical data -
+     * one request instead of two, same result either caller needs.
+     */
     private fun fetchMyGroups(context: Context): List<Long>? {
-        val whatsapp = UserPrefs.getWhatsapp(context) ?: return null
-        val androidId = readAndroidId(context)
-        if (androidId.isBlank()) return null
-        try {
-            val encoded = URLEncoder.encode(whatsapp, "UTF-8")
-            val encodedAndroidId = URLEncoder.encode(androidId, "UTF-8")
-            // android_id added so this only ever reads the calling device's
-            // own group membership, not any whatsapp number's.
-            val request = buildRequest(
-                "contacts?whatsapp=eq.$encoded&android_id=eq.$encodedAndroidId&select=group_id,extra_groups",
-                "GET"
-            )
-            httpClient.newCall(request).execute().use { response ->
-                if (response.code !in 200..299) {
-                    return null
-                }
-                val body = bodyString(response)
-                val arr = JSONArray(body)
-                if (arr.length() == 0) return null
-                val obj = arr.getJSONObject(0)
-
-                val groups = ArrayList<Long>()
-                val homeGroup = obj.optLong("group_id", -1L)
-                if (homeGroup > 0) groups.add(homeGroup)
-
-                val extra = obj.optJSONArray("extra_groups")
-                if (extra != null) {
-                    for (i in 0 until extra.length()) {
-                        groups.add(extra.getLong(i))
-                    }
-                }
-                return if (groups.isEmpty()) null else groups
-            }
-        } catch (e: Exception) {
-            Log.e("SheetSync", "fetchMyGroups failed", e)
-            return null
-        }
+        val (homeGroup, extra) = fetchMyGroupsSplit(context) ?: return null
+        val groups = ArrayList<Long>()
+        if (homeGroup != null) groups.add(homeGroup)
+        groups.addAll(extra)
+        return if (groups.isEmpty()) null else groups
     }
 
     /**
@@ -1128,7 +1116,7 @@ object SheetSync {
 
         for (attempt in 0 until MAX_RETRIES) {
             try {
-                val request = buildRequest("contacts?select=whatsapp,referral,name$groupFilter", "GET")
+                val request = buildRequest("contacts_public?select=whatsapp,referral,name$groupFilter", "GET")
                 httpClient.newCall(request).execute().use { response ->
                     val responseCode = response.code
                     if (responseCode in 200..299) {
