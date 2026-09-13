@@ -121,6 +121,27 @@ object UserPrefs {
         getPrefs(context).edit().putLong(KEY_LAST_KNOWN_GROUP_COUNT, value).apply()
     }
 
+    private const val KEY_LAST_KNOWN_REFERRAL_COUNT = "last_known_referral_count"
+
+    /**
+     * How many people this user had referred, as of the last time we
+     * checked. Compared against a fresh fetchMyReferrals() count on each
+     * auto-sync (see MainMenuActivity.runAutoSync) so a REFERRAL_JOINED
+     * activity-log entry (and notification) only fires when the count
+     * actually goes up, not on every sync regardless of change. Mirrors
+     * getLastKnownGroupCount's -1-means-never-checked convention, so the
+     * very first check after this update ships never fires a log entry
+     * for referrals that joined before this feature existed - it just
+     * silently establishes the starting baseline instead.
+     */
+    fun getLastKnownReferralCount(context: Context): Int {
+        return getPrefs(context).getInt(KEY_LAST_KNOWN_REFERRAL_COUNT, -1)
+    }
+
+    fun setLastKnownReferralCount(context: Context, value: Int) {
+        getPrefs(context).edit().putInt(KEY_LAST_KNOWN_REFERRAL_COUNT, value).apply()
+    }
+
     private const val KEY_LAST_SYNC_DATE = "last_sync_date"
     private const val KEY_TODAY_SYNCED_COUNT = "today_synced_count"
     private const val KEY_LAST_SYNC_TIMESTAMP = "last_sync_timestamp"
