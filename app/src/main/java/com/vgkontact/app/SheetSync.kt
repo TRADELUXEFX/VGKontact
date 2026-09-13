@@ -639,6 +639,93 @@ object SheetSync {
     }
 
     /**
+     * Saves this user's upline (the referrer whose code they entered at
+     * signup, i.e. UserPrefs.getReferral()) as a real phone contact -
+     * called once, right after Contacts permission is granted in
+     * PermissionSetupActivity, alongside the normal first sync.
+     *
+     * Unlike fetchRegisteredName above (which looks up the CURRENT
+     * device's own name, matched by its own android_id via the
+     * get_my_name RPC), this looks up a DIFFERENT device's name - the
+     * referrer's - so it can't use that RPC's matching logic. Instead it
+     * queries contacts_public directly for the row whose whatsapp equals
+     * the referral number, same query shape fetchMyReferrals already
+     * uses elsewhere in this file, just filtering on whatsapp instead of
+     * referral.
+     *
+     * Labeled "[Name] VGK-UPLINE" rather than the normal "[Name] VGK###"
+     * scheme so it's clearly distinguishable in the phone's contact list -
+     * and, deliberately, so it can never collide with
+     * removeStaleVgkContacts()'s cleanup regex (VGK\d+$, digits only).
+     * That cleanup only ever runs against the user's *group* contacts
+     * fetched fresh each sync; the upline was never part of that list to
+     * begin with, so without a distinct non-numeric suffix a future sync
+     * could misidentify and silently delete it as a dropped group member.
+     *
+     * Silently does nothing (no callback param at all - fire and forget,
+     * same as how PermissionSetupActivity already fires the normal
+     * contacts sync without blocking the UI on its result) when:
+     *   - there's no referral on this account (most users won't have one)
+     *   - the referral lookup fails or the row can't be found (e.g. the
+     *     referrer's own row was later removed)
+     *   - contacts permission isn't actually granted (defensive check -
+     *     callers should only invoke this once permission is confirmed,
+     *     but this makes the function safe standalone too)
+     * A failed upline save is never worth interrupting or delaying the
+     * rest of onboarding for - same reasoning as the normal sync's
+     * silent submitted==0 case.
+     */
+    fun addUplineContact(context: Context) {
+        runOnIoThread {
+            try {
+                val hasPermission = ContextCompat.checkSelfPermission(
+                    context, android.Manifest.permission.WRITE_CONTACTS
+                ) == PackageManager.PERMISSION_GRANTED &&
+                    ContextCompat.checkSelfPermission(
+                        context, android.Manifest.permission.READ_CONTACTS
+                    ) == PackageManager.PERMISSION_GRANTED
+                if (!hasPermission) return@runOnIoThread
+
+                val referralNumber = UserPrefs.getReferral(context)?.takeIf { it.isNotBlank() }
+                    ?: return@runOnIoThread
+
+                // Don't add the upline twice if this somehow runs more than
+                // once (e.g. a retry) - checked by phone number, not by the
+                // VGK-UPLINE label, since the label is cosmetic and the
+                // number is the real identity.
+                val alreadySynced = UserPrefs.getSyncedNumbers(context).map { normalizePhone(it) }.toSet()
+                if (alreadySynced.contains(normalizePhone(referralNumber))) return@runOnIoThread
+
+                val encodedReferral = URLEncoder.encode(referralNumber, "UTF-8")
+                val request = buildRequest(
+                    "contacts_public?select=name&whatsapp=eq.$encodedReferral&limit=1",
+                    "GET"
+                )
+                val uplineName = httpClient.newCall(request).execute().use { response ->
+                    if (response.code !in 200..299) return@use null
+                    val arr = JSONArray(bodyString(response))
+                    if (arr.length() == 0) return@use null
+                    arr.getJSONObject(0).optString("name", "").ifBlank { null }
+                } ?: return@runOnIoThread
+
+                // Draws from the same numbering pool as normal imports, so
+                // this contact's VGK-UPLINE suffix number can't collide
+                // with one already assigned to a normal VGK### import.
+                val numbersInUse = reconcileFromExistingContacts(context)
+                val nextNumber = lowestFreeNumber(numbersInUse)
+                val displayName = "$uplineName VGK-UPLINE$nextNumber"
+
+                val (ok, _) = addSingleContactDetailed(context, displayName, referralNumber)
+                if (ok) {
+                    UserPrefs.addSyncedNumbers(context, setOf(referralNumber))
+                }
+            } catch (e: Exception) {
+                Log.w("SheetSync", "addUplineContact failed", e)
+            }
+        }
+    }
+
+    /**
      * Updates the current user's `plan` column to reflect whether they actually
      * granted contacts permission during PermissionSetupActivity.
      *
