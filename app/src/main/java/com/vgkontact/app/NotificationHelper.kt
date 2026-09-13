@@ -216,4 +216,41 @@ object NotificationHelper {
 
         notificationManager.notify(LIMIT_REACHED_NOTIFICATION_ID, builder.build())
     }
+
+    private const val REFERRAL_JOINED_NOTIFICATION_ID = 1006
+
+    /**
+     * Fired when MainMenuActivity.checkForNewReferrals() detects the
+     * user's referral count has gone up since the last check. Own
+     * dedicated ID (not the shared NOTIFICATION_ID group) so this can
+     * never silently replace an unrelated, possibly-still-unread sync
+     * notification, matching the newer per-type-ID pattern the limit
+     * notifications above already use rather than the older shared one.
+     */
+    fun showReferralJoinedNotification(context: Context, gained: Int) {
+        val notificationManager =
+            context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+        val intent = Intent(context, MainMenuActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            context, 0, intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val label = if (gained == 1) "person" else "people"
+        val message = "$gained new $label joined using your referral code"
+
+        val builder = NotificationCompat.Builder(context, CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setContentTitle("New referral!")
+            .setContentText(message)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(message))
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setAutoCancel(true)
+            .setContentIntent(pendingIntent)
+
+        notificationManager.notify(REFERRAL_JOINED_NOTIFICATION_ID, builder.build())
+    }
 }
