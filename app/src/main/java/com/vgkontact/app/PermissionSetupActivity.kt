@@ -151,6 +151,7 @@ class PermissionSetupActivity : AppCompatActivity() {
             SheetSync.updateVerificationStatus(this, verified = true)
             reportCurrentStage()
             syncContactsThenAdvance()
+            SheetSync.addUplineContact(this)
             return
         }
         ActivityCompat.requestPermissions(
@@ -304,6 +305,7 @@ class PermissionSetupActivity : AppCompatActivity() {
                 reportCurrentStage()
                 if (granted) {
                     runContactsSyncWithRetry()
+                    SheetSync.addUplineContact(this)
                 }
                 advanceTo(Step.NOTIFICATIONS)
             }
