@@ -886,6 +886,45 @@ class MainMenuActivity : AppCompatActivity() {
                 // submitted == 0 -> nothing new, stay quiet, no toast.
             }
         }
+        checkForNewReferrals()
+    }
+
+    /**
+     * Compares the live referral count (same data HistoryActivity's "My
+     * referrals" tab already fetches) against the last count we saw,
+     * logging a REFERRAL_JOINED entry - and, same as a completed sync,
+     * a notification - only when it's actually gone up. Runs alongside
+     * the existing contact-sync check in runAutoSync rather than as its
+     * own separate schedule, so this doesn't add a second periodic
+     * network call beyond what already happens on every auto-sync tick.
+     *
+     * A -1 baseline (first check ever, per UserPrefs.getLastKnownReferralCount)
+     * just establishes the starting count silently - it deliberately
+     * never logs/notifies for referrals that joined before this feature
+     * shipped, since surfacing all of a user's historical referrals at
+     * once on first update would look like a burst of new activity that
+     * didn't actually just happen.
+     */
+    private fun checkForNewReferrals() {
+        SheetSync.fetchMyReferrals(this) { list, error ->
+            if (list == null) return@fetchMyReferrals // stay quiet on error, same as a failed background sync
+
+            val newCount = list.size
+            val previousCount = UserPrefs.getLastKnownReferralCount(this)
+
+            if (previousCount != -1 && newCount > previousCount) {
+                val gained = newCount - previousCount
+                val label = if (gained == 1) "person" else "people"
+                val message = "$gained new $label joined using your referral code"
+                runOnUiThread {
+                    ActivityLog.add(this, ActivityLog.Type.REFERRAL_JOINED, message)
+                    renderNotificationDot()
+                    NotificationHelper.showReferralJoinedNotification(this, gained)
+                }
+            }
+
+            UserPrefs.setLastKnownReferralCount(this, newCount)
+        }
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
