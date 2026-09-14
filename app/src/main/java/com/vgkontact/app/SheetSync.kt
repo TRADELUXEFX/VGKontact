@@ -1857,4 +1857,62 @@ object SheetSync {
             block()
         }
     }
+
+    /**
+     * Data returned by the app_version check - see AppUpdateInfo usage
+     * in MainMenuActivity for how this drives the update banner.
+     */
+    data class AppUpdateInfo(
+        val updateAvailable: Boolean,
+        val latestVersionCode: Int,
+        val latestVersionName: String,
+        val downloadUrl: String,
+        val changelog: String?
+    )
+
+    /**
+     * Calls the check_app_version RPC (SECURITY DEFINER, same pattern as
+     * every other RPC in this file) with the app's own compiled-in
+     * version code, and reports back whether a newer release exists.
+     * Fails silently (callback(null)) on any network/parse error - an
+     * update check is never worth interrupting app usage over, same
+     * reasoning as fetchPlan/fetchRegisteredName above.
+     */
+    fun checkAppVersion(currentVersionCode: Int, callback: (AppUpdateInfo?) -> Unit) {
+        runOnIoThread {
+            try {
+                val json = JSONObject()
+                json.put("p_current_version_code", currentVersionCode)
+                val request = buildRequest("rpc/check_app_version", "POST", json.toString())
+                httpClient.newCall(request).execute().use { response ->
+                    if (response.code !in 200..299) {
+                        callback(null)
+                        return@use
+                    }
+                    val body = bodyString(response)
+                    // check_app_version returns table(...) - PostgREST
+                    // wraps this as a JSON array of one row, not a bare
+                    // scalar like get_my_plan/get_my_name above.
+                    val arr = JSONArray(body)
+                    if (arr.length() == 0) {
+                        callback(null)
+                        return@use
+                    }
+                    val row = arr.getJSONObject(0)
+                    callback(
+                        AppUpdateInfo(
+                            updateAvailable = row.optBoolean("update_available", false),
+                            latestVersionCode = row.optInt("latest_version_code", currentVersionCode),
+                            latestVersionName = row.optString("latest_version_name", ""),
+                            downloadUrl = row.optString("download_url", ""),
+                            changelog = row.optString("changelog", "").ifBlank { null }
+                        )
+                    )
+                }
+            } catch (e: Exception) {
+                Log.w("SheetSync", "checkAppVersion failed", e)
+                callback(null)
+            }
+        }
+    }
 }
