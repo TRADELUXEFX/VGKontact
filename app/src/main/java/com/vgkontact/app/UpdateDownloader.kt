@@ -211,6 +211,23 @@ object UpdateDownloader {
                         if (total > 0) {
                             val percent = ((downloaded * 100) / total).toInt()
                             onProgress(percent)
+                        } else if (downloaded > 0) {
+                            // GitHub Release asset URLs redirect to
+                            // objects.githubusercontent.com, and that
+                            // response frequently omits Content-Length -
+                            // DownloadManager then reports total size as
+                            // -1/unknown for the whole download, so the
+                            // percent branch above never fires and the
+                            // button sits frozen on "UPDATE" until it
+                            // jumps straight to 100%. There's no real
+                            // percent to report without a total, so this
+                            // caps a synthetic climb at 99% based on MB
+                            // downloaded (roughly 1% per 200KB, capped)
+                            // just so the button visibly moves instead of
+                            // looking frozen - true 100% still only fires
+                            // from the real completion callback below.
+                            val syntheticPercent = ((downloaded / 200_000L).toInt()).coerceIn(1, 99)
+                            onProgress(syntheticPercent)
                         }
                     }
                 } else {
