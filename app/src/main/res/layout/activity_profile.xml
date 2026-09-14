@@ -67,15 +67,37 @@
                 android:letterSpacing="0.05"
                 android:textColor="@color/text_muted" />
 
-            <TextView
-                android:id="@+id/profileUsernameText"
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:textSize="17sp"
-                android:textStyle="bold"
-                android:textColor="@color/vg_dark"
-                android:paddingBottom="16dp"
-                tools:text="maria_g" />
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingBottom="16dp">
+
+                <TextView
+                    android:id="@+id/profileUsernameText"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:textSize="17sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/vg_dark"
+                    tools:text="maria_g" />
+
+                <ImageView
+                    android:id="@+id/profileUsernameCopyIcon"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_marginStart="8dp"
+                    android:padding="2dp"
+                    android:src="@drawable/ic_copy"
+                    android:contentDescription="@string/profile_copy_username"
+                    app:tint="@color/vg_green"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:clickable="true"
+                    android:focusable="true" />
+
+            </LinearLayout>
 
             <View
                 android:layout_width="match_parent"
