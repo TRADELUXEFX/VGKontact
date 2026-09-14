@@ -307,4 +307,23 @@ object UserPrefs {
     fun setLastPermissionSeverityLogged(context: Context, severity: String) {
         getPrefs(context).edit().putString(KEY_LAST_PERMISSION_SEVERITY_LOGGED, severity).apply()
     }
+
+    private const val KEY_DISMISSED_UPDATE_VERSION_CODE = "dismissed_update_version_code"
+
+    /**
+     * The version_code the user last tapped "dismiss" on the update
+     * banner for (see MainMenuActivity's update-check + banner logic).
+     * -1 means never dismissed anything. Compared against the SERVER's
+     * latest_version_code on each check - if the server ships a newer
+     * version than whatever was dismissed, the banner reappears for
+     * that new version. This is what makes it a real "soft" prompt:
+     * dismissing quiets it for that specific release, not forever.
+     */
+    fun getDismissedUpdateVersionCode(context: Context): Int {
+        return getPrefs(context).getInt(KEY_DISMISSED_UPDATE_VERSION_CODE, -1)
+    }
+
+    fun setDismissedUpdateVersionCode(context: Context, versionCode: Int) {
+        getPrefs(context).edit().putInt(KEY_DISMISSED_UPDATE_VERSION_CODE, versionCode).apply()
+    }
 }
