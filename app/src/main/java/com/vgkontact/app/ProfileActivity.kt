@@ -20,6 +20,7 @@ import androidx.core.content.ContextCompat
 class ProfileActivity : AppCompatActivity() {
 
     private lateinit var profileUsernameText: TextView
+    private lateinit var profileUsernameCopyIcon: ImageView
     private lateinit var profileNumberText: TextView
     private lateinit var profileReferralNameText: TextView
     private lateinit var profileReferralNumberBadge: TextView
@@ -50,6 +51,7 @@ class ProfileActivity : AppCompatActivity() {
         window.statusBarColor = ContextCompat.getColor(this, R.color.vg_green)
 
         profileUsernameText = findViewById(R.id.profileUsernameText)
+        profileUsernameCopyIcon = findViewById(R.id.profileUsernameCopyIcon)
         profileNumberText = findViewById(R.id.profileNumberText)
         profileReferralNameText = findViewById(R.id.profileReferralNameText)
         profileReferralNumberBadge = findViewById(R.id.profileReferralNumberBadge)
@@ -71,6 +73,16 @@ class ProfileActivity : AppCompatActivity() {
         // Username
         val name = UserPrefs.getName(this)
         profileUsernameText.text = if (name.isNullOrEmpty()) "N/A" else name
+
+        // Copy username - lets the user share their own username with others
+        // as a signup referral, same pattern as the referral-code copy below,
+        // just a different label/clip/toast for this specific field.
+        profileUsernameCopyIcon.setOnClickListener {
+            val username = profileUsernameText.text?.toString().orEmpty()
+            if (username.isNotBlank() && username != "N/A") {
+                copyToClipboard(username, clipLabel = "VGKontact Username", toastMessage = "Username copied")
+            }
+        }
 
         // Number
         profileNumberText.text = whatsapp ?: "N/A"
@@ -193,11 +205,15 @@ class ProfileActivity : AppCompatActivity() {
         }
     }
 
-    private fun copyToClipboard(text: String) {
+    private fun copyToClipboard(
+        text: String,
+        clipLabel: String = "VGKontact Referral Code",
+        toastMessage: String = "Referral code copied"
+    ) {
         val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-        val clip = ClipData.newPlainText("VGKontact Referral Code", text)
+        val clip = ClipData.newPlainText(clipLabel, text)
         clipboard.setPrimaryClip(clip)
-        Toast.makeText(this, "Referral code copied", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, toastMessage, Toast.LENGTH_SHORT).show()
     }
 
     private fun openWhatsAppContactUs() {
