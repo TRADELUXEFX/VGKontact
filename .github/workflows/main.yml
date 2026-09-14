@@ -98,7 +98,7 @@ jobs:
             -d '{
               "latest_version_code": ${{ github.run_number }},
               "latest_version_name": "1.0.${{ github.run_number }}",
-              "download_url": "https://github.com/${{ github.repository }}/releases/tag/v${{ github.run_number }}",
+              "download_url": "https://github.com/${{ github.repository }}/releases/download/v${{ github.run_number }}/VGKontact-${{ github.run_number }}.apk",
               "changelog": "Automated build ${{ github.run_number }}"
             }' \
             --fail-with-body
