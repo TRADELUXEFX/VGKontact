@@ -243,7 +243,7 @@ object UpdateDownloader {
 
         val request = DownloadManager.Request(Uri.parse(downloadUrl))
             .setTitle("VGKontact update")
-            .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_ONLY_COMPLETION)
+
             .setDestinationUri(Uri.fromFile(destFile))
             .setAllowedOverMetered(true)
             .setAllowedOverRoaming(true)
@@ -445,4 +445,3 @@ object UpdateDownloader {
         }
     }
 }
-
