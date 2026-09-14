@@ -52,6 +52,98 @@ object UpdateDownloader {
 
     private var receiver: BroadcastReceiver? = null
     private var pollingJob: Job? = null
+    private var activeDownloadId: Long? = null
+    private var activeVersionCode: Int? = null
+    private var activeDownloadManager: DownloadManager? = null
+
+    /** State UpdateDownloader is actually in right now, for a caller (e.g.
+     * onResume) to re-sync its UI to instead of guessing. */
+    sealed class State {
+        object Idle : State()
+        data class InProgress(val versionCode: Int) : State()
+        data class ReadyToInstall(val versionCode: Int) : State()
+    }
+
+    /**
+     * Reports what UpdateDownloader is actually doing right now, so a
+     * caller re-created after a transient teardown (activity backgrounded
+     * to grant the install-unknown-apps permission, or a rotation) can
+     * re-sync its banner instead of relying on stale in-memory UI state.
+     * Checks, in order: a download this object is still actively polling
+     * in-process; an in-flight download recorded in UserPrefs from before
+     * teardown (the object singleton itself survives activity recreation,
+     * but not full process death, so this prefs flag is the backstop for
+     * that case too); then a completed file already on disk.
+     */
+    fun currentState(context: Context, latestVersionCode: Int): State {
+        val appContext = context.applicationContext
+
+        if (pollingJob?.isActive == true && activeVersionCode == latestVersionCode) {
+            return State.InProgress(latestVersionCode)
+        }
+
+        val existingFile = File(File(appContext.getExternalFilesDir(null), APK_SUBDIR), APK_FILENAME)
+        val cachedVersionCode = UserPrefs.getDownloadedUpdateVersionCode(appContext)
+        if (existingFile.exists() && cachedVersionCode == latestVersionCode) {
+            return State.ReadyToInstall(latestVersionCode)
+        }
+
+        val inFlightVersionCode = UserPrefs.getInFlightUpdateVersionCode(appContext)
+        if (inFlightVersionCode == latestVersionCode) {
+            return State.InProgress(latestVersionCode)
+        }
+
+        return State.Idle
+    }
+
+    /**
+     * Re-attaches progress/completion callbacks to a download already
+     * enqueued in DownloadManager after this object's receiver/pollingJob
+     * got cleared (e.g. by a stale cancel() call, or full process death
+     * that survived because DownloadManager itself is a system service).
+     * Falls back to a fresh start() if no matching DownloadManager entry
+     * can be found (e.g. it finished and DownloadManager already dropped
+     * the row) or if this object's in-process state is missing entirely -
+     * either way the caller ends up correctly attached, never stuck.
+     */
+    fun reattach(
+        context: Context,
+        downloadUrl: String,
+        latestVersionCode: Int,
+        onProgress: (Int) -> Unit,
+        onInstallPromptShown: (willNeedPermissionFirst: Boolean) -> Unit
+    ) {
+        val appContext = context.applicationContext
+
+        when (val state = currentState(appContext, latestVersionCode)) {
+            is State.ReadyToInstall -> {
+                val existingFile = File(File(appContext.getExternalFilesDir(null), APK_SUBDIR), APK_FILENAME)
+                onProgress(100)
+                onInstallPromptShown(willNeedPermissionFirst(appContext))
+                launchInstall(appContext, existingFile)
+            }
+            is State.InProgress -> {
+                if (pollingJob?.isActive == true && activeVersionCode == latestVersionCode && activeDownloadId != null) {
+                    // Still tracked in-process (this object survived, only the
+                    // caller was recreated) - just re-register the receiver and
+                    // resume polling so progress/completion reach the new caller.
+                    val downloadManager = activeDownloadManager
+                        ?: (appContext.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager)
+                    registerCompletionReceiver(appContext, downloadManager, activeDownloadId!!, latestVersionCode, onProgress, onInstallPromptShown)
+                    pollProgress(downloadManager, activeDownloadId!!, onProgress)
+                } else {
+                    // In-flight per UserPrefs but this object's own tracking is
+                    // gone (full process death) - no downloadId survived to
+                    // re-attach to, so the only correct move is to start fresh;
+                    // start() itself handles deleting any stale partial file.
+                    start(appContext, downloadUrl, latestVersionCode, onProgress, onInstallPromptShown)
+                }
+            }
+            is State.Idle -> {
+                start(appContext, downloadUrl, latestVersionCode, onProgress, onInstallPromptShown)
+            }
+        }
+    }
 
     /** Deletes any previously downloaded update APK. Call when a newer
      * version supersedes it, so a stale file is never reused for install. */
@@ -61,14 +153,39 @@ object UpdateDownloader {
     }
 
     /**
-     * Cancels an in-flight download's progress polling and unregisters its
-     * completion receiver, without deleting any partially-downloaded file
-     * (DownloadManager keeps running the actual download regardless - this
-     * only stops OUR listening for it). Call from the hosting activity's
-     * onDestroy() so a rotation or back-navigation mid-download doesn't
-     * leak a coroutine or a registered receiver.
+     * Stops THIS caller's progress polling and unregisters its completion
+     * receiver, without deleting any partially-downloaded file and without
+     * abandoning the download - DownloadManager keeps running it regardless
+     * (this only stops OUR listening for it), and UserPrefs' in-flight flag
+     * is left intact so a later reattach()/onResume can tell the download
+     * is still going and re-sync to it. Previously this was called from
+     * onDestroy() unconditionally, which also fires on transient teardown
+     * (backgrounding to grant the install-unknown-apps permission), wiping
+     * the only thing tracking that download - do not call this from
+     * onDestroy() for that reason; call it only for a genuine user-cancel.
      */
     fun cancel(context: Context) {
+        pollingJob?.cancel()
+        pollingJob = null
+        activeDownloadId = null
+        activeVersionCode = null
+        activeDownloadManager = null
+        receiver?.let {
+            try { context.applicationContext.unregisterReceiver(it) } catch (e: Exception) { /* not registered, ignore */ }
+        }
+        receiver = null
+        UserPrefs.clearInFlightUpdateVersionCode(context)
+    }
+
+    /**
+     * Stops only THIS caller's listening (receiver + polling) without
+     * touching the in-flight tracking in UserPrefs or activeDownloadId -
+     * the download keeps running and stays discoverable for a future
+     * reattach(). This is the safe call for transient teardown (onDestroy
+     * from backgrounding), as opposed to cancel() which is for a genuine
+     * user-initiated abandon.
+     */
+    fun detachListenersOnly(context: Context) {
         pollingJob?.cancel()
         pollingJob = null
         receiver?.let {
@@ -132,11 +249,37 @@ object UpdateDownloader {
             .setAllowedOverRoaming(true)
 
         val downloadId = downloadManager.enqueue(request)
+        activeDownloadId = downloadId
+        activeVersionCode = latestVersionCode
+        activeDownloadManager = downloadManager
+        UserPrefs.setInFlightUpdateVersionCode(appContext, latestVersionCode)
 
+        registerCompletionReceiver(appContext, downloadManager, downloadId, latestVersionCode, onProgress, onInstallPromptShown)
+        pollProgress(downloadManager, downloadId, onProgress)
+    }
+
+    /**
+     * Registers the broadcast receiver that fires when DownloadManager
+     * finishes this download, verifies it succeeded, persists the
+     * completed version code, and hands off to the installer. Extracted
+     * out of start() so reattach() can register the same completion
+     * handling against a download it's re-attaching to rather than one it
+     * just enqueued itself.
+     */
+    private fun registerCompletionReceiver(
+        appContext: Context,
+        downloadManager: DownloadManager,
+        downloadId: Long,
+        latestVersionCode: Int,
+        onProgress: (Int) -> Unit,
+        onInstallPromptShown: (willNeedPermissionFirst: Boolean) -> Unit
+    ) {
         // Unregister any previous receiver before registering a new one.
         receiver?.let {
             try { appContext.unregisterReceiver(it) } catch (e: Exception) { /* not registered, ignore */ }
         }
+
+        val destFile = File(File(appContext.getExternalFilesDir(null), APK_SUBDIR), APK_FILENAME)
 
         receiver = object : BroadcastReceiver() {
             override fun onReceive(ctx: Context, intent: Intent) {
@@ -155,17 +298,7 @@ object UpdateDownloader {
 
                 try { appContext.unregisterReceiver(this) } catch (e: Exception) { /* ignore */ }
                 receiver = null
-
-                if (!success || !destFile.exists()) {
-                    Log.w(TAG, "Update download failed or file missing")
-                    onProgress(-1)
-                    return
-                }
-
-                UserPrefs.setDownloadedUpdateVersionCode(appContext, latestVersionCode)
-                onProgress(100)
-                onInstallPromptShown(willNeedPermissionFirst(appContext))
-                launchInstall(appContext, destFile)
+                finishDownload(appContext, success && destFile.exists(), destFile, latestVersionCode, onProgress, onInstallPromptShown)
             }
         }
 
@@ -176,8 +309,36 @@ object UpdateDownloader {
             @Suppress("UnspecifiedRegisterReceiverFlag")
             appContext.registerReceiver(receiver, filter)
         }
+    }
 
-        pollProgress(downloadManager, downloadId, onProgress)
+    /**
+     * Shared success/failure handling once a download is known to be
+     * finished - clears in-flight tracking either way, then either reports
+     * failure or persists completion and launches the installer.
+     */
+    private fun finishDownload(
+        appContext: Context,
+        success: Boolean,
+        destFile: File,
+        latestVersionCode: Int,
+        onProgress: (Int) -> Unit,
+        onInstallPromptShown: (willNeedPermissionFirst: Boolean) -> Unit
+    ) {
+        activeDownloadId = null
+        activeVersionCode = null
+        activeDownloadManager = null
+        UserPrefs.clearInFlightUpdateVersionCode(appContext)
+
+        if (!success) {
+            Log.w(TAG, "Update download failed or file missing")
+            onProgress(-1)
+            return
+        }
+
+        UserPrefs.setDownloadedUpdateVersionCode(appContext, latestVersionCode)
+        onProgress(100)
+        onInstallPromptShown(willNeedPermissionFirst(appContext))
+        launchInstall(appContext, destFile)
     }
 
     /**
