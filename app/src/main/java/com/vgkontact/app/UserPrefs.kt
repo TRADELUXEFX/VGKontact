@@ -326,4 +326,21 @@ object UserPrefs {
     fun setDismissedUpdateVersionCode(context: Context, versionCode: Int) {
         getPrefs(context).edit().putInt(KEY_DISMISSED_UPDATE_VERSION_CODE, versionCode).apply()
     }
+
+    private const val KEY_DOWNLOADED_UPDATE_VERSION_CODE = "downloaded_update_version_code"
+
+    /**
+     * Version code of the APK currently cached on disk by UpdateDownloader
+     * (if any). Lets checkForAppUpdate tell "this file is still the latest
+     * version, safe to re-launch the install prompt without re-downloading"
+     * apart from "server has since shipped something newer, this file is
+     * stale and must be deleted and re-fetched". -1 means nothing cached.
+     */
+    fun getDownloadedUpdateVersionCode(context: Context): Int {
+        return getPrefs(context).getInt(KEY_DOWNLOADED_UPDATE_VERSION_CODE, -1)
+    }
+
+    fun setDownloadedUpdateVersionCode(context: Context, versionCode: Int) {
+        getPrefs(context).edit().putInt(KEY_DOWNLOADED_UPDATE_VERSION_CODE, versionCode).apply()
+    }
 }
