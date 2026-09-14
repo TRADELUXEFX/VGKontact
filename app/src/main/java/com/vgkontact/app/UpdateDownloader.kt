@@ -27,9 +27,12 @@ import java.io.File
  *      polling DownloadManager on a cancellable IO coroutine (not a raw
  *      Thread) so it can be torn down cleanly via cancel() if the caller
  *      goes away mid-download.
- *   2. When DownloadManager finishes, a broadcast fires, we grab the file,
- *      and launch ACTION_VIEW on a FileProvider content:// URI with
- *      REQUEST_INSTALL_PACKAGES-backed install permission.
+ *   2. When DownloadManager finishes, completion is detected by whichever
+ *      of two independent signals notices first - the progress poller
+ *      seeing a terminal status, or the ACTION_DOWNLOAD_COMPLETE broadcast
+ *      (which is not reliably delivered on every device/OEM) - then we
+ *      grab the file and launch ACTION_VIEW on a FileProvider content://
+ *      URI with REQUEST_INSTALL_PACKAGES-backed install permission.
  *   3. On API 26+, canRequestPackageInstalls() is checked right before
  *      firing that intent, so the caller knows whether Android is about
  *      to interrupt with its own one-time "Allow installs from this app?"
@@ -55,6 +58,12 @@ object UpdateDownloader {
     private var activeDownloadId: Long? = null
     private var activeVersionCode: Int? = null
     private var activeDownloadManager: DownloadManager? = null
+
+    /** Guards against finishDownload() firing twice for the same download -
+     * now that both pollProgress() and the ACTION_DOWNLOAD_COMPLETE
+     * receiver can independently detect completion (see pollProgress doc),
+     * whichever notices first should win and the other should no-op. */
+    private var finishedDownloadIds: MutableSet<Long> = mutableSetOf()
 
     /** State UpdateDownloader is actually in right now, for a caller (e.g.
      * onResume) to re-sync its UI to instead of guessing. */
@@ -129,8 +138,9 @@ object UpdateDownloader {
                     // resume polling so progress/completion reach the new caller.
                     val downloadManager = activeDownloadManager
                         ?: (appContext.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager)
+                    val destFile = File(File(appContext.getExternalFilesDir(null), APK_SUBDIR), APK_FILENAME)
                     registerCompletionReceiver(appContext, downloadManager, activeDownloadId!!, latestVersionCode, onProgress, onInstallPromptShown)
-                    pollProgress(downloadManager, activeDownloadId!!, onProgress)
+                    pollProgress(appContext, downloadManager, activeDownloadId!!, latestVersionCode, destFile, onProgress, onInstallPromptShown)
                 } else {
                     // In-flight per UserPrefs but this object's own tracking is
                     // gone (full process death) - no downloadId survived to
@@ -167,6 +177,7 @@ object UpdateDownloader {
     fun cancel(context: Context) {
         pollingJob?.cancel()
         pollingJob = null
+        activeDownloadId?.let { id -> synchronized(finishedDownloadIds) { finishedDownloadIds.remove(id) } }
         activeDownloadId = null
         activeVersionCode = null
         activeDownloadManager = null
@@ -255,7 +266,7 @@ object UpdateDownloader {
         UserPrefs.setInFlightUpdateVersionCode(appContext, latestVersionCode)
 
         registerCompletionReceiver(appContext, downloadManager, downloadId, latestVersionCode, onProgress, onInstallPromptShown)
-        pollProgress(downloadManager, downloadId, onProgress)
+        pollProgress(appContext, downloadManager, downloadId, latestVersionCode, destFile, onProgress, onInstallPromptShown)
     }
 
     /**
@@ -298,6 +309,14 @@ object UpdateDownloader {
 
                 try { appContext.unregisterReceiver(this) } catch (e: Exception) { /* ignore */ }
                 receiver = null
+
+                // pollProgress() may have already detected STATUS_SUCCESSFUL
+                // and called finishDownload() itself if this broadcast was
+                // slow, batched, or dropped by the OS (common on OEM battery
+                // optimizers) - don't double-fire if so.
+                synchronized(finishedDownloadIds) {
+                    if (!finishedDownloadIds.add(downloadId)) return
+                }
                 finishDownload(appContext, success && destFile.exists(), destFile, latestVersionCode, onProgress, onInstallPromptShown)
             }
         }
@@ -347,11 +366,27 @@ object UpdateDownloader {
      * the Job lets cancel() stop this cleanly (e.g. on activity teardown)
      * instead of leaving a background loop running with no listener left
      * to hear it - a raw Thread has no equivalent cancellation hook.
+     *
+     * Previously this loop just set downloading = false and quietly
+     * returned once it saw STATUS_SUCCESSFUL/STATUS_FAILED, leaving
+     * completion entirely up to the separate ACTION_DOWNLOAD_COMPLETE
+     * broadcast receiver. That broadcast is not reliable on every device -
+     * OEM battery optimizers (MIUI, Samsung, etc.) and Doze can delay it,
+     * batch it, or drop it outright - so the button could sit frozen at
+     * whatever percent it last reported and never reach 100%/INSTALL even
+     * though the file had already finished downloading. Now the poller
+     * detects the terminal status itself and drives completion directly;
+     * the broadcast receiver becomes a fast-path that's a no-op if the
+     * poller already handled it (see finishedDownloadIds).
      */
     private fun pollProgress(
+        appContext: Context,
         downloadManager: DownloadManager,
         downloadId: Long,
-        onProgress: (Int) -> Unit
+        latestVersionCode: Int,
+        destFile: File,
+        onProgress: (Int) -> Unit,
+        onInstallPromptShown: (willNeedPermissionFirst: Boolean) -> Unit
     ) {
         pollingJob?.cancel()
         pollingJob = CoroutineScope(Dispatchers.IO).launch {
@@ -364,6 +399,22 @@ object UpdateDownloader {
 
                     if (status == DownloadManager.STATUS_SUCCESSFUL || status == DownloadManager.STATUS_FAILED) {
                         downloading = false
+                        cursor.close()
+
+                        val success = status == DownloadManager.STATUS_SUCCESSFUL
+                        // Whichever of {poller, broadcast receiver} notices
+                        // completion first wins; the other becomes a no-op.
+                        val shouldFinish = synchronized(finishedDownloadIds) {
+                            finishedDownloadIds.add(downloadId)
+                        }
+                        if (shouldFinish) {
+                            receiver?.let {
+                                try { appContext.unregisterReceiver(it) } catch (e: Exception) { /* ignore */ }
+                            }
+                            receiver = null
+                            finishDownload(appContext, success && destFile.exists(), destFile, latestVersionCode, onProgress, onInstallPromptShown)
+                        }
+                        break
                     } else {
                         val bytesIdx = cursor.getColumnIndex(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR)
                         val totalIdx = cursor.getColumnIndex(DownloadManager.COLUMN_TOTAL_SIZE_BYTES)
@@ -386,7 +437,7 @@ object UpdateDownloader {
                             // downloaded (roughly 1% per 200KB, capped)
                             // just so the button visibly moves instead of
                             // looking frozen - true 100% still only fires
-                            // from the real completion callback below.
+                            // once a terminal status is seen above.
                             val syntheticPercent = ((downloaded / 200_000L).toInt()).coerceIn(1, 99)
                             onProgress(syntheticPercent)
                         }
@@ -445,3 +496,4 @@ object UpdateDownloader {
         }
     }
 }
+
