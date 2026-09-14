@@ -203,7 +203,10 @@
                 android:layout_marginTop="16dp"
                 android:layout_marginBottom="16dp" />
 
-            <!-- 6. Referred By -->
+            <!-- 6. Referred By - name text, with the upline's phone number
+                 in its own pill container (matches the Number+Verification
+                 row's structure above: weight-1 text + a trailing badge),
+                 rather than plain parenthetical text inline with the name. -->
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -213,15 +216,39 @@
                 android:letterSpacing="0.05"
                 android:textColor="@color/text_muted" />
 
-            <TextView
-                android:id="@+id/profileReferralText"
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:textSize="17sp"
-                android:textStyle="bold"
-                android:textColor="@color/vg_dark"
-                android:paddingBottom="16dp"
-                tools:text="08123456789" />
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingBottom="16dp">
+
+                <TextView
+                    android:id="@+id/profileReferralNameText"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:textSize="17sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/vg_dark"
+                    tools:text="chidi_the_boss" />
+
+                <TextView
+                    android:id="@+id/profileReferralNumberBadge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:background="@drawable/referral_number_pill_background"
+                    android:paddingStart="10dp"
+                    android:paddingEnd="10dp"
+                    android:paddingTop="4dp"
+                    android:paddingBottom="4dp"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/vg_green_dark"
+                    tools:text="08123456789" />
+
+            </LinearLayout>
 
             <View
                 android:layout_width="match_parent"
