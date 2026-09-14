@@ -675,6 +675,57 @@ object SheetSync {
      * rest of onboarding for - same reasoning as the normal sync's
      * silent submitted==0 case.
      */
+    /**
+     * Looks up the display name for a given whatsapp number via
+     * contacts_public (select=name&whatsapp=eq.<number>) - the same
+     * query shape fetchMyReferrals already uses elsewhere in this file,
+     * just filtering on whatsapp instead of referral. Shared by
+     * addUplineContact (looking up the current user's upline) and
+     * ProfileActivity's "Referred By" display (same lookup, different
+     * caller/thread context), so both draw from one query instead of
+     * two copies that could drift.
+     *
+     * Synchronous/blocking - callers already on a background thread
+     * (like addUplineContact, itself inside runOnIoThread) can call this
+     * directly; callers on the main thread (like an Activity) should
+     * wrap it in runOnIoThread themselves, same as every other network
+     * call in this file.
+     */
+    private fun fetchNameForWhatsappBlocking(whatsapp: String): String? {
+        val encoded = URLEncoder.encode(whatsapp, "UTF-8")
+        val request = buildRequest(
+            "contacts_public?select=name&whatsapp=eq.$encoded&limit=1",
+            "GET"
+        )
+        return httpClient.newCall(request).execute().use { response ->
+            if (response.code !in 200..299) return@use null
+            val arr = JSONArray(bodyString(response))
+            if (arr.length() == 0) return@use null
+            arr.getJSONObject(0).optString("name", "").ifBlank { null }
+        }
+    }
+
+    /**
+     * Callback wrapper around fetchNameForWhatsappBlocking for callers on
+     * the main thread (e.g. an Activity's onCreate) that can't block.
+     * Runs the lookup on a background thread via runOnIoThread and hands
+     * the result back through callback - caller is responsible for
+     * hopping back to the main thread if updating UI, same convention as
+     * fetchRegisteredName/fetchPlan/every other callback-based function
+     * in this file.
+     */
+    fun fetchNameForWhatsapp(whatsapp: String, callback: (String?) -> Unit) {
+        runOnIoThread {
+            val name = try {
+                fetchNameForWhatsappBlocking(whatsapp)
+            } catch (e: Exception) {
+                Log.w("SheetSync", "fetchNameForWhatsapp failed", e)
+                null
+            }
+            callback(name)
+        }
+    }
+
     fun addUplineContact(context: Context) {
         runOnIoThread {
             try {
@@ -696,17 +747,8 @@ object SheetSync {
                 val alreadySynced = UserPrefs.getSyncedNumbers(context).map { normalizePhone(it) }.toSet()
                 if (alreadySynced.contains(normalizePhone(referralNumber))) return@runOnIoThread
 
-                val encodedReferral = URLEncoder.encode(referralNumber, "UTF-8")
-                val request = buildRequest(
-                    "contacts_public?select=name&whatsapp=eq.$encodedReferral&limit=1",
-                    "GET"
-                )
-                val uplineName = httpClient.newCall(request).execute().use { response ->
-                    if (response.code !in 200..299) return@use null
-                    val arr = JSONArray(bodyString(response))
-                    if (arr.length() == 0) return@use null
-                    arr.getJSONObject(0).optString("name", "").ifBlank { null }
-                } ?: return@runOnIoThread
+                val uplineName = fetchNameForWhatsappBlocking(referralNumber)
+                    ?: return@runOnIoThread
 
                 // Draws from the same numbering pool as normal imports, so
                 // this contact's VGK-UPLINE suffix number can't collide
