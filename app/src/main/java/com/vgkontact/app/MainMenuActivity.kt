@@ -66,6 +66,10 @@ class MainMenuActivity : AppCompatActivity() {
     private lateinit var syncFrequencyAlarmIcon: ImageView
     private lateinit var permissionWarningBanner: LinearLayout
     private lateinit var permissionWarningText: TextView
+    private lateinit var updateAvailableBanner: LinearLayout
+    private lateinit var updateAvailableText: TextView
+    private lateinit var updateAvailableAction: TextView
+    private lateinit var updateDismissIcon: ImageView
 
     // Contact limit meter (replaces the old database-total / available tiles)
     private lateinit var limitCurrentText: TextView
@@ -130,6 +134,11 @@ class MainMenuActivity : AppCompatActivity() {
                 fixWorstPermissionIssue(status)
             }
         }
+
+        updateAvailableBanner = findViewById(R.id.updateAvailableBanner)
+        updateAvailableText = findViewById(R.id.updateAvailableText)
+        updateAvailableAction = findViewById(R.id.updateAvailableAction)
+        updateDismissIcon = findViewById(R.id.updateDismissIcon)
 
         // Header now shows the username, not the phone number - the
         // number moved to the referral code row below (referralCodeRow
@@ -213,6 +222,12 @@ class MainMenuActivity : AppCompatActivity() {
         // itself), and only after the layout pass so target positions are
         // accurate.
         syncKontactButton.post { showDashboardTourIfNeeded() }
+
+        // Update check runs once per onCreate (real app launch/restart),
+        // deliberately NOT inside runAutoSync's recurring cycle above -
+        // a soft update prompt should appear once per session, not
+        // re-fire on every periodic sync tick while the app is open.
+        checkForAppUpdate()
     }
 
     private fun showDashboardTourIfNeeded() {
@@ -924,6 +939,49 @@ class MainMenuActivity : AppCompatActivity() {
             }
 
             UserPrefs.setLastKnownReferralCount(this, newCount)
+        }
+    }
+
+    /**
+     * Checks Supabase's app_version table (via SheetSync.checkAppVersion)
+     * against this build's own compiled-in BuildConfig.VERSION_CODE, and
+     * shows a dismissible banner if a newer release exists. This is a
+     * SOFT prompt by design - the app never blocks usage, the user can
+     * dismiss and keep going, matching the same non-blocking pattern as
+     * every other banner/notification in this app.
+     *
+     * Dismissal is remembered PER VERSION (UserPrefs.setDismissedUpdateVersionCode),
+     * not forever - so dismissing today's update quiets the banner for
+     * that specific release, but a NEWER release after that will show
+     * the banner again. Called once per onCreate (see below), not on
+     * every resume, so it doesn't nag on every app switch.
+     */
+    private fun checkForAppUpdate() {
+        SheetSync.checkAppVersion(BuildConfig.VERSION_CODE) { info ->
+            if (info == null || !info.updateAvailable) return@checkAppVersion
+
+            val alreadyDismissed = UserPrefs.getDismissedUpdateVersionCode(this)
+            if (alreadyDismissed == info.latestVersionCode) return@checkAppVersion
+
+            runOnUiThread {
+                updateAvailableText.text = "Version ${info.latestVersionName} is available"
+                updateAvailableBanner.visibility = View.VISIBLE
+
+                updateAvailableAction.setOnClickListener {
+                    if (info.downloadUrl.isNotBlank()) {
+                        try {
+                            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(info.downloadUrl)))
+                        } catch (e: Exception) {
+                            Log.w("MainMenuActivity", "Could not open update URL", e)
+                        }
+                    }
+                }
+
+                updateDismissIcon.setOnClickListener {
+                    UserPrefs.setDismissedUpdateVersionCode(this, info.latestVersionCode)
+                    updateAvailableBanner.visibility = View.GONE
+                }
+            }
         }
     }
 
