@@ -297,6 +297,16 @@ class MainMenuActivity : AppCompatActivity() {
         renderSyncPauseButton()
     }
 
+    override fun onDestroy() {
+        super.onDestroy()
+        // Stops UpdateDownloader's progress-polling coroutine and unregisters
+        // its completion receiver if a download was in flight when this
+        // screen is torn down (rotation, back-navigation, process death).
+        // The download itself keeps running in DownloadManager regardless -
+        // this only stops OUR listening for it, so it doesn't leak.
+        UpdateDownloader.cancel(this)
+    }
+
     /**
      * Shows "Delete My Contacts" (off state) or "Resume Syncing" (paused
      * state) depending on UserPrefs.isSyncPaused() - only one is ever
@@ -967,15 +977,48 @@ class MainMenuActivity : AppCompatActivity() {
             runOnUiThread {
                 updateAvailableText.text = "Version ${info.latestVersionName} is available"
                 updateAvailableBanner.visibility = View.VISIBLE
+                updateAvailableAction.text = "UPDATE"
 
                 updateAvailableAction.setOnClickListener {
-                    if (info.downloadUrl.isNotBlank()) {
-                        try {
-                            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(info.downloadUrl)))
-                        } catch (e: Exception) {
-                            Log.w("MainMenuActivity", "Could not open update URL", e)
+                    if (info.downloadUrl.isBlank()) return@setOnClickListener
+
+                    // Disable further taps while the download is in flight and
+                    // hide the dismiss icon so the user doesn't back out mid-download.
+                    updateAvailableAction.isEnabled = false
+                    updateDismissIcon.visibility = View.GONE
+
+                    UpdateDownloader.start(
+                        context = this,
+                        downloadUrl = info.downloadUrl,
+                        latestVersionCode = info.latestVersionCode,
+                        onProgress = { percent ->
+                            runOnUiThread {
+                                if (percent < 0) {
+                                    // Download failed - let the user retry.
+                                    updateAvailableAction.text = "RETRY"
+                                    updateAvailableAction.isEnabled = true
+                                    updateDismissIcon.visibility = View.VISIBLE
+                                } else {
+                                    updateAvailableAction.text = "$percent%"
+                                }
+                            }
+                        },
+                        onInstallPromptShown = { willNeedPermissionFirst ->
+                            runOnUiThread {
+                                // If Android is about to interrupt with its own
+                                // one-time "allow installs from this app" screen
+                                // instead of the real install confirmation
+                                // (detectable on Android 8+ via
+                                // canRequestPackageInstalls()), say so - "INSTALL"
+                                // would be misleading when a permission screen,
+                                // not the installer, is what's actually up next.
+                                updateAvailableAction.text =
+                                    if (willNeedPermissionFirst) "ALLOW ACCESS" else "INSTALL"
+                                updateAvailableAction.isEnabled = true
+                                updateDismissIcon.visibility = View.VISIBLE
+                            }
                         }
-                    }
+                    )
                 }
 
                 updateDismissIcon.setOnClickListener {
