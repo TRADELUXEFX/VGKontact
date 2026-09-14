@@ -16,6 +16,9 @@
     <!-- Battery optimization exemption -->
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
+    <!-- Needed to install the downloaded APK for in-app updates -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+
     <application
         android:allowBackup="true"
         android:fullBackupContent="@xml/backup_rules"
@@ -99,6 +102,20 @@
         <activity
             android:name=".UpgradePlanActivity"
             android:exported="false" />
+
+        <!-- Exposes the downloaded update APK (stored in app-private storage)
+             to the system package installer via a content:// URI. Required
+             because Android forbids installing a file:// URI from another
+             app's private storage (FileUriExposedException) on API 24+. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
 
     </application>
 
