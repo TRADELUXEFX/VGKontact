@@ -65,27 +65,30 @@ jobs:
           files: app/build/outputs/apk/debug/VGKontact-${{ github.run_number }}.apk
           generate_release_notes: true
 
-      # Keeps app_version in Supabase pointing at whatever just got
-      # released, automatically - so publishing a build and updating
-      # the "latest version" the app checks against happen in the same
-      # push, not as two separate manual steps that can drift out of
-      # sync with each other.
+      # Logs every build into app_releases, automatically - but NOT
+      # approved. Building and shipping are now two separate steps on
+      # purpose: this step just records that the build exists, so
+      # nothing reaches users until it's manually approved (via
+      # `select approve_release(<version_code>);` in Supabase, or the
+      # admin dashboard toggle once that's built). This replaces the
+      # old behavior of writing straight into app_version, which made
+      # every push instantly live to every phone.
       #
       # Uses the service_role key, NOT the anon key the app itself
-      # uses - anon deliberately has read-only access to app_version
-      # (see the SQL that created this table), so anyone who extracts
-      # the anon key from the APK can never fake a version update.
-      # service_role bypasses RLS entirely, which is correct here since
-      # this step only runs inside your own trusted CI, never inside
-      # the app.
+      # uses - anon has read-only access via the check_app_version RPC
+      # only (see the SQL that created app_releases), so anyone who
+      # extracts the anon key from the APK can never insert or approve
+      # a release themselves. service_role bypasses RLS entirely, which
+      # is correct here since this step only runs inside your own
+      # trusted CI, never inside the app.
       #
-      # REQUIRES a new repo secret: SUPABASE_SERVICE_ROLE_KEY.
+      # REQUIRES a repo secret: SUPABASE_SERVICE_ROLE_KEY.
       # Add it at: Settings -> Secrets and variables -> Actions ->
       # New repository secret. Get the actual key from Supabase
       # dashboard -> Project Settings -> API -> service_role (the
       # "secret" one, not anon/public). Treat this like a password -
       # it bypasses every RLS policy in your database.
-      - name: Update latest version in Supabase
+      - name: Log build in Supabase (unapproved)
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
@@ -104,14 +107,14 @@ jobs:
             exit 1
           fi
 
-          curl -X POST "$SUPABASE_URL/rest/v1/app_version" \
+          curl -X POST "$SUPABASE_URL/rest/v1/app_releases" \
             -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
             -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
             -H "Content-Type: application/json" \
             -H "Prefer: return=minimal" \
             -d '{
-              "latest_version_code": ${{ github.run_number }},
-              "latest_version_name": "1.0.${{ github.run_number }}",
+              "version_code": ${{ github.run_number }},
+              "version_name": "1.0.${{ github.run_number }}",
               "download_url": "'"$DOWNLOAD_URL"'",
               "changelog": "Automated build ${{ github.run_number }}"
             }' \
