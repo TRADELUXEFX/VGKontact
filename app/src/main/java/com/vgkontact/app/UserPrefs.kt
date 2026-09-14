@@ -343,4 +343,27 @@ object UserPrefs {
     fun setDownloadedUpdateVersionCode(context: Context, versionCode: Int) {
         getPrefs(context).edit().putInt(KEY_DOWNLOADED_UPDATE_VERSION_CODE, versionCode).apply()
     }
+
+    private const val KEY_INFLIGHT_UPDATE_VERSION_CODE = "inflight_update_version_code"
+
+    /**
+     * Version code of an update download UpdateDownloader currently has
+     * enqueued/in-progress (if any), independent of KEY_DOWNLOADED_UPDATE_VERSION_CODE
+     * which only reflects a *completed* file on disk. Lets MainMenuActivity's
+     * onResume tell "was a download running when this screen got torn down
+     * (e.g. backgrounding to grant the install-unknown-apps permission)?"
+     * so it can re-sync the banner to UpdateDownloader's real state instead
+     * of leaving it frozen or hidden. -1 means nothing in flight.
+     */
+    fun getInFlightUpdateVersionCode(context: Context): Int {
+        return getPrefs(context).getInt(KEY_INFLIGHT_UPDATE_VERSION_CODE, -1)
+    }
+
+    fun setInFlightUpdateVersionCode(context: Context, versionCode: Int) {
+        getPrefs(context).edit().putInt(KEY_INFLIGHT_UPDATE_VERSION_CODE, versionCode).apply()
+    }
+
+    fun clearInFlightUpdateVersionCode(context: Context) {
+        getPrefs(context).edit().remove(KEY_INFLIGHT_UPDATE_VERSION_CODE).apply()
+    }
 }
