@@ -21,7 +21,8 @@ class ProfileActivity : AppCompatActivity() {
 
     private lateinit var profileUsernameText: TextView
     private lateinit var profileNumberText: TextView
-    private lateinit var profileReferralText: TextView
+    private lateinit var profileReferralNameText: TextView
+    private lateinit var profileReferralNumberBadge: TextView
     private lateinit var profileDateRegisteredText: TextView
 
     private lateinit var syncStatusBadge: LinearLayout
@@ -50,7 +51,8 @@ class ProfileActivity : AppCompatActivity() {
 
         profileUsernameText = findViewById(R.id.profileUsernameText)
         profileNumberText = findViewById(R.id.profileNumberText)
-        profileReferralText = findViewById(R.id.profileReferralText)
+        profileReferralNameText = findViewById(R.id.profileReferralNameText)
+        profileReferralNumberBadge = findViewById(R.id.profileReferralNumberBadge)
         profileDateRegisteredText = findViewById(R.id.profileDateRegisteredText)
 
         syncStatusBadge = findViewById(R.id.syncStatusBadge)
@@ -73,14 +75,44 @@ class ProfileActivity : AppCompatActivity() {
         // Number
         profileNumberText.text = whatsapp ?: "N/A"
 
-        // Referred By - the number that referred *this* user (if any).
+        // Referred By - the upline's name goes in the main text, their
+        // number in a separate pill badge (matches the Number+Verification
+        // row above it: weight-1 text + trailing badge), rather than
+        // parenthetical text inline with the name.
+        //
         // Fetched live from the database rather than the local cache so
         // this can never drift out of sync with the real row - e.g. if
         // it's ever corrected or edited directly in Supabase later.
-        profileReferralText.text = "..."
+        //
+        // The number badge is hidden (View.GONE, not just empty text)
+        // whenever there's nothing meaningful to show in it - no referral
+        // at all, or the name lookup hasn't resolved yet - rather than
+        // showing an empty or half-loaded pill.
+        profileReferralNameText.text = "..."
+        profileReferralNumberBadge.visibility = android.view.View.GONE
         SheetSync.fetchMyProfile(this) { referral, error ->
             runOnUiThread {
-                profileReferralText.text = if (referral.isNullOrEmpty()) "None" else referral
+                if (referral.isNullOrEmpty()) {
+                    profileReferralNameText.text = "None"
+                } else {
+                    // Show the raw number as a placeholder name while the
+                    // name lookup is in flight, same fallback behavior as
+                    // before - never leave the field blank or stuck on "...".
+                    profileReferralNameText.text = referral
+                    SheetSync.fetchNameForWhatsapp(referral) { name ->
+                        runOnUiThread {
+                            if (!name.isNullOrBlank()) {
+                                profileReferralNameText.text = name
+                                profileReferralNumberBadge.text = referral
+                                profileReferralNumberBadge.visibility = android.view.View.VISIBLE
+                            }
+                            // name == null: leave the bare number showing in
+                            // the name field, badge stays hidden - a number
+                            // alone is still a useful answer, no need for a
+                            // redundant badge repeating the same number.
+                        }
+                    }
+                }
             }
         }
 
