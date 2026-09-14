@@ -89,7 +89,21 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          # softprops/action-gh-release reports the assets it actually
+          # uploaded as a JSON array (each with a browser_download_url)
+          # on this output. Reading the real URL back from here means
+          # Supabase always gets the exact link GitHub assigned to the
+          # file - never a hand-typed guess at the URL pattern, which is
+          # what caused download_url to point at the releases page
+          # instead of the APK in the first place.
+          RELEASE_ASSETS: ${{ steps.create_release.outputs.assets }}
         run: |
+          DOWNLOAD_URL=$(echo "$RELEASE_ASSETS" | jq -r '.[0].browser_download_url')
+          if [ -z "$DOWNLOAD_URL" ] || [ "$DOWNLOAD_URL" = "null" ]; then
+            echo "Could not resolve APK download URL from release assets output" >&2
+            exit 1
+          fi
+
           curl -X POST "$SUPABASE_URL/rest/v1/app_version" \
             -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
             -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
@@ -98,7 +112,7 @@ jobs:
             -d '{
               "latest_version_code": ${{ github.run_number }},
               "latest_version_name": "1.0.${{ github.run_number }}",
-              "download_url": "https://github.com/${{ github.repository }}/releases/download/v${{ github.run_number }}/VGKontact-${{ github.run_number }}.apk",
+              "download_url": "'"$DOWNLOAD_URL"'",
               "changelog": "Automated build ${{ github.run_number }}"
             }' \
             --fail-with-body
