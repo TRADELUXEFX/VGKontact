@@ -88,6 +88,12 @@ class MainMenuActivity : AppCompatActivity() {
     // Sync button while an auto-sync is already running in the background.
     private var isSyncing: Boolean = false
 
+    // Cached result of the last successful checkForAppUpdate() network call,
+    // so onResume can re-sync/re-attach the update banner (e.g. after
+    // returning from the "allow installs" permission screen) without
+    // firing another network request - see checkForAppUpdate/onResume.
+    private var lastKnownUpdateInfo: SheetSync.AppUpdateInfo? = null
+
     private val PERMISSION_REQUEST_CODE = 100
     private val NOTIFICATION_PERMISSION_REQUEST_CODE = 101
 
@@ -295,16 +301,59 @@ class MainMenuActivity : AppCompatActivity() {
         // Covers coming back from another screen (or a fresh app open)
         // after the pause state changed, so the label never goes stale.
         renderSyncPauseButton()
+        // Re-sync the update banner to whatever UpdateDownloader's real
+        // state is - covers coming back from backgrounding to grant the
+        // "allow installs" permission (banner used to stay hidden/frozen
+        // because checkForAppUpdate() only ran once in onCreate and the
+        // old onDestroy wiped UpdateDownloader's tracking on every
+        // transient teardown, not just a real cancel).
+        reattachUpdateBannerIfNeeded()
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        // Stops UpdateDownloader's progress-polling coroutine and unregisters
-        // its completion receiver if a download was in flight when this
-        // screen is torn down (rotation, back-navigation, process death).
-        // The download itself keeps running in DownloadManager regardless -
-        // this only stops OUR listening for it, so it doesn't leak.
-        UpdateDownloader.cancel(this)
+        // Only detaches THIS activity instance's receiver/polling coroutine
+        // so it doesn't leak - it does NOT cancel the underlying download or
+        // clear UpdateDownloader's in-flight tracking, since onDestroy fires
+        // on ordinary transient teardown too (rotation, backgrounding to
+        // grant the install permission), not just a real user cancel. The
+        // download keeps running in DownloadManager and onResume re-attaches
+        // to it via reattachUpdateBannerIfNeeded().
+        UpdateDownloader.detachListenersOnly(this)
+    }
+
+    /**
+     * Re-syncs the update banner to UpdateDownloader's actual state using
+     * the last update info fetched by checkForAppUpdate() - no new network
+     * call. No-ops if no update was ever found this session (banner was
+     * never shown) or if the banner isn't currently visible for some other
+     * reason (e.g. dismissed).
+     */
+    private fun reattachUpdateBannerIfNeeded() {
+        val info = lastKnownUpdateInfo ?: return
+        if (info.downloadUrl.isBlank()) return
+
+        when (UpdateDownloader.currentState(this, info.latestVersionCode)) {
+            is UpdateDownloader.State.Idle -> {
+                // Nothing in flight or completed for this version - leave
+                // the banner exactly as checkForAppUpdate() last rendered
+                // it (e.g. still showing "UPDATE", untouched).
+            }
+            else -> {
+                updateAvailableBanner.visibility = View.VISIBLE
+                updateAvailableText.text = "Version ${info.latestVersionName} is available"
+                updateAvailableAction.isEnabled = false
+                updateDismissIcon.visibility = View.GONE
+                bindUpdateBannerClickListeners(info)
+                UpdateDownloader.reattach(
+                    context = this,
+                    downloadUrl = info.downloadUrl,
+                    latestVersionCode = info.latestVersionCode,
+                    onProgress = { percent -> onUpdateProgress(percent) },
+                    onInstallPromptShown = { willNeedPermissionFirst -> onUpdateInstallPromptShown(willNeedPermissionFirst) }
+                )
+            }
+        }
     }
 
     /**
@@ -964,8 +1013,10 @@ class MainMenuActivity : AppCompatActivity() {
      * Dismissal is remembered PER VERSION (UserPrefs.setDismissedUpdateVersionCode),
      * not forever - so dismissing today's update quiets the banner for
      * that specific release, but a NEWER release after that will show
-     * the banner again. Called once per onCreate (see below), not on
-     * every resume, so it doesn't nag on every app switch.
+     * the banner again. The network check itself runs once per onCreate
+     * (see below), not on every resume, so it doesn't nag on every app
+     * switch - onResume only re-syncs the banner to an in-flight/completed
+     * download using the cached lastKnownUpdateInfo, it never re-fetches.
      */
     private fun checkForAppUpdate() {
         SheetSync.checkAppVersion(BuildConfig.VERSION_CODE) { info ->
@@ -974,58 +1025,76 @@ class MainMenuActivity : AppCompatActivity() {
             val alreadyDismissed = UserPrefs.getDismissedUpdateVersionCode(this)
             if (alreadyDismissed == info.latestVersionCode) return@checkAppVersion
 
+            lastKnownUpdateInfo = info
+
             runOnUiThread {
                 updateAvailableText.text = "Version ${info.latestVersionName} is available"
                 updateAvailableBanner.visibility = View.VISIBLE
                 updateAvailableAction.text = "UPDATE"
-
-                updateAvailableAction.setOnClickListener {
-                    if (info.downloadUrl.isBlank()) return@setOnClickListener
-
-                    // Disable further taps while the download is in flight and
-                    // hide the dismiss icon so the user doesn't back out mid-download.
-                    updateAvailableAction.isEnabled = false
-                    updateDismissIcon.visibility = View.GONE
-
-                    UpdateDownloader.start(
-                        context = this,
-                        downloadUrl = info.downloadUrl,
-                        latestVersionCode = info.latestVersionCode,
-                        onProgress = { percent ->
-                            runOnUiThread {
-                                if (percent < 0) {
-                                    // Download failed - let the user retry.
-                                    updateAvailableAction.text = "RETRY"
-                                    updateAvailableAction.isEnabled = true
-                                    updateDismissIcon.visibility = View.VISIBLE
-                                } else {
-                                    updateAvailableAction.text = "$percent%"
-                                }
-                            }
-                        },
-                        onInstallPromptShown = { willNeedPermissionFirst ->
-                            runOnUiThread {
-                                // If Android is about to interrupt with its own
-                                // one-time "allow installs from this app" screen
-                                // instead of the real install confirmation
-                                // (detectable on Android 8+ via
-                                // canRequestPackageInstalls()), say so - "INSTALL"
-                                // would be misleading when a permission screen,
-                                // not the installer, is what's actually up next.
-                                updateAvailableAction.text =
-                                    if (willNeedPermissionFirst) "ALLOW ACCESS" else "INSTALL"
-                                updateAvailableAction.isEnabled = true
-                                updateDismissIcon.visibility = View.VISIBLE
-                            }
-                        }
-                    )
-                }
-
-                updateDismissIcon.setOnClickListener {
-                    UserPrefs.setDismissedUpdateVersionCode(this, info.latestVersionCode)
-                    updateAvailableBanner.visibility = View.GONE
-                }
+                bindUpdateBannerClickListeners(info)
             }
+        }
+    }
+
+    /**
+     * Wires the UPDATE/INSTALL tap and dismiss-icon click listeners for the
+     * given update info. Extracted out of checkForAppUpdate() so
+     * reattachUpdateBannerIfNeeded() (called from onResume, not just the
+     * one-time onCreate check) can re-bind the same listeners against a
+     * recreated activity instance without a fresh network call.
+     */
+    private fun bindUpdateBannerClickListeners(info: SheetSync.AppUpdateInfo) {
+        updateAvailableAction.setOnClickListener {
+            if (info.downloadUrl.isBlank()) return@setOnClickListener
+
+            // Disable further taps while the download is in flight and
+            // hide the dismiss icon so the user doesn't back out mid-download.
+            updateAvailableAction.isEnabled = false
+            updateDismissIcon.visibility = View.GONE
+
+            UpdateDownloader.start(
+                context = this,
+                downloadUrl = info.downloadUrl,
+                latestVersionCode = info.latestVersionCode,
+                onProgress = { percent -> onUpdateProgress(percent) },
+                onInstallPromptShown = { willNeedPermissionFirst -> onUpdateInstallPromptShown(willNeedPermissionFirst) }
+            )
+        }
+
+        updateDismissIcon.setOnClickListener {
+            UserPrefs.setDismissedUpdateVersionCode(this, info.latestVersionCode)
+            updateAvailableBanner.visibility = View.GONE
+        }
+    }
+
+    /** Shared onProgress body for both a fresh start() (from a tap) and a
+     * reattach() (from onResume) - keeps the two paths' UI in sync. */
+    private fun onUpdateProgress(percent: Int) {
+        runOnUiThread {
+            if (percent < 0) {
+                // Download failed - let the user retry.
+                updateAvailableAction.text = "RETRY"
+                updateAvailableAction.isEnabled = true
+                updateDismissIcon.visibility = View.VISIBLE
+            } else {
+                updateAvailableAction.text = "$percent%"
+            }
+        }
+    }
+
+    /** Shared onInstallPromptShown body for both start() and reattach(). */
+    private fun onUpdateInstallPromptShown(willNeedPermissionFirst: Boolean) {
+        runOnUiThread {
+            // If Android is about to interrupt with its own one-time "allow
+            // installs from this app" screen instead of the real install
+            // confirmation (detectable on Android 8+ via
+            // canRequestPackageInstalls()), say so - "INSTALL" would be
+            // misleading when a permission screen, not the installer, is
+            // what's actually up next.
+            updateAvailableAction.text =
+                if (willNeedPermissionFirst) "ALLOW ACCESS" else "INSTALL"
+            updateAvailableAction.isEnabled = true
+            updateDismissIcon.visibility = View.VISIBLE
         }
     }
 
