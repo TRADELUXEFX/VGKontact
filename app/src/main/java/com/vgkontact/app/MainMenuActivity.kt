@@ -70,7 +70,9 @@ class MainMenuActivity : AppCompatActivity() {
     private lateinit var updateAvailableBanner: LinearLayout
     private lateinit var updateAvailableText: TextView
     private lateinit var updateAvailableAction: TextView
-    private lateinit var updateDismissIcon: ImageView
+    private lateinit var hardUpdateBlockOverlay: LinearLayout
+    private lateinit var hardUpdateBlockMessage: TextView
+    private lateinit var hardUpdateBlockAction: TextView
 
     // Contact limit meter (replaces the old database-total / available tiles)
     private lateinit var limitCurrentText: TextView
@@ -93,6 +95,12 @@ class MainMenuActivity : AppCompatActivity() {
     // returning from the "allow installs" permission screen) without
     // firing another network request - see checkForAppUpdate/onResume.
     private var lastKnownUpdateInfo: SheetSync.AppUpdateInfo? = null
+
+    // True once checkForAppUpdate() determines the running version is below
+    // the backend's min_supported_version_code - see onBackPressed, which
+    // uses this to refuse to let the user navigate away from the hard
+    // block by pressing back.
+    private var hardBlockActive: Boolean = false
 
     private val PERMISSION_REQUEST_CODE = 100
     private val NOTIFICATION_PERMISSION_REQUEST_CODE = 101
@@ -145,7 +153,9 @@ class MainMenuActivity : AppCompatActivity() {
         updateAvailableBanner = findViewById(R.id.updateAvailableBanner)
         updateAvailableText = findViewById(R.id.updateAvailableText)
         updateAvailableAction = findViewById(R.id.updateAvailableAction)
-        updateDismissIcon = findViewById(R.id.updateDismissIcon)
+        hardUpdateBlockOverlay = findViewById(R.id.hardUpdateBlockOverlay)
+        hardUpdateBlockMessage = findViewById(R.id.hardUpdateBlockMessage)
+        hardUpdateBlockAction = findViewById(R.id.hardUpdateBlockAction)
 
         // Header now shows the username, not the phone number - the
         // number moved to the referral code row below (referralCodeRow
@@ -957,25 +967,30 @@ class MainMenuActivity : AppCompatActivity() {
     /**
      * Checks Supabase's app_version table (via SheetSync.checkAppVersion)
      * against this build's own compiled-in BuildConfig.VERSION_CODE, and
-     * shows a dismissible banner if a newer release exists. This is a
-     * SOFT prompt by design - the app never blocks usage, the user can
-     * dismiss and keep going, matching the same non-blocking pattern as
-     * every other banner/notification in this app.
+     * shows a persistent (non-dismissible) banner if a newer release
+     * exists. This is a SOFT prompt in the sense that the app never
+     * blocks usage underneath it - the user can keep using the app with
+     * the banner showing - but the banner itself has no way to dismiss
+     * it; it stays up for the rest of the session, or until a fresh
+     * check no longer reports an update available (e.g. after updating).
      *
-     * Dismissal is remembered PER VERSION (UserPrefs.setDismissedUpdateVersionCode),
-     * not forever - so dismissing today's update quiets the banner for
-     * that specific release, but a NEWER release after that will show
-     * the banner again. The network check itself runs once per onCreate
-     * (see below), not on every resume, so it doesn't nag on every app
-     * switch - onResume only re-syncs the banner to an in-flight/completed
-     * download using the cached lastKnownUpdateInfo, it never re-fetches.
+     * The network check itself runs once per onCreate (see below), not
+     * on every resume, so it doesn't refetch on every app switch.
      */
     private fun checkForAppUpdate() {
         SheetSync.checkAppVersion(BuildConfig.VERSION_CODE) { info ->
-            if (info == null || !info.updateAvailable) return@checkAppVersion
+            if (info == null) return@checkAppVersion
 
-            val alreadyDismissed = UserPrefs.getDismissedUpdateVersionCode(this)
-            if (alreadyDismissed == info.latestVersionCode) return@checkAppVersion
+            // Hard block takes priority over everything else - being below
+            // min_supported_version_code means the app is no longer
+            // safe/functional to keep using.
+            if (BuildConfig.VERSION_CODE < info.minSupportedVersionCode) {
+                lastKnownUpdateInfo = info
+                runOnUiThread { showHardUpdateBlock(info) }
+                return@checkAppVersion
+            }
+
+            if (!info.updateAvailable) return@checkAppVersion
 
             lastKnownUpdateInfo = info
 
@@ -989,6 +1004,33 @@ class MainMenuActivity : AppCompatActivity() {
     }
 
     /**
+     * Shows the full-screen, non-dismissible hard block and wires its
+     * single tap target to the update page. Called only when the running
+     * version is below the backend's min_supported_version_code - see
+     * checkForAppUpdate. Sets hardBlockActive so onBackPressed refuses to
+     * let the user escape it.
+     */
+    private fun showHardUpdateBlock(info: SheetSync.AppUpdateInfo) {
+        hardBlockActive = true
+        updateAvailableBanner.visibility = View.GONE
+        hardUpdateBlockMessage.text =
+            "Version ${info.latestVersionName} or newer is required to keep using VGKontact. Please update to continue."
+        hardUpdateBlockOverlay.visibility = View.VISIBLE
+        val openUpdatePage = {
+            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://vgkontacts.netlify.app")))
+        }
+        hardUpdateBlockOverlay.setOnClickListener { openUpdatePage() }
+        hardUpdateBlockAction.setOnClickListener { openUpdatePage() }
+    }
+
+    override fun onBackPressed() {
+        // A hard block means this version is no longer supported - back
+        // must not reveal the app underneath it, only the update page can.
+        if (hardBlockActive) return
+        super.onBackPressed()
+    }
+
+    /**
      * Wires the UPDATE tap and dismiss-icon click listeners for the given
      * update info. Tapping UPDATE just opens the update download page in
      * the browser instead of downloading the APK in-app - Android's own
@@ -997,16 +1039,17 @@ class MainMenuActivity : AppCompatActivity() {
      * is the same well-tested path every non-Play-Store app relies on, so
      * it doesn't need custom in-app progress tracking or install-prompt
      * handling at all.
+     *
+     * No dismiss control - a soft-blocked update banner stays visible for
+     * the whole session once shown, rather than being permanently
+     * dismissable per version. It clears on its own once the user updates
+     * (a fresh checkAppVersion() no longer reports it available) or if a
+     * later check reports a different result.
      */
     private fun bindUpdateBannerClickListeners(info: SheetSync.AppUpdateInfo) {
         updateAvailableAction.setOnClickListener {
             val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://vgkontacts.netlify.app"))
             startActivity(browserIntent)
-        }
-
-        updateDismissIcon.setOnClickListener {
-            UserPrefs.setDismissedUpdateVersionCode(this, info.latestVersionCode)
-            updateAvailableBanner.visibility = View.GONE
         }
     }
 
