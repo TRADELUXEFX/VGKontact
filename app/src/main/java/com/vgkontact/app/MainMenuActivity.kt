@@ -74,15 +74,14 @@ class MainMenuActivity : AppCompatActivity() {
     private lateinit var hardUpdateBlockMessage: TextView
     private lateinit var hardUpdateBlockAction: TextView
 
-    // Contact limit meter (replaces the old database-total / available tiles)
-    private lateinit var limitCurrentText: TextView
-    private lateinit var limitOfText: TextView
-    private lateinit var limitMeterBar: ProgressBar
-    private lateinit var limitPctText: TextView
-    private lateinit var limitWarningText: TextView
-    private lateinit var limitBreakdownBlock: android.widget.LinearLayout
-    private lateinit var limitBaseText: TextView
-    private lateinit var limitBonusText: TextView
+    // Viewers block (replaces the old single combined contact-limit meter
+    // with three independent rows - see get_my_free_viewers /
+    // get_my_purchased_viewers / get_my_referred_viewers_count RPCs).
+    private lateinit var freeViewersCurrentText: TextView
+    private lateinit var freeViewersMaxText: TextView
+    private lateinit var purchasedViewersCurrentText: TextView
+    private lateinit var purchasedViewersMaxText: TextView
+    private lateinit var referredViewersCountText: TextView
 
     private var latestPermissionStatus: PermissionHealth.Status? = null
     // Guards against overlapping syncs - e.g. onResume firing again while an
@@ -135,14 +134,11 @@ class MainMenuActivity : AppCompatActivity() {
         permissionWarningBanner = findViewById(R.id.permissionWarningBanner)
         permissionWarningText = findViewById(R.id.permissionWarningText)
 
-        limitCurrentText = findViewById(R.id.limitCurrentText)
-        limitOfText = findViewById(R.id.limitOfText)
-        limitMeterBar = findViewById(R.id.limitMeterBar)
-        limitPctText = findViewById(R.id.limitPctText)
-        limitWarningText = findViewById(R.id.limitWarningText)
-        limitBreakdownBlock = findViewById(R.id.limitBreakdownBlock)
-        limitBaseText = findViewById(R.id.limitBaseText)
-        limitBonusText = findViewById(R.id.limitBonusText)
+        freeViewersCurrentText = findViewById(R.id.freeViewersCurrentText)
+        freeViewersMaxText = findViewById(R.id.freeViewersMaxText)
+        purchasedViewersCurrentText = findViewById(R.id.purchasedViewersCurrentText)
+        purchasedViewersMaxText = findViewById(R.id.purchasedViewersMaxText)
+        referredViewersCountText = findViewById(R.id.referredViewersCountText)
 
         permissionWarningBanner.setOnClickListener {
             latestPermissionStatus?.let { status ->
@@ -681,7 +677,8 @@ class MainMenuActivity : AppCompatActivity() {
             getString(R.string.stats_no_sync_today)
         }
 
-        // SINGLE call - fetchImportStats has everything we need
+        // SINGLE call - fetchImportStats has everything we need for the
+        // headless limit-reached/almost-full notification logic.
         SheetSync.fetchImportStats(this) { stats ->
             runOnUiThread {
                 statsProgressBar.visibility = View.GONE
@@ -693,95 +690,64 @@ class MainMenuActivity : AppCompatActivity() {
                 // screen rather than overwriting them with zeros/placeholders.
             }
         }
+
+        loadViewersBlock()
     }
 
     /**
-     * Drives the "Contact Limit" meter block: current (synced) / limit
-     * (sum of joined groups' real caps on Supabase - see
-     * ImportStats.contactLimit). Bar fill percentage and color follow the
-     * same green -> amber (>=80%) -> red (>=100%, capped) thresholds as
-     * the approved HTML preview.
-     *
-     * contactLimit == -1L means "couldn't be determined" (offline, or the
-     * groups-summary call failed) - shown as "-- / --" rather than a
-     * misleading 0, same "unknown" convention SheetSync uses elsewhere.
+     * Populates the three-row viewers block (Free / Purchased / Referred).
+     * Three independent calls, since each RPC covers a different, non-
+     * overlapping slice: home group only, extra_groups only, and the
+     * referral graph - see SheetSync.fetchFreeViewers/
+     * fetchPurchasedViewers/fetchReferredViewersCount. A failure on one
+     * leaves that row showing its last-known value rather than blanking
+     * it, matching loadStats' existing failure behavior above.
      */
-    /**
-     * Smoothly animates the meter bar filling from its current position to
-     * the new percentage, instead of the bar silently snapping straight to
-     * the new value with no visual feedback.
-     */
-    private fun animateLimitMeterTo(targetPct: Int) {
-        val start = limitMeterBar.progress
-        android.animation.ValueAnimator.ofInt(start, targetPct).apply {
-            duration = 600
-            interpolator = android.view.animation.DecelerateInterpolator()
-            addUpdateListener { animator ->
-                limitMeterBar.progress = animator.animatedValue as Int
+    private fun loadViewersBlock() {
+        SheetSync.fetchFreeViewers(this) { result ->
+            if (result != null) {
+                runOnUiThread {
+                    freeViewersCurrentText.text = result.current.toString()
+                    freeViewersMaxText.text = "/${result.max}"
+                }
             }
-            start()
+        }
+
+        SheetSync.fetchPurchasedViewers(this) { result ->
+            if (result != null) {
+                runOnUiThread {
+                    purchasedViewersCurrentText.text = result.current.toString()
+                    purchasedViewersMaxText.text = "/${result.max}"
+                }
+            }
+        }
+
+        SheetSync.fetchReferredViewersCount(this) { count ->
+            if (count != null) {
+                runOnUiThread {
+                    referredViewersCountText.text = count.toString()
+                }
+            }
         }
     }
 
+    /**
+     * Headless now - drives ONLY the limit-reached/almost-full push
+     * notification logic off the combined total (stats.syncedToPhone /
+     * stats.contactLimit). The visible current/limit/%/breakdown UI this
+     * used to also update was removed when the old single combined meter
+     * was replaced by the three-row viewers block (see loadViewersBlock
+     * and freeViewersCurrentText/purchasedViewersCurrentText/
+     * referredViewersCountText below) - that block is populated
+     * separately, from get_my_free_viewers/get_my_purchased_viewers/
+     * get_my_referred_viewers_count, not from this combined total.
+     */
     private fun updateLimitMeter(current: Int, limit: Long, baseLimit: Long = -1L, bonusLimit: Long = -1L) {
         if (limit < 0L) {
-            limitCurrentText.text = "--"
-            limitOfText.text = "/ --"
-            limitPctText.text = getString(R.string.limit_meter_unknown)
-            limitMeterBar.progress = 0
-            limitMeterBar.progressDrawable = ContextCompat.getDrawable(this, R.drawable.limit_meter_progress)
-            limitWarningText.visibility = View.GONE
-            limitBreakdownBlock.visibility = View.GONE
             return
         }
 
-        limitCurrentText.text = current.toString()
-        limitOfText.text = "/ $limit"
-
-        // Breakdown row (Free plan / Referral bonus) - only shown once
-        // both halves are known and there's an actual bonus to show,
-        // so a brand-new free user with no referral/redeemed groups
-        // yet doesn't see a confusing "+0" row.
-        if (baseLimit >= 0L && bonusLimit > 0L) {
-            limitBreakdownBlock.visibility = View.VISIBLE
-            limitBaseText.text = baseLimit.toString()
-            limitBonusText.text = "+$bonusLimit"
-        } else {
-            limitBreakdownBlock.visibility = View.GONE
-        }
-
         val pct = if (limit <= 0L) 0 else ((current.toLong() * 100) / limit).toInt().coerceIn(0, 100)
-        animateLimitMeterTo(pct)
-        limitPctText.text = "$pct% used"
-
-        val fillDrawableRes = when {
-            pct >= 100 -> R.drawable.limit_meter_progress_danger
-            pct >= 80 -> R.drawable.limit_meter_progress_warn
-            else -> R.drawable.limit_meter_progress
-        }
-        limitMeterBar.progressDrawable = ContextCompat.getDrawable(this, fillDrawableRes)
-
-        // Proactive warning, not just a color change - tells the user in
-        // words that they're about to run out, before a new kontact
-        // actually fails to add. Same 80%/100% thresholds as the bar color,
-        // so the wording always matches what the bar is showing.
-        val remaining = (limit - current).coerceAtLeast(0L)
-        when {
-            pct >= 100 -> {
-                limitWarningText.visibility = View.VISIBLE
-                limitWarningText.text = "Limit reached - unlock more to keep adding kontacts"
-                limitWarningText.setTextColor(ContextCompat.getColor(this, R.color.warning_red))
-            }
-            pct >= 80 -> {
-                limitWarningText.visibility = View.VISIBLE
-                val label = if (remaining == 1L) "spot" else "spots"
-                limitWarningText.text = "Only $remaining $label left - unlock more before you run out"
-                limitWarningText.setTextColor(ContextCompat.getColor(this, R.color.warning_amber))
-            }
-            else -> {
-                limitWarningText.visibility = View.GONE
-            }
-        }
 
         // Notify (once) the moment the user actually crosses into the
         // warning/danger zone - not on every sync while already there,
