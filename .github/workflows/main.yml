@@ -27,6 +27,14 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
+      # setup-android installs the SDK but does NOT auto-accept its
+      # licenses. Without this, the first time Gradle needs a license-gated
+      # component it drops into an interactive "Accept? (y/N):" prompt with
+      # no terminal to answer it in CI, and the build just fails/hangs.
+      # Piping 'yes' auto-answers every prompt sdkmanager shows.
+      - name: Accept Android SDK licenses
+        run: yes | sdkmanager --licenses || true
+
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
