@@ -12,6 +12,7 @@
 <color name="stats_card_border">#DCEEE1</color>
 <color name="warning_amber">#E8A93B</color>
 <color name="warning_red">#D9534F</color>
+<color name="vg_blue">#3B82C4</color>
 <!-- Groups UI reference additions -->
 <color name="badge_dot_green">#B6F0C9</color>
 <color name="badge_bg">#2EFFFFFF</color>
