@@ -687,6 +687,129 @@ object SheetSync {
         }
     }
 
+    /** Simple current/max pair for a single viewers row on the dashboard. */
+    data class ViewerCount(val current: Long, val max: Long)
+
+    /**
+     * FREE VIEWERS row - current members of the user's home group only,
+     * vs that group's cap, via get_my_free_viewers(). Deliberately does
+     * NOT include extra_groups (purchased capacity) - that's a separate
+     * row, see fetchPurchasedViewers below - so the two numbers never
+     * double-count the same people.
+     */
+    fun fetchFreeViewers(context: Context, callback: (ViewerCount?) -> Unit) {
+        runOnIoThread {
+            try {
+                val whatsapp = UserPrefs.getWhatsapp(context)
+                if (whatsapp.isNullOrEmpty()) {
+                    callback(null)
+                    return@runOnIoThread
+                }
+                val androidId = readAndroidId(context)
+                if (androidId.isBlank()) {
+                    callback(null)
+                    return@runOnIoThread
+                }
+                val json = JSONObject()
+                json.put("p_whatsapp", whatsapp)
+                json.put("p_android_id", androidId)
+                val request = buildRequest("rpc/get_my_free_viewers", "POST", json.toString())
+                httpClient.newCall(request).execute().use { response ->
+                    if (response.code !in 200..299) {
+                        callback(null)
+                        return@runOnIoThread
+                    }
+                    val arr = JSONArray(bodyString(response))
+                    if (arr.length() == 0) {
+                        callback(null)
+                        return@runOnIoThread
+                    }
+                    val obj = arr.getJSONObject(0)
+                    callback(ViewerCount(obj.optLong("current_count", 0L), obj.optLong("max_users", 0L)))
+                }
+            } catch (e: Exception) {
+                Log.w("SheetSync", "fetchFreeViewers failed", e)
+                callback(null)
+            }
+        }
+    }
+
+    /**
+     * PURCHASED VIEWERS row - current members across all of the user's
+     * extra_groups (unlocked via redeem_key), vs their combined cap, via
+     * get_my_purchased_viewers(). Home group is intentionally excluded -
+     * see fetchFreeViewers above.
+     */
+    fun fetchPurchasedViewers(context: Context, callback: (ViewerCount?) -> Unit) {
+        runOnIoThread {
+            try {
+                val whatsapp = UserPrefs.getWhatsapp(context)
+                if (whatsapp.isNullOrEmpty()) {
+                    callback(null)
+                    return@runOnIoThread
+                }
+                val androidId = readAndroidId(context)
+                if (androidId.isBlank()) {
+                    callback(null)
+                    return@runOnIoThread
+                }
+                val json = JSONObject()
+                json.put("p_whatsapp", whatsapp)
+                json.put("p_android_id", androidId)
+                val request = buildRequest("rpc/get_my_purchased_viewers", "POST", json.toString())
+                httpClient.newCall(request).execute().use { response ->
+                    if (response.code !in 200..299) {
+                        callback(null)
+                        return@runOnIoThread
+                    }
+                    val arr = JSONArray(bodyString(response))
+                    if (arr.length() == 0) {
+                        callback(null)
+                        return@runOnIoThread
+                    }
+                    val obj = arr.getJSONObject(0)
+                    callback(ViewerCount(obj.optLong("current_count", 0L), obj.optLong("max_users", 0L)))
+                }
+            } catch (e: Exception) {
+                Log.w("SheetSync", "fetchPurchasedViewers failed", e)
+                callback(null)
+            }
+        }
+    }
+
+    /**
+     * REFERRED VIEWERS row - first-level referrals plus second-level
+     * (people referred by people this user referred), combined into one
+     * number via get_my_referred_viewers_count(). Only needs whatsapp,
+     * not android_id, since referral chains are keyed off whatsapp
+     * numbers, same as get_referral_leaderboard/get_second_level_referrals.
+     */
+    fun fetchReferredViewersCount(context: Context, callback: (Long?) -> Unit) {
+        runOnIoThread {
+            try {
+                val whatsapp = UserPrefs.getWhatsapp(context)
+                if (whatsapp.isNullOrEmpty()) {
+                    callback(null)
+                    return@runOnIoThread
+                }
+                val json = JSONObject()
+                json.put("p_whatsapp", whatsapp)
+                val request = buildRequest("rpc/get_my_referred_viewers_count", "POST", json.toString())
+                httpClient.newCall(request).execute().use { response ->
+                    if (response.code !in 200..299) {
+                        callback(null)
+                        return@runOnIoThread
+                    }
+                    val trimmed = bodyString(response).trim()
+                    callback(trimmed.toLongOrNull())
+                }
+            } catch (e: Exception) {
+                Log.w("SheetSync", "fetchReferredViewersCount failed", e)
+                callback(null)
+            }
+        }
+    }
+
     /**
      * Looks up this device's registered name from the server, for the
      * DeviceBlockedActivity "log in" flow - restoring local state for a
@@ -1998,106 +2121,4 @@ object SheetSync {
     private fun addSingleContactDetailed(context: Context, name: String, phone: String): Pair<Boolean, String?> {
         return try {
             val ops = buildContactOps(name, phone, insertIndex = 0)
-            context.contentResolver.applyBatch(ContactsContract.AUTHORITY, ArrayList(ops))
-            Pair(true, null)
-        } catch (e: Exception) {
-            Pair(false, e.message ?: e.javaClass.simpleName)
-        }
-    }
-
-    /**
-     * Runs [block] on a coroutine dispatched to Dispatchers.IO's shared
-     * thread pool. This replaces the old kotlin.concurrent.thread { }
-     * pattern, which spun up a brand new OS thread from scratch on every
-     * single call with no reuse. Dispatchers.IO maintains a shared,
-     * reusable pool sized for blocking I/O work, so repeated calls (e.g.
-     * several screens fetching data close together) share threads instead
-     * of each paying full thread-creation cost. Every public function in
-     * this file still has the exact same callback-based shape as before -
-     * only what runs the work in the background changed, so no calling
-     * Activity needs to change.
-     */
-    private fun runOnIoThread(block: suspend () -> Unit) {
-        CoroutineScope(Dispatchers.IO).launch {
-            block()
-        }
-    }
-
-    /**
-     * Data returned by the app_version check - see AppUpdateInfo usage
-     * in MainMenuActivity for how this drives the update banner.
-     *
-     * minSupportedVersionCode distinguishes a soft block from a hard
-     * block: if the running app's version code is below it, the app is
-     * too old to keep running safely (e.g. a breaking backend change) and
-     * MainMenuActivity shows a full-screen, non-dismissible block instead
-     * of the normal dismissible "update available" banner.
-     */
-    data class AppUpdateInfo(
-        val updateAvailable: Boolean,
-        val latestVersionCode: Int,
-        val latestVersionName: String,
-        val downloadUrl: String,
-        val changelog: String?,
-        val minSupportedVersionCode: Int
-    )
-
-    /**
-     * Calls the check_app_version RPC (SECURITY DEFINER, same pattern as
-     * every other RPC in this file) with the app's own compiled-in
-     * version code plus the device's android_id, and reports back
-     * whether a newer release exists. The android_id is what lets the
-     * backend log this device's version into device_versions (see SQL),
-     * which the admin dashboard uses to estimate how many users a given
-     * hard-block would affect - purely a logging side effect from the
-     * app's perspective, the response shape is unchanged either way.
-     * Fails silently (callback(null)) on any network/parse error - an
-     * update check is never worth interrupting app usage over, same
-     * reasoning as fetchPlan/fetchRegisteredName above.
-     */
-    fun checkAppVersion(context: Context, currentVersionCode: Int, callback: (AppUpdateInfo?) -> Unit) {
-        runOnIoThread {
-            try {
-                val androidId = readAndroidId(context)
-                val json = JSONObject()
-                json.put("p_current_version_code", currentVersionCode)
-                if (androidId.isNotBlank()) {
-                    json.put("p_android_id", androidId)
-                }
-                val request = buildRequest("rpc/check_app_version", "POST", json.toString())
-                httpClient.newCall(request).execute().use { response ->
-                    if (response.code !in 200..299) {
-                        callback(null)
-                        return@use
-                    }
-                    val body = bodyString(response)
-                    // check_app_version returns table(...) - PostgREST
-                    // wraps this as a JSON array of one row, not a bare
-                    // scalar like get_my_plan/get_my_name above.
-                    val arr = JSONArray(body)
-                    if (arr.length() == 0) {
-                        callback(null)
-                        return@use
-                    }
-                    val row = arr.getJSONObject(0)
-                    callback(
-                        AppUpdateInfo(
-                            updateAvailable = row.optBoolean("update_available", false),
-                            latestVersionCode = row.optInt("latest_version_code", currentVersionCode),
-                            latestVersionName = row.optString("latest_version_name", ""),
-                            downloadUrl = row.optString("download_url", ""),
-                            changelog = row.optString("changelog", "").ifBlank { null },
-                            // Defaults to 0 (never blocks) if the backend
-                            // column doesn't exist yet or omits it, so this
-                            // is safe to deploy before the RPC is updated.
-                            minSupportedVersionCode = row.optInt("min_supported_version_code", 0)
-                        )
-                    )
-                }
-            } catch (e: Exception) {
-                Log.w("SheetSync", "checkAppVersion failed", e)
-                callback(null)
-            }
-        }
-    }
-}
+            co
