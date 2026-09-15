@@ -454,6 +454,108 @@ object SheetSync {
     }
 
     /**
+     * Adds this user's SECOND-LEVEL referrals as phone contacts - i.e.
+     * the people referred by this user's own direct referrals (their
+     * "downline's downline"). This is additive on top of the normal
+     * referral flow: a user's direct referrals are added as contacts by
+     * the existing sync pipeline already (see addContactsBatched calls
+     * from importAllContactsFromSheet*), and this covers exactly one
+     * layer beyond that - not the direct referrals themselves, and not
+     * anything deeper than one extra layer.
+     *
+     * A plain suspend function - same shape as
+     * importAllContactsFromSheetSuspend above - rather than a
+     * callback, so both the background worker (which is already a
+     * coroutine) and the callback-based Activity call sites can use it
+     * directly, the Activity ones via the small wrapper below.
+     *
+     * The actual "who is second-level" lookup is one call to the
+     * get_second_level_referrals RPC (see accompanying SQL) - the join
+     * that used to be two separate contacts_public fetches, matched by
+     * hand in Kotlin, now happens server-side in a single round trip.
+     *
+     * Named/numbered the same "[name] VGK[number]" way as normal group
+     * contacts (unlike addUplineContact's deliberately unmarked
+     * "[name] Upline" contacts above) - these are ordinary discoverable
+     * contacts, not a special case that needs hiding from
+     * removeStaleVgkContacts/getDevicePhoneNumbers, so there's no reason
+     * to opt them out of that existing cleanup/dedupe machinery.
+     *
+     * Safe to call repeatedly (every login, every background check) -
+     * gated by UserPrefs.getSyncedNumbers the same way the normal
+     * import path is, so an already-added second-level contact is never
+     * re-added or duplicated on a later run, and a NEW second-level
+     * referral that appears later (e.g. this user's direct referral
+     * gains a referral of their own next week) gets picked up the next
+     * time this runs.
+     */
+    suspend fun addSecondLevelReferralContactsSuspend(context: Context): Pair<Int, Int> {
+        try {
+            val hasPermission = ContextCompat.checkSelfPermission(
+                context, android.Manifest.permission.WRITE_CONTACTS
+            ) == PackageManager.PERMISSION_GRANTED &&
+                ContextCompat.checkSelfPermission(
+                    context, android.Manifest.permission.READ_CONTACTS
+                ) == PackageManager.PERMISSION_GRANTED
+            if (!hasPermission) return Pair(0, 0)
+
+            val whatsapp = UserPrefs.getWhatsapp(context)
+            if (whatsapp.isNullOrEmpty()) return Pair(0, 0)
+
+            val json = JSONObject()
+            json.put("p_whatsapp", whatsapp)
+            val request = buildRequest("rpc/get_second_level_referrals", "POST", json.toString())
+            val secondLevel = httpClient.newCall(request).execute().use { response ->
+                if (response.code !in 200..299) return@use null
+                val arr = JSONArray(bodyString(response))
+                (0 until arr.length()).map {
+                    val obj = arr.getJSONObject(it)
+                    Pair(obj.optString("whatsapp"), obj.optString("name"))
+                }
+            } ?: return Pair(0, 0)
+            // Empty result just means no direct referrals yet, or none of
+            // them have referrals of their own yet - not an error.
+            if (secondLevel.isEmpty()) return Pair(0, 0)
+
+            val alreadySynced = UserPrefs.getSyncedNumbers(context).map { normalizePhone(it) }.toSet()
+            val numbersInUse = reconcileFromExistingContacts(context).toMutableSet()
+            val toAdd = ArrayList<Pair<String, String>>()
+            for ((phone, name) in secondLevel) {
+                if (phone.isEmpty() || name.isEmpty() || alreadySynced.contains(normalizePhone(phone))) {
+                    continue
+                }
+                val nextNumber = lowestFreeNumber(numbersInUse)
+                numbersInUse.add(nextNumber)
+                toAdd.add(Pair("$name VGK$nextNumber", phone))
+            }
+            if (toAdd.isEmpty()) return Pair(0, 0)
+
+            val (ok, fail) = addContactsBatched(context, toAdd)
+            if (ok > 0) {
+                UserPrefs.addSyncedNumbers(context, toAdd.take(ok).map { it.second }.toSet())
+            }
+            return Pair(ok, fail)
+        } catch (e: Exception) {
+            Log.w("SheetSync", "addSecondLevelReferralContactsSuspend failed", e)
+            return Pair(0, 0)
+        }
+    }
+
+    /**
+     * Callback wrapper around addSecondLevelReferralContactsSuspend for
+     * the Activity call sites (PermissionSetupActivity), which aren't
+     * coroutines themselves - same runOnIoThread + runBlocking bridge
+     * every other suspend->callback wrapper in this file already uses,
+     * not a one-off pattern invented for this function.
+     */
+    fun addSecondLevelReferralContacts(context: Context, callback: ((submitted: Int, failed: Int) -> Unit)? = null) {
+        runOnIoThread {
+            val (ok, fail) = runBlocking { addSecondLevelReferralContactsSuspend(context) }
+            callback?.invoke(ok, fail)
+        }
+    }
+
+    /**
      * Fetches all active paid campaigns from paid_campaigns. These are
      * pure listing data - name, rate, requirements, and a destination
      * link (WhatsApp group or DM) - managed entirely from the admin
@@ -640,40 +742,60 @@ object SheetSync {
 
     /**
      * Saves this user's upline (the referrer whose code they entered at
-     * signup, i.e. UserPrefs.getReferral()) as a real phone contact -
-     * called once, right after Contacts permission is granted in
-     * PermissionSetupActivity, alongside the normal first sync.
+     * signup, i.e. UserPrefs.getReferral()) AND that upline's own upline
+     * (one hop further up the referral chain, via get_upline_of_upline -
+     * see accompanying SQL) as real phone contacts - called once, right
+     * after Contacts permission is granted in PermissionSetupActivity,
+     * alongside the normal first sync.
+     *
+     * This is the mirror of addSecondLevelReferralContactsSuspend's
+     * one-hop-down reach: that function gives a user their downline's
+     * downline; this one gives a new signup their upline's upline. Same
+     * referral chain, same one-extra-hop rule, walked from opposite
+     * ends - so if C signs up under B who was referred by A, A gains C
+     * (via the second-level function) and C gains A (via this
+     * function), in addition to the direct A<->B and B<->C links that
+     * already existed.
      *
      * Unlike fetchRegisteredName above (which looks up the CURRENT
      * device's own name, matched by its own android_id via the
-     * get_my_name RPC), this looks up a DIFFERENT device's name - the
-     * referrer's - so it can't use that RPC's matching logic. Instead it
-     * queries contacts_public directly for the row whose whatsapp equals
-     * the referral number, same query shape fetchMyReferrals already
-     * uses elsewhere in this file, just filtering on whatsapp instead of
-     * referral.
+     * get_my_name RPC), the direct-upline lookup here looks up a
+     * DIFFERENT device's name - the referrer's - so it can't use that
+     * RPC's matching logic. Instead it queries contacts_public directly
+     * for the row whose whatsapp equals the referral number, same query
+     * shape fetchMyReferrals already uses elsewhere in this file, just
+     * filtering on whatsapp instead of referral.
      *
-     * Labeled "[Name] VGK-UPLINE" rather than the normal "[Name] VGK###"
-     * scheme so it's clearly distinguishable in the phone's contact list -
-     * and, deliberately, so it can never collide with
-     * removeStaleVgkContacts()'s cleanup regex (VGK\d+$, digits only).
-     * That cleanup only ever runs against the user's *group* contacts
-     * fetched fresh each sync; the upline was never part of that list to
-     * begin with, so without a distinct non-numeric suffix a future sync
-     * could misidentify and silently delete it as a dropped group member.
+     * Both contacts are labeled plain "[Name] Upline" - deliberately
+     * WITHOUT the "VGK" marker or a numeric suffix that every other
+     * app-created contact carries (see buildContactOps/
+     * getDevicePhoneNumbers/removeStaleVgkContacts above), so they read
+     * as normal, clean contact names instead of exposing internal
+     * bookkeeping. This is a deliberate trade-off: because they have no
+     * "VGK" marker, these contacts are invisible to every VGK-pattern-
+     * based function in this file - reconcileFromExistingContacts/
+     * getDevicePhoneNumbers won't find them, and removeStaleVgkContacts
+     * can't accidentally delete them either (they were never in that
+     * cleanup's target set to begin with, per that function's own
+     * comments, so this doesn't newly expose them to anything).
+     * Duplicate-prevention for these contacts instead relies entirely
+     * on UserPrefs.getSyncedNumbers/addSyncedNumbers below, keyed by
+     * phone number rather than by scanning contact names - a separate,
+     * already-existing mechanism, not something this function has to
+     * invent.
      *
-     * Silently does nothing (no callback param at all - fire and forget,
+     * Each half (direct upline, upline-of-upline) is independent - a
+     * failure or absence of one doesn't block the other. Silently skips
+     * the whole function (no callback param at all - fire and forget,
      * same as how PermissionSetupActivity already fires the normal
-     * contacts sync without blocking the UI on its result) when:
-     *   - there's no referral on this account (most users won't have one)
-     *   - the referral lookup fails or the row can't be found (e.g. the
-     *     referrer's own row was later removed)
-     *   - contacts permission isn't actually granted (defensive check -
-     *     callers should only invoke this once permission is confirmed,
-     *     but this makes the function safe standalone too)
-     * A failed upline save is never worth interrupting or delaying the
-     * rest of onboarding for - same reasoning as the normal sync's
-     * silent submitted==0 case.
+     * contacts sync without blocking the UI on its result) when there's
+     * no referral on this account at all (most users won't have one) or
+     * contacts permission isn't actually granted (defensive check -
+     * callers should only invoke this once permission is confirmed, but
+     * this makes the function safe standalone too). A failed upline
+     * save is never worth interrupting or delaying the rest of
+     * onboarding for - same reasoning as the normal sync's silent
+     * submitted==0 case.
      */
     /**
      * Looks up the display name for a given whatsapp number via
@@ -740,26 +862,69 @@ object SheetSync {
                 val referralNumber = UserPrefs.getReferral(context)?.takeIf { it.isNotBlank() }
                     ?: return@runOnIoThread
 
-                // Don't add the upline twice if this somehow runs more than
-                // once (e.g. a retry) - checked by phone number, not by the
-                // VGK-UPLINE label, since the label is cosmetic and the
-                // number is the real identity.
                 val alreadySynced = UserPrefs.getSyncedNumbers(context).map { normalizePhone(it) }.toSet()
-                if (alreadySynced.contains(normalizePhone(referralNumber))) return@runOnIoThread
+                val newlySynced = HashSet<String>()
 
-                val uplineName = fetchNameForWhatsappBlocking(referralNumber)
-                    ?: return@runOnIoThread
+                // Direct upline - unchanged from before. Recorded via
+                // addSyncedNumbers IMMEDIATELY after it succeeds, not
+                // batched with the grand-upline save at the end of the
+                // function - if the grand-upline lookup below throws
+                // (network error, RPC not deployed yet, etc.), that
+                // exception must not un-record a direct-upline contact
+                // that was already successfully written to the phone,
+                // or the next run would try to add it again and create
+                // a duplicate.
+                if (!alreadySynced.contains(normalizePhone(referralNumber))) {
+                    val uplineName = fetchNameForWhatsappBlocking(referralNumber)
+                    if (uplineName != null) {
+                        // No VGK marker or numeric suffix - see the class
+                        // doc above for why this is a deliberate, safe
+                        // trade-off.
+                        val (ok, _) = addSingleContactDetailed(context, "$uplineName Upline", referralNumber)
+                        if (ok) {
+                            newlySynced.add(referralNumber)
+                            UserPrefs.addSyncedNumbers(context, setOf(referralNumber))
+                        }
+                    }
+                }
 
-                // Draws from the same numbering pool as normal imports, so
-                // this contact's VGK-UPLINE suffix number can't collide
-                // with one already assigned to a normal VGK### import.
-                val numbersInUse = reconcileFromExistingContacts(context)
-                val nextNumber = lowestFreeNumber(numbersInUse)
-                val displayName = "$uplineName VGK-UPLINE$nextNumber"
-
-                val (ok, _) = addSingleContactDetailed(context, displayName, referralNumber)
-                if (ok) {
-                    UserPrefs.addSyncedNumbers(context, setOf(referralNumber))
+                // Upline's own upline - one hop further up, via
+                // get_upline_of_upline (see accompanying SQL). This is
+                // the mirror of addSecondLevelReferralContactsSuspend's
+                // one-hop-down reach: just as a user gains their
+                // downline's downline, a new downline here gains their
+                // upline's upline - same referral chain, walked one
+                // extra hop from each end. Wrapped in its own try/catch
+                // so a failure here (network error, or this RPC not
+                // having been deployed to the database yet) can never
+                // undo or block the direct-upline save above, which has
+                // already completed and been recorded by this point.
+                val currentlySynced = alreadySynced + newlySynced.map { normalizePhone(it) }
+                try {
+                    val grandUplineJson = JSONObject()
+                    grandUplineJson.put("p_upline_whatsapp", referralNumber)
+                    val grandUplineRequest = buildRequest("rpc/get_upline_of_upline", "POST", grandUplineJson.toString())
+                    val grandUpline = httpClient.newCall(grandUplineRequest).execute().use { response ->
+                        if (response.code !in 200..299) return@use null
+                        val arr = JSONArray(bodyString(response))
+                        if (arr.length() == 0) return@use null
+                        val obj = arr.getJSONObject(0)
+                        Pair(obj.optString("whatsapp"), obj.optString("name"))
+                    }
+                    if (grandUpline != null) {
+                        val (grandUplineNumber, grandUplineName) = grandUpline
+                        if (grandUplineNumber.isNotBlank() && grandUplineName.isNotBlank() &&
+                            !currentlySynced.contains(normalizePhone(grandUplineNumber))
+                        ) {
+                            val (ok, _) = addSingleContactDetailed(context, "$grandUplineName Upline", grandUplineNumber)
+                            if (ok) {
+                                newlySynced.add(grandUplineNumber)
+                                UserPrefs.addSyncedNumbers(context, setOf(grandUplineNumber))
+                            }
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.w("SheetSync", "addUplineContact: grand-upline lookup failed, direct upline unaffected", e)
                 }
             } catch (e: Exception) {
                 Log.w("SheetSync", "addUplineContact failed", e)
@@ -1861,28 +2026,44 @@ object SheetSync {
     /**
      * Data returned by the app_version check - see AppUpdateInfo usage
      * in MainMenuActivity for how this drives the update banner.
+     *
+     * minSupportedVersionCode distinguishes a soft block from a hard
+     * block: if the running app's version code is below it, the app is
+     * too old to keep running safely (e.g. a breaking backend change) and
+     * MainMenuActivity shows a full-screen, non-dismissible block instead
+     * of the normal dismissible "update available" banner.
      */
     data class AppUpdateInfo(
         val updateAvailable: Boolean,
         val latestVersionCode: Int,
         val latestVersionName: String,
         val downloadUrl: String,
-        val changelog: String?
+        val changelog: String?,
+        val minSupportedVersionCode: Int
     )
 
     /**
      * Calls the check_app_version RPC (SECURITY DEFINER, same pattern as
      * every other RPC in this file) with the app's own compiled-in
-     * version code, and reports back whether a newer release exists.
+     * version code plus the device's android_id, and reports back
+     * whether a newer release exists. The android_id is what lets the
+     * backend log this device's version into device_versions (see SQL),
+     * which the admin dashboard uses to estimate how many users a given
+     * hard-block would affect - purely a logging side effect from the
+     * app's perspective, the response shape is unchanged either way.
      * Fails silently (callback(null)) on any network/parse error - an
      * update check is never worth interrupting app usage over, same
      * reasoning as fetchPlan/fetchRegisteredName above.
      */
-    fun checkAppVersion(currentVersionCode: Int, callback: (AppUpdateInfo?) -> Unit) {
+    fun checkAppVersion(context: Context, currentVersionCode: Int, callback: (AppUpdateInfo?) -> Unit) {
         runOnIoThread {
             try {
+                val androidId = readAndroidId(context)
                 val json = JSONObject()
                 json.put("p_current_version_code", currentVersionCode)
+                if (androidId.isNotBlank()) {
+                    json.put("p_android_id", androidId)
+                }
                 val request = buildRequest("rpc/check_app_version", "POST", json.toString())
                 httpClient.newCall(request).execute().use { response ->
                     if (response.code !in 200..299) {
@@ -1905,7 +2086,11 @@ object SheetSync {
                             latestVersionCode = row.optInt("latest_version_code", currentVersionCode),
                             latestVersionName = row.optString("latest_version_name", ""),
                             downloadUrl = row.optString("download_url", ""),
-                            changelog = row.optString("changelog", "").ifBlank { null }
+                            changelog = row.optString("changelog", "").ifBlank { null },
+                            // Defaults to 0 (never blocks) if the backend
+                            // column doesn't exist yet or omits it, so this
+                            // is safe to deploy before the RPC is updated.
+                            minSupportedVersionCode = row.optInt("min_supported_version_code", 0)
                         )
                     )
                 }
