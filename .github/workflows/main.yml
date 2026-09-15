@@ -24,8 +24,18 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
+      # packages: '' overrides the action's default package list, which
+      # includes the legacy 'tools' package. Google removed 'tools' from
+      # the SDK repository, so sdkmanager now fails with "Failed to find
+      # package 'tools'" whenever it tries to install it. Passing an empty
+      # list here skips that install entirely; platform-tools, the
+      # platform, and build-tools are pulled in automatically by Gradle
+      # itself (via the Android Gradle Plugin) on the "Build debug APK"
+      # step below, so nothing else needs to be installed manually.
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          packages: ''
 
       # setup-android installs the SDK but does NOT auto-accept its
       # licenses. Without this, the first time Gradle needs a license-gated
