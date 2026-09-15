@@ -433,6 +433,22 @@
                          (updateLimitMeter in MainMenuActivity), same
                          green -> amber -> red threshold behavior as the
                          approved HTML preview. -->
+                    <!-- ===== Viewers block (replaces old combined limit
+                         meter) =====
+                         Three separate rows instead of one combined
+                         current/limit meter:
+                           - Free viewers: home group only (get_my_free_viewers)
+                           - Purchased viewers: extra_groups only (get_my_purchased_viewers)
+                           - Referred viewers: first+second level referral count
+                             (get_my_referred_viewers_count)
+                         Kept the limitBlock id on the outer container so the
+                         existing show/hide logic in MainMenuActivity (the
+                         stats-card progress swap) still resolves it. The old
+                         limit-reached/almost-full PUSH NOTIFICATION logic in
+                         updateLimitMeter() is intentionally kept and still
+                         runs headlessly off stats.syncedToPhone/contactLimit -
+                         only the visible current/limit/%/breakdown UI was
+                         removed, since this block replaces it. -->
                     <LinearLayout
                         android:id="@+id/limitBlock"
                         android:layout_width="match_parent"
@@ -452,135 +468,138 @@
                             android:textColor="@color/text_muted"
                             android:gravity="center" />
 
+                        <!-- Free viewers row -->
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="8dp"
-                            android:layout_marginBottom="14dp"
                             android:orientation="horizontal"
-                            android:gravity="center"
-                            android:baselineAligned="true">
+                            android:gravity="center_vertical"
+                            android:layout_marginTop="14dp"
+                            android:paddingTop="10dp"
+                            android:paddingBottom="10dp">
+
+                            <View
+                                android:layout_width="8dp"
+                                android:layout_height="8dp"
+                                android:layout_marginEnd="10dp"
+                                android:background="@drawable/viewers_dot_green" />
 
                             <TextView
-                                android:id="@+id/limitCurrentText"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="@string/label_free_viewers"
+                                android:textSize="13sp"
+                                android:textStyle="bold"
+                                android:textColor="@color/vg_dark" />
+
+                            <TextView
+                                android:id="@+id/freeViewersCurrentText"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:textSize="34sp"
+                                android:textSize="15sp"
                                 android:textStyle="bold"
                                 android:textColor="@color/vg_dark"
-                                android:fontFamily="@font/baloo2"
-                                tools:text="15" />
+                                tools:text="3" />
 
                             <TextView
-                                android:id="@+id/limitOfText"
+                                android:id="@+id/freeViewersMaxText"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:layout_marginStart="6dp"
-                                android:textSize="16sp"
+                                android:textSize="12sp"
                                 android:textStyle="bold"
-                                android:textColor="@color/text_muted"
-                                tools:text="/ 250" />
+                                android:textColor="@color/text_secondary"
+                                tools:text="/5" />
 
                         </LinearLayout>
 
-                        <ProgressBar
-                            android:id="@+id/limitMeterBar"
-                            style="?android:attr/progressBarStyleHorizontal"
+                        <!-- 1dp hairline between Free and Purchased rows -->
+                        <View
                             android:layout_width="match_parent"
-                            android:layout_height="14dp"
-                            android:max="100"
-                            android:progress="2"
-                            android:progressDrawable="@drawable/limit_meter_progress" />
+                            android:layout_height="1dp"
+                            android:background="@color/tab_track_fill" />
 
-                        <TextView
-                            android:id="@+id/limitPctText"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="8dp"
-                            android:textSize="12sp"
-                            android:textStyle="bold"
-                            android:textColor="@color/text_muted"
-                            android:gravity="center"
-                            tools:text="2% used" />
-
-                        <TextView
-                            android:id="@+id/limitWarningText"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="8dp"
-                            android:textSize="12sp"
-                            android:textStyle="bold"
-                            android:gravity="center"
-                            android:visibility="gone"
-                            tools:text="Only 1 spot left - unlock more before you run out"
-                            tools:visibility="visible" />
-
-                        <!-- Contact limit breakdown - shows where the total
-                             comes from (base plan vs referral/redeemed
-                             bonus), using ImportStats.baseLimit/bonusLimit.
-                             Hidden entirely when either is unknown (-1) or
-                             bonusLimit is 0, so a brand-new free user with
-                             no bonus yet doesn't see a confusing "+0" row. -->
+                        <!-- Purchased viewers row -->
                         <LinearLayout
-                            android:id="@+id/limitBreakdownBlock"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:orientation="vertical"
-                            android:layout_marginTop="14dp"
-                            android:paddingTop="12dp"
-                            android:background="@drawable/limit_breakdown_divider"
-                            android:visibility="gone"
-                            tools:visibility="visible">
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:paddingTop="10dp"
+                            android:paddingBottom="10dp">
 
-                            <LinearLayout
-                                android:layout_width="match_parent"
+                            <View
+                                android:layout_width="8dp"
+                                android:layout_height="8dp"
+                                android:layout_marginEnd="10dp"
+                                android:background="@drawable/viewers_dot_blue" />
+
+                            <TextView
+                                android:layout_width="0dp"
                                 android:layout_height="wrap_content"
-                                android:orientation="horizontal"
-                                android:paddingTop="3dp"
-                                android:paddingBottom="3dp">
+                                android:layout_weight="1"
+                                android:text="@string/label_purchased_viewers"
+                                android:textSize="13sp"
+                                android:textStyle="bold"
+                                android:textColor="@color/vg_dark" />
 
-                                <TextView
-                                    android:layout_width="0dp"
-                                    android:layout_height="wrap_content"
-                                    android:layout_weight="1"
-                                    android:text="@string/label_free_plan"
-                                    android:textSize="13sp"
-                                    android:textColor="@color/text_secondary" />
-
-                                <TextView
-                                    android:id="@+id/limitBaseText"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:textSize="13sp"
-                                    android:textColor="@color/vg_dark"
-                                    tools:text="250" />
-
-                            </LinearLayout>
-
-                            <LinearLayout
-                                android:layout_width="match_parent"
+                            <TextView
+                                android:id="@+id/purchasedViewersCurrentText"
+                                android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:orientation="horizontal"
-                                android:paddingTop="3dp"
-                                android:paddingBottom="3dp">
+                                android:textSize="15sp"
+                                android:textStyle="bold"
+                                android:textColor="@color/vg_dark"
+                                tools:text="0" />
 
-                                <TextView
-                                    android:layout_width="0dp"
-                                    android:layout_height="wrap_content"
-                                    android:layout_weight="1"
-                                    android:text="@string/label_referral_bonus"
-                                    android:textSize="13sp"
-                                    android:textColor="@color/text_secondary" />
+                            <TextView
+                                android:id="@+id/purchasedViewersMaxText"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:textSize="12sp"
+                                android:textStyle="bold"
+                                android:textColor="@color/text_secondary"
+                                tools:text="/0" />
 
-                                <TextView
-                                    android:id="@+id/limitBonusText"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:textSize="13sp"
-                                    android:textColor="@color/vg_green_dark"
-                                    tools:text="+20" />
+                        </LinearLayout>
 
-                            </LinearLayout>
+                        <!-- 1dp hairline between Purchased and Referred rows -->
+                        <View
+                            android:layout_width="match_parent"
+                            android:layout_height="1dp"
+                            android:background="@color/tab_track_fill" />
+
+                        <!-- Referred viewers row (no divider under last row) -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:paddingTop="10dp">
+
+                            <View
+                                android:layout_width="8dp"
+                                android:layout_height="8dp"
+                                android:layout_marginEnd="10dp"
+                                android:background="@drawable/viewers_dot_amber" />
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="@string/label_referred_viewers"
+                                android:textSize="13sp"
+                                android:textStyle="bold"
+                                android:textColor="@color/vg_dark" />
+
+                            <TextView
+                                android:id="@+id/referredViewersCountText"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:textSize="15sp"
+                                android:textStyle="bold"
+                                android:textColor="@color/vg_dark"
+                                tools:text="2" />
 
                         </LinearLayout>
 
