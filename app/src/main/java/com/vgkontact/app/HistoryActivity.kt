@@ -303,10 +303,42 @@ class HistoryActivity : AppCompatActivity() {
                 }
             }
 
+            val numberRow = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = android.view.Gravity.CENTER_VERTICAL
+            }
+
             val numberView = TextView(this).apply {
                 text = entry.whatsapp
                 textSize = 14f
                 setTextColor(ContextCompat.getColor(this@HistoryActivity, R.color.vg_dark))
+            }
+
+            // Level badge - "Direct" for this user's own referrals,
+            // "2nd level" for people referred by those referrals in turn
+            // (see SheetSync.fetchMyReferrals). Only the second-level
+            // badge is shown since a plain unlabeled row already reads as
+            // "direct" by default - matches the tagged-list approach
+            // discussed, keeping the existing search/pagination logic
+            // untouched since this stays one flat list.
+            if (entry.level == 2) {
+                val levelBadge = TextView(this).apply {
+                    text = "2nd level"
+                    textSize = 10f
+                    setTextColor(ContextCompat.getColor(this@HistoryActivity, R.color.text_muted))
+                    background = ContextCompat.getDrawable(this@HistoryActivity, R.drawable.referral_number_pill_background)
+                    val paddingHPx = (8 * resources.displayMetrics.density).toInt()
+                    val paddingVPx = (2 * resources.displayMetrics.density).toInt()
+                    setPadding(paddingHPx, paddingVPx, paddingHPx, paddingVPx)
+                    val marginPx = (8 * resources.displayMetrics.density).toInt()
+                    layoutParams = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT
+                    ).apply { marginStart = marginPx }
+                }
+                numberRow.addView(numberView)
+                numberRow.addView(levelBadge)
+            } else {
+                numberRow.addView(numberView)
             }
 
             val timeView = TextView(this).apply {
@@ -315,7 +347,7 @@ class HistoryActivity : AppCompatActivity() {
                 setTextColor(ContextCompat.getColor(this@HistoryActivity, R.color.text_muted))
             }
 
-            textColumn.addView(numberView)
+            textColumn.addView(numberRow)
             textColumn.addView(timeView)
 
             // WhatsApp nudge icon - opens a chat to this referral's
