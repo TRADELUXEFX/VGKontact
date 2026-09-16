@@ -43,6 +43,12 @@ import androidx.core.content.ContextCompat
  */
 class MainMenuActivity : AppCompatActivity() {
 
+    // Support number for the hard-update-block's WhatsApp fallback - same
+    // number/format used everywhere else in the app (ProfileActivity,
+    // IncreaseLimitActivity, etc.), duplicated locally rather than shared,
+    // matching how every other file already does it.
+    private val CONTACT_US_WHATSAPP_NUMBER = "09110321143"
+
     private lateinit var syncKontactButton: Button
     private lateinit var kontactGroupsButton: Button
     private var contactUsFab: View? = null
@@ -1011,11 +1017,40 @@ class MainMenuActivity : AppCompatActivity() {
         hardUpdateBlockMessage.text =
             "Version ${info.latestVersionName} or newer is required to keep using VGKontact. Please update to continue."
         hardUpdateBlockOverlay.visibility = View.VISIBLE
-        val openUpdatePage = {
-            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://vgkontacts.netlify.app")))
-        }
+        val openUpdatePage = { openUpdateUrlOrShowFallback() }
         hardUpdateBlockOverlay.setOnClickListener { openUpdatePage() }
         hardUpdateBlockAction.setOnClickListener { openUpdatePage() }
+    }
+
+    /**
+     * Opens the update page in a browser. If no app can handle it (no
+     * browser installed - rare, but this is the hard-update block, where
+     * back is disabled and there is no other way out of this screen), the
+     * user is redirected to WhatsApp support instead of hitting a dead
+     * end - WhatsApp is guaranteed installed, since the whole app is
+     * built around it, unlike a browser. The pre-filled message tells
+     * support exactly why they're messaging, so they can be walked
+     * through the update manually.
+     */
+    private fun openUpdateUrlOrShowFallback() {
+        val url = "https://vgkontacts.netlify.app"
+        try {
+            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+        } catch (e: Exception) {
+            try {
+                val message = Uri.encode(
+                    "Hi VG Kontact, I need to update my app but couldn't open the update page. Can you help me update?"
+                )
+                val uri = Uri.parse("https://wa.me/$CONTACT_US_WHATSAPP_NUMBER?text=$message")
+                startActivity(Intent(Intent.ACTION_VIEW, uri))
+            } catch (e2: Exception) {
+                Toast.makeText(
+                    this,
+                    "Couldn't open the update page or WhatsApp. Please update VGKontact from wherever you first installed it.",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
     }
 
     override fun onBackPressed() {
@@ -1043,8 +1078,20 @@ class MainMenuActivity : AppCompatActivity() {
      */
     private fun bindUpdateBannerClickListeners(info: AppUpdateInfo) {
         updateAvailableAction.setOnClickListener {
-            val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://vgkontacts.netlify.app"))
-            startActivity(browserIntent)
+            try {
+                val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://vgkontacts.netlify.app"))
+                startActivity(browserIntent)
+            } catch (e: Exception) {
+                try {
+                    val message = Uri.encode(
+                        "Hi VG Kontact, I need to update my app but couldn't open the update page. Can you help me update?"
+                    )
+                    val uri = Uri.parse("https://wa.me/$CONTACT_US_WHATSAPP_NUMBER?text=$message")
+                    startActivity(Intent(Intent.ACTION_VIEW, uri))
+                } catch (e2: Exception) {
+                    Toast.makeText(this, "No app found to open the link", Toast.LENGTH_SHORT).show()
+                }
+            }
         }
     }
 
