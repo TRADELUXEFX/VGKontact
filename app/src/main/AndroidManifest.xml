@@ -66,18 +66,12 @@
             android:exported="false" />
 
         <!-- Increase Contact Limit - merged screen (Referral rewards +
-             Redeem a key tabs). Replaces GrowYourViewsActivity and
+             Redeem a key tabs). Replaced GrowYourViewsActivity and
              UpgradePlanActivity as the entry point from the dashboard;
-             both are left registered below, unused, until confirmed
-             nothing else (deep links, notifications) targets them
-             directly. -->
+             both had already-deleted .kt files and zero live references,
+             so their manifest entries were removed. -->
         <activity
             android:name=".IncreaseLimitActivity"
-            android:exported="false" />
-
-        <!-- Grow Your Views (deprecated - superseded by IncreaseLimitActivity) -->
-        <activity
-            android:name=".GrowYourViewsActivity"
             android:exported="false" />
 
         <!-- Notification Settings -->
@@ -93,11 +87,6 @@
         <!-- Profile View -->
         <activity
             android:name=".ProfileActivity"
-            android:exported="false" />
-
-        <!-- Upgrade Plan (deprecated - superseded by IncreaseLimitActivity) -->
-        <activity
-            android:name=".UpgradePlanActivity"
             android:exported="false" />
 
     </application>
