@@ -66,6 +66,9 @@ class HistoryActivity : AppCompatActivity() {
     private lateinit var myReferralsNoResultsText: TextView
     private lateinit var myReferralsPagerScroll: HorizontalScrollView
     private lateinit var myReferralsPagerContainer: LinearLayout
+    private lateinit var myReferralsBreadcrumb: LinearLayout
+    private lateinit var breadcrumbBackButton: ImageView
+    private lateinit var breadcrumbPathText: TextView
 
     private val ENTRIES_PER_PAGE = 5
 
@@ -80,6 +83,12 @@ class HistoryActivity : AppCompatActivity() {
     private var myReferralsCurrentPage = 0
     private var myReferralsSearchQuery = ""
     private var myReferralsLoaded = false
+    private var myReferralsCounts: Map<String, Int> = emptyMap()
+
+    /** One entry per drill-in level: whose referrals are showing, and the label shown in the breadcrumb for them. */
+    private data class ReferralStackEntry(val whatsapp: String, val label: String)
+    /** Root of the stack is always the logged-in user (label unused - breadcrumb hides at depth 0). */
+    private var referralStack: MutableList<ReferralStackEntry> = mutableListOf()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -110,6 +119,11 @@ class HistoryActivity : AppCompatActivity() {
         myReferralsNoResultsText = findViewById(R.id.myReferralsNoResultsText)
         myReferralsPagerScroll = findViewById(R.id.myReferralsPagerScroll)
         myReferralsPagerContainer = findViewById(R.id.myReferralsPagerContainer)
+        myReferralsBreadcrumb = findViewById(R.id.myReferralsBreadcrumb)
+        breadcrumbBackButton = findViewById(R.id.breadcrumbBackButton)
+        breadcrumbPathText = findViewById(R.id.breadcrumbPathText)
+
+        breadcrumbBackButton.setOnClickListener { popReferralLevel() }
 
         historySearchInput.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
@@ -147,7 +161,21 @@ class HistoryActivity : AppCompatActivity() {
         tabLeaderboardButton.backgroundTintList = ContextCompat.getColorStateList(this, android.R.color.transparent)
         tabLeaderboardButton.setTextColor(ContextCompat.getColor(this, R.color.white))
 
+        // Reselecting the "My referrals" tab always resets any drill-in
+        // depth back to the root list, same as navigating away and back
+        // to the app would - avoids leaving the user stranded mid-tree
+        // with a hidden breadcrumb if they'd switched tabs while drilled in.
+        val wasDrilledIn = referralStack.isNotEmpty()
+        referralStack.clear()
+        myReferralsCounts = emptyMap()
+        updateBreadcrumb()
+
         if (!myReferralsLoaded) {
+            loadMyReferrals()
+        } else if (wasDrilledIn) {
+            // Was mid-tree when the tab lost focus - myReferrals still
+            // holds that drilled-in list, so re-fetch the root list
+            // rather than just re-rendering it.
             loadMyReferrals()
         }
     }
@@ -172,15 +200,22 @@ class HistoryActivity : AppCompatActivity() {
         myReferralsNoResultsText.visibility = View.GONE
         myReferralsPagerScroll.visibility = View.GONE
 
+        // Root level only: this user's own direct referrals. Drilling
+        // into someone else's downline goes through loadReferralsForStack()
+        // instead, which shares the rendering/search/pager code below but
+        // never re-enters this function or touches myReferralsLoaded.
         SheetSync.fetchMyReferrals(this) { list, error ->
             runOnUiThread {
                 if (list != null) {
                     myReferralsLoaded = true
-                    myReferrals = list
-                    myReferralsTotalText.text = list.size.toString()
+                    // Root list only shows direct referrals now - the old
+                    // flat direct+2nd-level merge is gone, since 2nd level
+                    // is reached by drilling into a direct referral instead.
+                    myReferrals = list.filter { it.level == 1 }
+                    myReferralsTotalText.text = myReferrals.size.toString()
                     myReferralsSearchQuery = ""
                     myReferralsSearchInput.setText("")
-                    if (list.isEmpty()) {
+                    if (myReferrals.isEmpty()) {
                         myReferralsEmptyText.visibility = View.VISIBLE
                         myReferralsEmptyText.text = "No referrals yet."
                         return@runOnUiThread
@@ -198,6 +233,75 @@ class HistoryActivity : AppCompatActivity() {
                 }
             }
         }
+    }
+
+    /**
+     * Loads the direct referrals of whoever is at the top of
+     * [referralStack] (used for every drill-in level, depth 1+). Shares
+     * applyMyReferralsSearch/renderMyReferralsPage/renderMyReferralsPager
+     * with the root list so search and pagination behave identically at
+     * any depth.
+     */
+    private fun loadReferralsForStack() {
+        val target = referralStack.last()
+        myReferralsListContainer.removeAllViews()
+        myReferralsEmptyText.visibility = View.GONE
+        myReferralsNoResultsText.visibility = View.GONE
+        myReferralsPagerScroll.visibility = View.GONE
+        updateBreadcrumb()
+
+        SheetSync.fetchReferralsFor(target.whatsapp) { list, error ->
+            runOnUiThread {
+                if (list != null) {
+                    myReferrals = list
+                    myReferralsTotalText.text = myReferrals.size.toString()
+                    myReferralsSearchQuery = ""
+                    myReferralsSearchInput.setText("")
+                    if (myReferrals.isEmpty()) {
+                        myReferralsEmptyText.visibility = View.VISIBLE
+                        myReferralsEmptyText.text = "${target.label} has no referrals yet."
+                        return@runOnUiThread
+                    }
+                    applyMyReferralsSearch()
+                } else {
+                    myReferralsEmptyText.visibility = View.VISIBLE
+                    val message = if (error == "NO_INTERNET") {
+                        "No internet connection. Check your connection and try again."
+                    } else {
+                        "Couldn't load referrals. Please try again."
+                    }
+                    myReferralsEmptyText.text = message
+                    Toast.makeText(this@HistoryActivity, message, Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
+    /** Tapping a row drills into that referral's own downline, pushing a new breadcrumb level. */
+    private fun drillIntoReferral(entry: MyReferral) {
+        referralStack.add(ReferralStackEntry(entry.whatsapp, entry.whatsapp))
+        loadReferralsForStack()
+    }
+
+    /** Breadcrumb back arrow: pops one level, back to the root list if the stack empties out. */
+    private fun popReferralLevel() {
+        if (referralStack.isEmpty()) return
+        referralStack.removeAt(referralStack.lastIndex)
+        if (referralStack.isEmpty()) {
+            loadMyReferrals()
+        } else {
+            loadReferralsForStack()
+        }
+    }
+
+    /** Shows/hides and fills the "You > Name > Name" breadcrumb based on current drill depth. */
+    private fun updateBreadcrumb() {
+        if (referralStack.isEmpty()) {
+            myReferralsBreadcrumb.visibility = View.GONE
+            return
+        }
+        myReferralsBreadcrumb.visibility = View.VISIBLE
+        breadcrumbPathText.text = "You  >  " + referralStack.joinToString("  >  ") { it.label }
     }
 
     /**
@@ -225,6 +329,31 @@ class HistoryActivity : AppCompatActivity() {
         myReferralsNoResultsText.visibility = View.GONE
         renderMyReferralsPage()
         renderMyReferralsPager()
+        if (referralStack.isEmpty()) loadCountsForCurrentPage()
+    }
+
+    /**
+     * Fetches invite counts for just the numbers on [myReferralsCurrentPage]
+     * (one batched request via fetchReferralCountsFor) and re-renders the
+     * page once they arrive, so counts appear without slowing down the
+     * initial row render.
+     */
+    private fun loadCountsForCurrentPage() {
+        val start = myReferralsCurrentPage * ENTRIES_PER_PAGE
+        val end = minOf(start + ENTRIES_PER_PAGE, filteredMyReferrals.size)
+        if (start >= filteredMyReferrals.size) return
+        val pageNumbers = filteredMyReferrals.subList(start, end).map { it.whatsapp }
+
+        SheetSync.fetchReferralCountsFor(pageNumbers) { counts, _ ->
+            if (counts == null) return@fetchReferralCountsFor
+            runOnUiThread {
+                myReferralsCounts = counts
+                // Only re-render if we're still showing this same page -
+                // avoids a stale count fetch overwriting a page the user
+                // has since navigated away from.
+                renderMyReferralsPage()
+            }
+        }
     }
 
     /**
@@ -313,33 +442,7 @@ class HistoryActivity : AppCompatActivity() {
                 textSize = 14f
                 setTextColor(ContextCompat.getColor(this@HistoryActivity, R.color.vg_dark))
             }
-
-            // Level badge - "Direct" for this user's own referrals,
-            // "2nd level" for people referred by those referrals in turn
-            // (see SheetSync.fetchMyReferrals). Only the second-level
-            // badge is shown since a plain unlabeled row already reads as
-            // "direct" by default - matches the tagged-list approach
-            // discussed, keeping the existing search/pagination logic
-            // untouched since this stays one flat list.
-            if (entry.level == 2) {
-                val levelBadge = TextView(this).apply {
-                    text = "2nd level"
-                    textSize = 10f
-                    setTextColor(ContextCompat.getColor(this@HistoryActivity, R.color.text_muted))
-                    background = ContextCompat.getDrawable(this@HistoryActivity, R.drawable.referral_number_pill_background)
-                    val paddingHPx = (8 * resources.displayMetrics.density).toInt()
-                    val paddingVPx = (2 * resources.displayMetrics.density).toInt()
-                    setPadding(paddingHPx, paddingVPx, paddingHPx, paddingVPx)
-                    val marginPx = (8 * resources.displayMetrics.density).toInt()
-                    layoutParams = LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT
-                    ).apply { marginStart = marginPx }
-                }
-                numberRow.addView(numberView)
-                numberRow.addView(levelBadge)
-            } else {
-                numberRow.addView(numberView)
-            }
+            numberRow.addView(numberView)
 
             val timeView = TextView(this).apply {
                 text = formatRelativeTime(entry.createdAt)
@@ -350,23 +453,57 @@ class HistoryActivity : AppCompatActivity() {
             textColumn.addView(numberRow)
             textColumn.addView(timeView)
 
-            // WhatsApp nudge icon - opens a chat to this referral's
-            // number with a pre-filled follow-up message.
-            val iconSizePx = (24 * resources.displayMetrics.density).toInt()
-            val iconMarginPx = (12 * resources.displayMetrics.density).toInt()
-            val nudgeIcon = ImageView(this).apply {
-                setImageResource(R.drawable.ic_chat)
-                setColorFilter(ContextCompat.getColor(this@HistoryActivity, R.color.vg_green))
-                contentDescription = "Message ${entry.whatsapp} on WhatsApp"
-                layoutParams = LinearLayout.LayoutParams(iconSizePx, iconSizePx).apply {
-                    marginStart = iconMarginPx
-                }
-                setOnClickListener { openWhatsAppNudge(entry.whatsapp) }
-            }
-
             textRow.addView(avatar)
             textRow.addView(textColumn)
-            textRow.addView(nudgeIcon)
+
+            // Invite count pill (e.g. "18 invited") - filled in once
+            // loadCountsForCurrentPage's batched fetch returns; shows
+            // "no invites yet" when the count is 0/unknown, matching the
+            // drill-in mockup. Only shown at root depth (referralStack
+            // empty) - a nudge icon replaces it one level deeper, since
+            // you're already looking at that referral's own downline
+            // there and don't need their count restated.
+            if (referralStack.isEmpty()) {
+                val count = myReferralsCounts[entry.whatsapp] ?: 0
+                val countView = TextView(this).apply {
+                    text = if (count > 0) "$count invited" else "no invites yet"
+                    textSize = 12f
+                    setTextColor(
+                        ContextCompat.getColor(
+                            this@HistoryActivity,
+                            if (count > 0) R.color.vg_green else R.color.text_muted
+                        )
+                    )
+                    if (count > 0) setTypeface(typeface, android.graphics.Typeface.BOLD)
+                }
+                textRow.addView(countView)
+
+                // Only rows with at least one invite are worth drilling
+                // into - matches the mockup, where only Ravi (18 invited)
+                // is tappable and Amara (no invites yet) is not.
+                if (count > 0) {
+                    row.setOnClickListener { drillIntoReferral(entry) }
+                    row.isClickable = true
+                    row.isFocusable = true
+                }
+            } else {
+                // WhatsApp nudge icon - opens a chat to this referral's
+                // number with a pre-filled follow-up message. Root-list
+                // only; see comment above.
+                val iconSizePx = (24 * resources.displayMetrics.density).toInt()
+                val iconMarginPx = (12 * resources.displayMetrics.density).toInt()
+                val nudgeIcon = ImageView(this).apply {
+                    setImageResource(R.drawable.ic_chat)
+                    setColorFilter(ContextCompat.getColor(this@HistoryActivity, R.color.vg_green))
+                    contentDescription = "Message ${entry.whatsapp} on WhatsApp"
+                    layoutParams = LinearLayout.LayoutParams(iconSizePx, iconSizePx).apply {
+                        marginStart = iconMarginPx
+                    }
+                    setOnClickListener { openWhatsAppNudge(entry.whatsapp) }
+                }
+                textRow.addView(nudgeIcon)
+            }
+
             row.addView(textRow)
 
             // Skip the divider after the last row on this page.
@@ -405,6 +542,7 @@ class HistoryActivity : AppCompatActivity() {
                     myReferralsCurrentPage = pageIndex
                     renderMyReferralsPage()
                     updateMyReferralsPagerSelection()
+                    if (referralStack.isEmpty()) loadCountsForCurrentPage()
                 }
             }
             myReferralsPagerContainer.addView(pageButton)
