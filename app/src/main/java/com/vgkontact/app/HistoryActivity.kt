@@ -199,6 +199,10 @@ class HistoryActivity : AppCompatActivity() {
         myReferralsEmptyText.visibility = View.GONE
         myReferralsNoResultsText.visibility = View.GONE
         myReferralsPagerScroll.visibility = View.GONE
+        // Root list - breadcrumb is never shown here. Set eagerly so it
+        // can't remain visible on screen from a previous drill-in level
+        // while this reload is in flight.
+        myReferralsBreadcrumb.visibility = View.GONE
 
         // Root level only: this user's own direct referrals. Drilling
         // into someone else's downline goes through loadReferralsForStack()
@@ -287,6 +291,12 @@ class HistoryActivity : AppCompatActivity() {
     private fun popReferralLevel() {
         if (referralStack.isEmpty()) return
         referralStack.removeAt(referralStack.lastIndex)
+        // Hide the breadcrumb row immediately rather than waiting for the
+        // async reload below to finish - otherwise, on a slow connection,
+        // the old breadcrumb can stay visible/overlapping on screen for a
+        // moment after tapping back, on top of the root list's own
+        // "RECENT REFERRALS" header row.
+        updateBreadcrumb()
         if (referralStack.isEmpty()) {
             loadMyReferrals()
         } else {
