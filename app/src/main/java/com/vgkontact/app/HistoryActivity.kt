@@ -123,6 +123,11 @@ class HistoryActivity : AppCompatActivity() {
         breadcrumbBackButton = findViewById(R.id.breadcrumbBackButton)
         breadcrumbPathText = findViewById(R.id.breadcrumbPathText)
 
+        // Whole breadcrumb row is clickable now, not just the small
+        // arrow icon - a tiny 20dp icon was too easy to miss/mistap as
+        // the only way back. Keeping the icon's own listener too is
+        // harmless (same action either way).
+        myReferralsBreadcrumb.setOnClickListener { popReferralLevel() }
         breadcrumbBackButton.setOnClickListener { popReferralLevel() }
 
         historySearchInput.addTextChangedListener(object : TextWatcher {
@@ -304,14 +309,19 @@ class HistoryActivity : AppCompatActivity() {
         }
     }
 
-    /** Shows/hides and fills the "You > Name > Name" breadcrumb based on current drill depth. */
+    /** Shows/hides and fills the drill-in breadcrumb pill based on current drill depth. */
     private fun updateBreadcrumb() {
         if (referralStack.isEmpty()) {
             myReferralsBreadcrumb.visibility = View.GONE
             return
         }
         myReferralsBreadcrumb.visibility = View.VISIBLE
-        breadcrumbPathText.text = "You  >  " + referralStack.joinToString("  >  ") { it.label }
+        // "<name>'s referrals" instead of a "You > A > B" trail - simpler
+        // to read at a glance, and doesn't require understanding what a
+        // breadcrumb trail even is. Only the deepest level's label is
+        // shown; popReferralLevel() still walks back one level at a time
+        // even though this text doesn't spell out the full path.
+        breadcrumbPathText.text = "${referralStack.last().label}'s referrals"
     }
 
     /**
