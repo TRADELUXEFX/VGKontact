@@ -84,18 +84,39 @@
                     android:textColor="@color/vg_dark"
                     tools:text="maria_g" />
 
-                <ImageView
+                <LinearLayout
                     android:id="@+id/profileUsernameCopyIcon"
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
                     android:layout_marginStart="8dp"
-                    android:padding="2dp"
-                    android:src="@drawable/ic_copy"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:background="@drawable/badge_verified_background"
+                    android:paddingStart="10dp"
+                    android:paddingEnd="10dp"
+                    android:paddingTop="6dp"
+                    android:paddingBottom="6dp"
                     android:contentDescription="@string/profile_copy_username"
-                    app:tint="@color/vg_green"
-                    android:background="?attr/selectableItemBackgroundBorderless"
                     android:clickable="true"
-                    android:focusable="true" />
+                    android:focusable="true"
+                    android:foreground="?attr/selectableItemBackground">
+
+                    <ImageView
+                        android:layout_width="14dp"
+                        android:layout_height="14dp"
+                        android:src="@drawable/ic_copy"
+                        app:tint="@color/vg_green" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="4dp"
+                        android:text="Copy"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/vg_green" />
+
+                </LinearLayout>
 
             </LinearLayout>
 
