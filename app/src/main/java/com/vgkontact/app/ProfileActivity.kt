@@ -20,7 +20,7 @@ import androidx.core.content.ContextCompat
 class ProfileActivity : AppCompatActivity() {
 
     private lateinit var profileUsernameText: TextView
-    private lateinit var profileUsernameCopyIcon: ImageView
+    private lateinit var profileUsernameCopyIcon: LinearLayout
     private lateinit var profileNumberText: TextView
     private lateinit var profileReferralNameText: TextView
     private lateinit var profileReferralNumberBadge: TextView
