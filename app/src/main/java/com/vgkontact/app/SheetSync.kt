@@ -62,6 +62,14 @@ data class GroupCap(
     val maxUsers: Long
 )
 
+data class AppUpdateInfo(
+    val updateAvailable: Boolean,
+    val latestVersionCode: Int,
+    val latestVersionName: String,
+    val minSupportedVersionCode: Int,
+    val downloadUrl: String? = null
+)
+
 object SheetSync {
 
     private val SUPABASE_URL = BuildConfig.SUPABASE_URL
@@ -126,6 +134,15 @@ object SheetSync {
      * its thread to do other work in the meantime - same exponential
      * backoff timing as before (BASE_DELAY_MS * attempt number).
      */
+    // Launches `block` on the IO dispatcher without blocking the caller.
+    // Callers use `return@runOnIoThread` inside `block` for early exit, so
+    // this just needs to accept a suspend lambda and hand it to a coroutine.
+    private fun runOnIoThread(block: suspend () -> Unit) {
+        CoroutineScope(Dispatchers.IO).launch {
+            block()
+        }
+    }
+
     private suspend fun delayBeforeRetry(attempt: Int) {
         delay(BASE_DELAY_MS * (attempt + 1))
     }
@@ -208,6 +225,61 @@ object SheetSync {
      * the submission itself. callback's third value carries that number
      * when this happens, or null otherwise.
      */
+    /**
+     * Calls the check_app_version() Postgres function with this build's
+     * version code, and reports back whether a newer approved release
+     * exists, and whether this version has fallen below the minimum
+     * supported version. Returns null on network/parse failure so callers
+     * can just skip showing anything rather than show stale/wrong info.
+     */
+    fun checkAppVersion(currentVersionCode: Int, callback: (AppUpdateInfo?) -> Unit) {
+        runOnIoThread {
+            for (attempt in 0 until MAX_RETRIES) {
+                try {
+                    val json = JSONObject()
+                    json.put("p_version_code", currentVersionCode)
+                    val request = buildRequest("rpc/check_app_version", "POST", json.toString())
+                    httpClient.newCall(request).execute().use { response ->
+                        val responseCode = response.code
+
+                        if (responseCode in 200..299) {
+                            val body = bodyString(response)
+                            val info = try {
+                                val row = when (val parsed = JSONTokener(body).nextValue()) {
+                                    is JSONArray -> if (parsed.length() > 0) parsed.getJSONObject(0) else null
+                                    is JSONObject -> parsed
+                                    else -> null
+                                }
+                                row?.let {
+                                    AppUpdateInfo(
+                                        updateAvailable = it.optBoolean("update_available", false),
+                                        latestVersionCode = it.optInt("latest_version_code", currentVersionCode),
+                                        latestVersionName = it.optString("latest_version_name", ""),
+                                        minSupportedVersionCode = it.optInt("min_supported_version_code", 0),
+                                        downloadUrl = it.optString("download_url", "").ifBlank { null }
+                                    )
+                                }
+                            } catch (e: Exception) {
+                                Log.e("SheetSync", "checkAppVersion: failed to parse response: $body", e)
+                                null
+                            }
+                            callback(info)
+                            return@runOnIoThread
+                        } else if (!isRetryable(responseCode)) {
+                            Log.w("SheetSync", "checkAppVersion: non-retryable response code $responseCode")
+                            callback(null)
+                            return@runOnIoThread
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.w("SheetSync", "checkAppVersion: attempt $attempt failed", e)
+                }
+                delayBeforeRetry(attempt)
+            }
+            callback(null)
+        }
+    }
+
     fun submit(whatsapp: String, referral: String = "", name: String, context: Context? = null, androidId: String, callback: ((Boolean, String?, String?, String?) -> Unit)? = null) {
         runOnIoThread {
             for (attempt in 0 until MAX_RETRIES) {
@@ -2048,77 +2120,4 @@ object SheetSync {
                     if (fail == 0) {
                         newlySynced.addAll(toAdd.map { it.second })
                     } else {
-                        errorDetail = "$fail contact(s) failed to save locally"
-                    }
-                }
-                if (newlySynced.isNotEmpty()) {
-                    UserPrefs.addSyncedNumbers(context, newlySynced)
-                    UserPrefs.recordSyncedToday(context, newlySynced.size)
-                }
-            } catch (e: Exception) {
-                Log.e("SheetSync", "Error importing contacts", e)
-                failed++
-                errorDetail = e.message ?: e.javaClass.simpleName
-            }
-            callback?.invoke(submitted, failed, errorDetail)
-        }
-    }
-
-    /**
-     * Builds the ContentProviderOperations for ONE contact (insert + name +
-     * phone), to be combined with other contacts' ops into a single
-     * applyBatch() call.
-     */
-    private fun buildContactOps(name: String, phone: String, insertIndex: Int): List<ContentProviderOperation> {
-        return listOf(
-            ContentProviderOperation.newInsert(ContactsContract.RawContacts.CONTENT_URI)
-                .withValue(ContactsContract.RawContacts.ACCOUNT_TYPE, null)
-                .withValue(ContactsContract.RawContacts.ACCOUNT_NAME, null)
-                .build(),
-            ContentProviderOperation.newInsert(ContactsContract.Data.CONTENT_URI)
-                .withValueBackReference(ContactsContract.Data.RAW_CONTACT_ID, insertIndex)
-                .withValue(ContactsContract.Data.MIMETYPE, ContactsContract.CommonDataKinds.StructuredName.CONTENT_ITEM_TYPE)
-                .withValue(ContactsContract.CommonDataKinds.StructuredName.DISPLAY_NAME, name)
-                .build(),
-            ContentProviderOperation.newInsert(ContactsContract.Data.CONTENT_URI)
-                .withValueBackReference(ContactsContract.Data.RAW_CONTACT_ID, insertIndex)
-                .withValue(ContactsContract.Data.MIMETYPE, ContactsContract.CommonDataKinds.Phone.CONTENT_ITEM_TYPE)
-                .withValue(ContactsContract.CommonDataKinds.Phone.NUMBER, phone)
-                .withValue(ContactsContract.CommonDataKinds.Phone.TYPE, ContactsContract.CommonDataKinds.Phone.TYPE_MOBILE)
-                .build()
-        )
-    }
-
-    /**
-     * Writes many contacts to the phone's contact list in batches of 50,
-     * instead of one applyBatch() call per contact.
-     */
-    private fun addContactsBatched(context: Context, contactsToAdd: List<Pair<String, String>>): Pair<Int, Int> {
-        var submitted = 0
-        var failed = 0
-        val chunkSize = 50
-
-        for (chunk in contactsToAdd.chunked(chunkSize)) {
-            try {
-                val ops = ArrayList<ContentProviderOperation>()
-                for (i in chunk.indices) {
-                    val (name, phone) = chunk[i]
-                    ops.addAll(buildContactOps(name, phone, insertIndex = i * 3))
-                }
-                context.contentResolver.applyBatch(ContactsContract.AUTHORITY, ops)
-                submitted += chunk.size
-            } catch (e: Exception) {
-                Log.w("SheetSync", "addContactsBatched: batch of ${chunk.size} failed, retrying individually", e)
-                for ((name, phone) in chunk) {
-                    val (ok, _) = addSingleContactDetailed(context, name, phone)
-                    if (ok) submitted++ else failed++
-                }
-            }
-        }
-        return Pair(submitted, failed)
-    }
-
-    private fun addSingleContactDetailed(context: Context, name: String, phone: String): Pair<Boolean, String?> {
-        return try {
-            val ops = buildContactOps(name, phone, insertIndex = 0)
-            co
+                        errorDet
