@@ -107,21 +107,25 @@ class ProfileActivity : AppCompatActivity() {
                 if (referral.isNullOrEmpty()) {
                     profileReferralNameText.text = "None"
                 } else {
-                    // Show the raw number as a placeholder name while the
-                    // name lookup is in flight, same fallback behavior as
-                    // before - never leave the field blank or stuck on "...".
-                    profileReferralNameText.text = referral
+                    // Keep showing the "..." loading placeholder while the
+                    // name lookup is in flight, instead of flashing the raw
+                    // phone number first and then swapping it for the name
+                    // a moment later - that flash read as a glitch even
+                    // though both values were genuinely correct in sequence.
                     SheetSync.fetchNameForWhatsapp(referral) { name ->
                         runOnUiThread {
                             if (!name.isNullOrBlank()) {
                                 profileReferralNameText.text = name
                                 profileReferralNumberBadge.text = referral
                                 profileReferralNumberBadge.visibility = android.view.View.VISIBLE
+                            } else {
+                                // Name lookup genuinely failed/returned nothing -
+                                // fall back to the bare number so the field never
+                                // gets stuck on "..." forever. Badge stays hidden
+                                // here since showing the same number twice (once
+                                // as the name, once in the badge) would be redundant.
+                                profileReferralNameText.text = referral
                             }
-                            // name == null: leave the bare number showing in
-                            // the name field, badge stays hidden - a number
-                            // alone is still a useful answer, no need for a
-                            // redundant badge repeating the same number.
                         }
                     }
                 }
