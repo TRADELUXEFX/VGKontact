@@ -43,7 +43,7 @@
     <string name="dialog_delete_contacts_message">This stops new contacts from syncing and removes the numbers VG Kontact added to your phone. You can turn syncing back on anytime.</string>
     <string name="dialog_cancel">Cancel</string>
     <string name="dialog_delete">Delete</string>
-    <string name="contact_limit_label">Contact Limit</string>
+    <string name="contact_limit_label">Contact Information</string>
     <string name="label_free_viewers">Free viewers</string>
     <string name="label_purchased_viewers">Purchased viewers</string>
     <string name="label_referred_viewers">Referred viewers</string>
