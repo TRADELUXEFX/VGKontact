@@ -498,6 +498,31 @@ class HistoryActivity : AppCompatActivity() {
                 }
                 textRow.addView(countView)
 
+                // WhatsApp nudge icon - was previously only shown one
+                // level deep into a drill-in. Added here too so root-list
+                // rows can always message a referral, regardless of
+                // whether they've invited anyone yet. Its own click
+                // listener + isClickable, separate from the row's
+                // drill-in listener below, so tapping the icon doesn't
+                // also trigger navigation into the row.
+                val iconSizePx = (22 * resources.displayMetrics.density).toInt()
+                val iconMarginPx = (10 * resources.displayMetrics.density).toInt()
+                val nudgeIcon = ImageView(this).apply {
+                    setImageResource(R.drawable.ic_chat)
+                    setColorFilter(ContextCompat.getColor(this@HistoryActivity, R.color.vg_green))
+                    contentDescription = "Message ${entry.whatsapp} on WhatsApp"
+                    layoutParams = LinearLayout.LayoutParams(iconSizePx, iconSizePx).apply {
+                        marginStart = iconMarginPx
+                    }
+                    isClickable = true
+                    isFocusable = true
+                    val outValue = android.util.TypedValue()
+                    theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, outValue, true)
+                    setBackgroundResource(outValue.resourceId)
+                    setOnClickListener { openWhatsAppNudge(entry.whatsapp) }
+                }
+                textRow.addView(nudgeIcon)
+
                 // Only rows with at least one invite are worth drilling
                 // into - matches the mockup, where only Ravi (18 invited)
                 // is tappable and Amara (no invites yet) is not.
@@ -531,8 +556,11 @@ class HistoryActivity : AppCompatActivity() {
                 }
             } else {
                 // WhatsApp nudge icon - opens a chat to this referral's
-                // number with a pre-filled follow-up message. Root-list
-                // only; see comment above.
+                // number with a pre-filled follow-up message. Also shown
+                // on root-list rows now (see block above); duplicated
+                // here rather than shared since the two branches build
+                // very different rows (count pill + chevron vs none of
+                // that one level deep).
                 val iconSizePx = (24 * resources.displayMetrics.density).toInt()
                 val iconMarginPx = (12 * resources.displayMetrics.density).toInt()
                 val nudgeIcon = ImageView(this).apply {
