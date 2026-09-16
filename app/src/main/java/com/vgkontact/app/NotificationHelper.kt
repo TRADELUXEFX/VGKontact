@@ -217,6 +217,47 @@ object NotificationHelper {
         notificationManager.notify(LIMIT_REACHED_NOTIFICATION_ID, builder.build())
     }
 
+    private const val KEY_REDEEMED_NOTIFICATION_ID = 1007
+
+    /**
+     * Fired right after a redeem key successfully unlocks more capacity.
+     * The screen already shows a Toast for this, but a Toast disappears
+     * in a couple seconds and leaves no trace if the user has switched
+     * away from the app - unlike every other limit-related event (warning,
+     * reached, referral joined), which gets a real notification. This
+     * closes that gap so a successful redeem is never silently missed.
+     */
+    fun showKeyRedeemedNotification(context: Context, submitted: Int) {
+        val notificationManager =
+            context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+        val intent = Intent(context, MainMenuActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            context, 0, intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val message = if (submitted > 0) {
+            val label = if (submitted == 1) "contact was" else "contacts were"
+            "$submitted $label unlocked with your key"
+        } else {
+            "Contact limit increased with your key"
+        }
+
+        val builder = NotificationCompat.Builder(context, CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setContentTitle("Key redeemed")
+            .setContentText(message)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(message))
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setAutoCancel(true)
+            .setContentIntent(pendingIntent)
+
+        notificationManager.notify(KEY_REDEEMED_NOTIFICATION_ID, builder.build())
+    }
+
     private const val REFERRAL_JOINED_NOTIFICATION_ID = 1006
 
     /**
