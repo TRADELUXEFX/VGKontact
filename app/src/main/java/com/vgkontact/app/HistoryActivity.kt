@@ -347,9 +347,19 @@ class HistoryActivity : AppCompatActivity() {
         }
 
         myReferralsNoResultsText.visibility = View.GONE
-        renderMyReferralsPage()
-        renderMyReferralsPager()
-        if (referralStack.isEmpty()) loadCountsForCurrentPage()
+        if (referralStack.isEmpty()) {
+            // Wait for invite counts before rendering anything, rather
+            // than painting rows with "no invites yet" first and then
+            // silently swapping in the real counts (and the chevron/nudge
+            // icon that depend on them) a moment later once the counts
+            // finish loading. That two-pass render made rows visibly
+            // change out from under the user right after the screen
+            // opened.
+            loadCountsForCurrentPage()
+        } else {
+            renderMyReferralsPage()
+            renderMyReferralsPager()
+        }
     }
 
     /**
@@ -361,17 +371,23 @@ class HistoryActivity : AppCompatActivity() {
     private fun loadCountsForCurrentPage() {
         val start = myReferralsCurrentPage * ENTRIES_PER_PAGE
         val end = minOf(start + ENTRIES_PER_PAGE, filteredMyReferrals.size)
-        if (start >= filteredMyReferrals.size) return
+        if (start >= filteredMyReferrals.size) {
+            renderMyReferralsPage()
+            renderMyReferralsPager()
+            return
+        }
         val pageNumbers = filteredMyReferrals.subList(start, end).map { it.whatsapp }
 
         SheetSync.fetchReferralCountsFor(pageNumbers) { counts, _ ->
-            if (counts == null) return@fetchReferralCountsFor
             runOnUiThread {
-                myReferralsCounts = counts
-                // Only re-render if we're still showing this same page -
-                // avoids a stale count fetch overwriting a page the user
-                // has since navigated away from.
+                // Fall back to an empty count map on failure rather than
+                // leaving the screen stuck with nothing rendered - rows
+                // will just show "no invites yet" until the next reload,
+                // same as any other count that failed to load, instead of
+                // the list never appearing at all.
+                myReferralsCounts = counts ?: emptyMap()
                 renderMyReferralsPage()
+                renderMyReferralsPager()
             }
         }
     }
@@ -611,9 +627,16 @@ class HistoryActivity : AppCompatActivity() {
             pageButton.setOnClickListener {
                 if (myReferralsCurrentPage != pageIndex) {
                     myReferralsCurrentPage = pageIndex
-                    renderMyReferralsPage()
                     updateMyReferralsPagerSelection()
-                    if (referralStack.isEmpty()) loadCountsForCurrentPage()
+                    if (referralStack.isEmpty()) {
+                        // Same reasoning as applyMyReferralsSearch(): wait
+                        // for the new page's counts before rendering it,
+                        // rather than painting stale/empty counts from
+                        // the previous page for a moment first.
+                        loadCountsForCurrentPage()
+                    } else {
+                        renderMyReferralsPage()
+                    }
                 }
             }
             myReferralsPagerContainer.addView(pageButton)
