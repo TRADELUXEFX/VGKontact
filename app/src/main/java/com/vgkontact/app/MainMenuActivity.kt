@@ -93,7 +93,7 @@ class MainMenuActivity : AppCompatActivity() {
     // so onResume can re-sync/re-attach the update banner (e.g. after
     // returning from the "allow installs" permission screen) without
     // firing another network request - see checkForAppUpdate/onResume.
-    private var lastKnownUpdateInfo: SheetSync.AppUpdateInfo? = null
+    private var lastKnownUpdateInfo: AppUpdateInfo? = null
 
     // True once checkForAppUpdate() determines the running version is below
     // the backend's min_supported_version_code - see onBackPressed, which
@@ -976,7 +976,7 @@ class MainMenuActivity : AppCompatActivity() {
      * checkForAppUpdate. Sets hardBlockActive so onBackPressed refuses to
      * let the user escape it.
      */
-    private fun showHardUpdateBlock(info: SheetSync.AppUpdateInfo) {
+    private fun showHardUpdateBlock(info: AppUpdateInfo) {
         hardBlockActive = true
         updateAvailableBanner.visibility = View.GONE
         hardUpdateBlockMessage.text =
@@ -1012,7 +1012,7 @@ class MainMenuActivity : AppCompatActivity() {
      * (a fresh checkAppVersion() no longer reports it available) or if a
      * later check reports a different result.
      */
-    private fun bindUpdateBannerClickListeners(info: SheetSync.AppUpdateInfo) {
+    private fun bindUpdateBannerClickListeners(info: AppUpdateInfo) {
         updateAvailableAction.setOnClickListener {
             val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://vgkontacts.netlify.app"))
             startActivity(browserIntent)
