@@ -88,6 +88,51 @@
 
         </LinearLayout>
 
+        <!-- Drill-in breadcrumb pill - shown only when viewing someone
+             else's referrals (You > their downline). Sits in the header,
+             centered, matching WhatsApp's pattern of the header itself
+             showing where you are, rather than a small row buried inside
+             the card body where it was easy to miss/mistake for a static
+             label. Tapping it pops one level, wired in
+             HistoryActivity.popReferralLevel(). -->
+        <LinearLayout
+            android:id="@+id/myReferralsBreadcrumb"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:background="@drawable/breadcrumb_pill_background"
+            android:paddingTop="10dp"
+            android:paddingBottom="10dp"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:layout_marginTop="16dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:visibility="gone">
+
+            <ImageView
+                android:id="@+id/breadcrumbBackButton"
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:layout_marginEnd="8dp"
+                android:src="@drawable/ic_chevron_left"
+                app:tint="@color/white" />
+
+            <TextView
+                android:id="@+id/breadcrumbPathText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:fontFamily="@font/manrope"
+                android:textColor="@color/white"
+                android:gravity="center"
+                android:ellipsize="end"
+                android:maxLines="1" />
+
+        </LinearLayout>
+
     </LinearLayout>
 
     <!-- Loading indicator, shown while fetching -->
@@ -142,65 +187,7 @@
                 <!-- Search field - filters this user's own referral list
                      by WhatsApp number, same style/drawable as the
                      Leaderboard panel's historySearchInput. -->
-                <EditText
-                    android:id="@+id/myReferralsSearchInput"
-                    android:layout_width="match_parent"
-                    android:layout_height="46dp"
-                    android:hint="Search by WhatsApp number..."
-                    android:inputType="number"
-                    android:paddingStart="14dp"
-                    android:paddingEnd="14dp"
-                    android:background="@drawable/rect_box_background"
-                    android:textSize="13sp"
-                    android:textColor="@color/vg_dark"
-                    android:textColorHint="@color/text_muted"
-                    android:fontFamily="@font/manrope"
-                    android:imeOptions="actionDone"
-                    android:layout_marginBottom="16dp" />
-
-                <!-- RECENT REFERRALS label + total-referrals pill, same
-                     row, pill right-aligned opposite the label. Pill was
-                     previously in the header (headerTotalPill); moved
-                     here per request, using the same
-                     freq_summary_pill_background (opaque vg_green_tint,
-                     26dp corners) as GroupsActivity's frequency-summary
-                     pill. -->
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:paddingBottom="8dp">
-
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="RECENT REFERRALS"
-                        android:textSize="11sp"
-                        android:textAllCaps="true"
-                        android:letterSpacing="0.05"
-                        android:textColor="@color/text_muted" />
-
-                    <LinearLayout
-                        android:id="@+id/headerTotalPill"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical"
-                        android:background="@drawable/freq_summary_pill_background"
-                        android:paddingStart="12dp"
-                        android:paddingEnd="12dp"
-                        android:paddingTop="5dp"
-                        android:paddingBottom="5dp">
-
-                        <TextView
-                            android:id="@+id/myReferralsTotalText"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="0"
-                            android:textSize="12sp"
-                            android:textStyle="bold"
+< truncated lines 190-248 >
                             android:textColor="@color/vg_green_dark" />
 
                         <TextView
@@ -218,41 +205,6 @@
                     android:layout_width="match_parent"
                     android:layout_height="1dp"
                     android:background="@color/stats_card_border" />
-
-                <!-- Breadcrumb shown only when drilled into someone's
-                     downline (You > Ravi K. > ...). Hidden at the root
-                     level. Tapping breadcrumbBackButton pops one level,
-                     wired in HistoryActivity.popReferralLevel(). -->
-                <LinearLayout
-                    android:id="@+id/myReferralsBreadcrumb"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:paddingTop="12dp"
-                    android:paddingBottom="4dp"
-                    android:visibility="gone">
-
-                    <ImageView
-                        android:id="@+id/breadcrumbBackButton"
-                        android:layout_width="20dp"
-                        android:layout_height="20dp"
-                        android:layout_marginEnd="8dp"
-                        android:src="@drawable/ic_chevron_left"
-                        app:tint="@color/vg_green" />
-
-                    <TextView
-                        android:id="@+id/breadcrumbPathText"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:textSize="13sp"
-                        android:fontFamily="@font/manrope"
-                        android:textColor="@color/text_muted"
-                        android:ellipsize="end"
-                        android:maxLines="1" />
-
-                </LinearLayout>
 
                 <!-- List of this user's own referrals, one page at a
                      time - wired in HistoryActivity.renderMyReferralsPage() -->
