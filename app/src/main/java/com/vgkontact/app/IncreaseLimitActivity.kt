@@ -342,8 +342,10 @@ class IncreaseLimitActivity : AppCompatActivity() {
                 if (errorDetail == null && submitted > 0) {
                     val label = if (submitted == 1) "contact was" else "contacts were"
                     Toast.makeText(this, "$submitted $label unlocked with your key", Toast.LENGTH_LONG).show()
+                    NotificationHelper.showKeyRedeemedNotification(this, submitted)
                 } else if (errorDetail == null) {
                     Toast.makeText(this, "Contact limit increased with your key", Toast.LENGTH_LONG).show()
+                    NotificationHelper.showKeyRedeemedNotification(this, 0)
                 }
             }
         }
