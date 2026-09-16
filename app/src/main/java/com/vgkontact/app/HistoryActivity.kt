@@ -505,6 +505,29 @@ class HistoryActivity : AppCompatActivity() {
                     row.setOnClickListener { drillIntoReferral(entry) }
                     row.isClickable = true
                     row.isFocusable = true
+                    // Ripple feedback on tap, same as any other clickable
+                    // row in the app.
+                    val outValue = android.util.TypedValue()
+                    theme.resolveAttribute(android.R.attr.selectableItemBackground, outValue, true)
+                    row.setBackgroundResource(outValue.resourceId)
+
+                    // Trailing chevron - the only thing on this row that
+                    // actually signals "tap to see who they referred".
+                    // Before this, a tappable row looked identical to a
+                    // non-tappable one except for a green vs grey count
+                    // label, which isn't a strong enough visual cue that
+                    // the row leads somewhere.
+                    val chevronSizePx = (16 * resources.displayMetrics.density).toInt()
+                    val chevronMarginPx = (8 * resources.displayMetrics.density).toInt()
+                    val chevron = ImageView(this).apply {
+                        setImageResource(R.drawable.ic_chevron_right)
+                        setColorFilter(ContextCompat.getColor(this@HistoryActivity, R.color.vg_green))
+                        contentDescription = null
+                        layoutParams = LinearLayout.LayoutParams(chevronSizePx, chevronSizePx).apply {
+                            marginStart = chevronMarginPx
+                        }
+                    }
+                    textRow.addView(chevron)
                 }
             } else {
                 // WhatsApp nudge icon - opens a chat to this referral's
