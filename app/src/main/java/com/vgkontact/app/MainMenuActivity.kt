@@ -696,37 +696,66 @@ class MainMenuActivity : AppCompatActivity() {
 
     /**
      * Populates the three-row viewers block (Free / Purchased / Referred).
-     * Three independent calls, since each RPC covers a different, non-
-     * overlapping slice: home group only, extra_groups only, and the
-     * referral graph - see SheetSync.fetchFreeViewers/
-     * fetchPurchasedViewers/fetchReferredViewersCount. A failure on one
-     * leaves that row showing its last-known value rather than blanking
-     * it, matching loadStats' existing failure behavior above.
+     * Three independent calls in flight at once, since each RPC covers a
+     * different, non-overlapping slice: home group only, extra_groups
+     * only, and the referral graph - see SheetSync.fetchFreeViewers/
+     * fetchPurchasedViewers/fetchReferredViewersCount.
+     *
+     * All three results are held back and written to the screen together
+     * once every call has returned, rather than each row updating the
+     * instant its own call finishes - the calls don't all take the same
+     * time, so writing to the screen independently made the three rows
+     * visibly fill in one at a time instead of appearing together. A
+     * failed call still contributes its "arrival" (via the null check
+     * inside runOnUiThread) so the other two calls finishing isn't stuck
+     * waiting forever on one that failed; that row simply keeps its
+     * last-known value, same failure behavior as before.
      */
     private fun loadViewersBlock() {
-        SheetSync.fetchFreeViewers(this) { result ->
-            if (result != null) {
-                runOnUiThread {
-                    freeViewersCurrentText.text = result.current.toString()
-                    freeViewersMaxText.text = "/${result.max}"
+        var freeResult: SheetSync.ViewerCount? = null
+        var purchasedResult: SheetSync.ViewerCount? = null
+        var referredResult: Long? = null
+        var freeDone = false
+        var purchasedDone = false
+        var referredDone = false
+
+        fun paintIfAllDone() {
+            if (freeDone && purchasedDone && referredDone) {
+                freeResult?.let {
+                    freeViewersCurrentText.text = it.current.toString()
+                    freeViewersMaxText.text = "/${it.max}"
                 }
+                purchasedResult?.let {
+                    purchasedViewersCurrentText.text = it.current.toString()
+                    purchasedViewersMaxText.text = "/${it.max}"
+                }
+                referredResult?.let {
+                    referredViewersCountText.text = it.toString()
+                }
+            }
+        }
+
+        SheetSync.fetchFreeViewers(this) { result ->
+            runOnUiThread {
+                freeResult = result
+                freeDone = true
+                paintIfAllDone()
             }
         }
 
         SheetSync.fetchPurchasedViewers(this) { result ->
-            if (result != null) {
-                runOnUiThread {
-                    purchasedViewersCurrentText.text = result.current.toString()
-                    purchasedViewersMaxText.text = "/${result.max}"
-                }
+            runOnUiThread {
+                purchasedResult = result
+                purchasedDone = true
+                paintIfAllDone()
             }
         }
 
         SheetSync.fetchReferredViewersCount(this) { count ->
-            if (count != null) {
-                runOnUiThread {
-                    referredViewersCountText.text = count.toString()
-                }
+            runOnUiThread {
+                referredResult = count
+                referredDone = true
+                paintIfAllDone()
             }
         }
     }
