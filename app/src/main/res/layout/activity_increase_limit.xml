@@ -56,7 +56,7 @@
             android:textStyle="bold"
             android:textColor="@color/white"
             android:textAlignment="center"
-            android:fontFamily="@font/baloo2" />
+            android:fontFamily="@font/poppins" />
 
         <!-- ============ TAB SWITCHER (segmented control) ============
              Moved up into the header, replacing the subtitle text, per
