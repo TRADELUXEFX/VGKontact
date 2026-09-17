@@ -93,6 +93,7 @@ class HistoryActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_history)
+        FontHelper.applyPoppinsAsync(this, findViewById(android.R.id.content))
         FloatingContactHelper.attach(this)
         BottomNavHelper.setup(this, BottomNavHelper.Tab.HISTORY)
 
