@@ -34,7 +34,7 @@
             android:textColor="@color/white"
             android:textSize="18sp"
             android:textStyle="bold"
-            android:fontFamily="@font/baloo2" />
+            android:fontFamily="@font/poppins" />
 
     </FrameLayout>
 
@@ -49,7 +49,7 @@
         android:textSize="14sp"
         android:paddingStart="32dp"
         android:paddingEnd="32dp"
-        android:fontFamily="@font/baloo2"
+        android:fontFamily="@font/poppins"
         android:visibility="gone" />
 
     <ScrollView
