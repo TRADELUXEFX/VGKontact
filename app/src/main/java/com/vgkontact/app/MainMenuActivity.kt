@@ -113,6 +113,7 @@ class MainMenuActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main_menu)
+        FontHelper.applyPoppinsAsync(this, findViewById(android.R.id.content))
         contactUsFab = FloatingContactHelper.attach(this)
 
         window.statusBarColor = ContextCompat.getColor(this, R.color.vg_green)
