@@ -501,6 +501,44 @@ class HistoryActivity : AppCompatActivity() {
             // there and don't need their count restated.
             if (referralStack.isEmpty()) {
                 val count = myReferralsCounts[entry.whatsapp] ?: 0
+
+                // Trailing pill - wraps the nudge icon, invite-count text,
+                // and (when tappable) the chevron all inside one rounded
+                // container, so they read as a single control rather than
+                // three separate items floating on the row.
+                val trailingPillPaddingH = (12 * resources.displayMetrics.density).toInt()
+                val trailingPillPaddingV = (6 * resources.displayMetrics.density).toInt()
+                val trailingPill = LinearLayout(this).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = android.view.Gravity.CENTER_VERTICAL
+                    background = ContextCompat.getDrawable(this@HistoryActivity, R.drawable.referral_number_pill_background)
+                    setPadding(trailingPillPaddingH, trailingPillPaddingV, trailingPillPaddingH, trailingPillPaddingV)
+                }
+
+                // WhatsApp nudge icon - placed first, before the invite
+                // count. Was previously only shown one level deep into a
+                // drill-in. Added here too so root-list rows can always
+                // message a referral, regardless of whether they've
+                // invited anyone yet. Its own click listener + isClickable,
+                // separate from the row's drill-in listener below, so
+                // tapping the icon doesn't also trigger navigation into
+                // the row.
+                val iconSizePx = (18 * resources.displayMetrics.density).toInt()
+                val nudgeIcon = ImageView(this).apply {
+                    setImageResource(R.drawable.ic_chat)
+                    setColorFilter(ContextCompat.getColor(this@HistoryActivity, R.color.vg_green))
+                    contentDescription = "Message ${entry.whatsapp} on WhatsApp"
+                    layoutParams = LinearLayout.LayoutParams(iconSizePx, iconSizePx)
+                    isClickable = true
+                    isFocusable = true
+                    val outValue = android.util.TypedValue()
+                    theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, outValue, true)
+                    setBackgroundResource(outValue.resourceId)
+                    setOnClickListener { openWhatsAppNudge(entry.whatsapp) }
+                }
+                trailingPill.addView(nudgeIcon)
+
+                val countMarginPx = (8 * resources.displayMetrics.density).toInt()
                 val countView = TextView(this).apply {
                     text = if (count > 0) "$count invited" else "no invites yet"
                     textSize = 12f
@@ -511,33 +549,14 @@ class HistoryActivity : AppCompatActivity() {
                         )
                     )
                     if (count > 0) setTypeface(typeface, android.graphics.Typeface.BOLD)
-                }
-                textRow.addView(countView)
-
-                // WhatsApp nudge icon - was previously only shown one
-                // level deep into a drill-in. Added here too so root-list
-                // rows can always message a referral, regardless of
-                // whether they've invited anyone yet. Its own click
-                // listener + isClickable, separate from the row's
-                // drill-in listener below, so tapping the icon doesn't
-                // also trigger navigation into the row.
-                val iconSizePx = (22 * resources.displayMetrics.density).toInt()
-                val iconMarginPx = (10 * resources.displayMetrics.density).toInt()
-                val nudgeIcon = ImageView(this).apply {
-                    setImageResource(R.drawable.ic_chat)
-                    setColorFilter(ContextCompat.getColor(this@HistoryActivity, R.color.vg_green))
-                    contentDescription = "Message ${entry.whatsapp} on WhatsApp"
-                    layoutParams = LinearLayout.LayoutParams(iconSizePx, iconSizePx).apply {
-                        marginStart = iconMarginPx
+                    layoutParams = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT
+                    ).apply {
+                        marginStart = countMarginPx
                     }
-                    isClickable = true
-                    isFocusable = true
-                    val outValue = android.util.TypedValue()
-                    theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, outValue, true)
-                    setBackgroundResource(outValue.resourceId)
-                    setOnClickListener { openWhatsAppNudge(entry.whatsapp) }
                 }
-                textRow.addView(nudgeIcon)
+                trailingPill.addView(countView)
 
                 // Only rows with at least one invite are worth drilling
                 // into - matches the mockup, where only Ravi (18 invited)
@@ -557,9 +576,10 @@ class HistoryActivity : AppCompatActivity() {
                     // Before this, a tappable row looked identical to a
                     // non-tappable one except for a green vs grey count
                     // label, which isn't a strong enough visual cue that
-                    // the row leads somewhere.
+                    // the row leads somewhere. Kept inside the same pill
+                    // as the icon and count.
                     val chevronSizePx = (16 * resources.displayMetrics.density).toInt()
-                    val chevronMarginPx = (8 * resources.displayMetrics.density).toInt()
+                    val chevronMarginPx = (6 * resources.displayMetrics.density).toInt()
                     val chevron = ImageView(this).apply {
                         setImageResource(R.drawable.ic_chevron_right)
                         setColorFilter(ContextCompat.getColor(this@HistoryActivity, R.color.vg_green))
@@ -568,8 +588,10 @@ class HistoryActivity : AppCompatActivity() {
                             marginStart = chevronMarginPx
                         }
                     }
-                    textRow.addView(chevron)
+                    trailingPill.addView(chevron)
                 }
+
+                textRow.addView(trailingPill)
             } else {
                 // WhatsApp nudge icon - opens a chat to this referral's
                 // number with a pre-filled follow-up message. Also shown
