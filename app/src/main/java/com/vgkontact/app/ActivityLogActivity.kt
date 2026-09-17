@@ -24,7 +24,7 @@ import androidx.core.content.ContextCompat
  * codebase's general preference for hand-built views over a
  * RecyclerView adapter for lists this small (capped at 100 entries).
  */
-class ActivityLogActivity : AppCompatActivity() {
+class ActivityLogActivity : BaseActivity() {
 
     private lateinit var listContainer: LinearLayout
     private lateinit var emptyText: TextView
