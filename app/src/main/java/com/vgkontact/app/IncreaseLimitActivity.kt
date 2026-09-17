@@ -45,7 +45,7 @@ import android.widget.EditText
  * Referral tab, since referring friends doesn't require the user to
  * already have something (a code) in hand, unlike the key tab.
  */
-class IncreaseLimitActivity : AppCompatActivity() {
+class IncreaseLimitActivity : BaseActivity() {
 
     companion object {
         // Callers can pass this to control which tab opens first - e.g.
