@@ -125,7 +125,7 @@
                 android:layout_height="wrap_content"
                 android:textSize="13sp"
                 android:textStyle="bold"
-                android:fontFamily="@font/manrope"
+                android:fontFamily="@font/poppins"
                 android:textColor="@color/white"
                 android:gravity="center"
                 android:ellipsize="end"
@@ -199,7 +199,7 @@
                     android:textSize="13sp"
                     android:textColor="@color/vg_dark"
                     android:textColorHint="@color/text_muted"
-                    android:fontFamily="@font/manrope"
+                    android:fontFamily="@font/poppins"
                     android:imeOptions="actionDone"
                     android:layout_marginBottom="16dp" />
 
@@ -344,7 +344,7 @@
                     android:textSize="13sp"
                     android:textColor="@color/vg_dark"
                     android:textColorHint="@color/text_muted"
-                    android:fontFamily="@font/manrope"
+                    android:fontFamily="@font/poppins"
                     android:imeOptions="actionDone"
                     android:layout_marginBottom="16dp" />
 
