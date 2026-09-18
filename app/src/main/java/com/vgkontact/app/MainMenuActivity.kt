@@ -41,7 +41,7 @@ import androidx.core.content.ContextCompat
  * code unlocks is decided entirely by the admin server-side
  * (keys.groups_unlock); the user never sees or chooses a specific group ID.
  */
-class MainMenuActivity : AppCompatActivity() {
+class MainMenuActivity : BaseActivity() {
 
     // Support number for the hard-update-block's WhatsApp fallback - same
     // number/format used everywhere else in the app (ProfileActivity,
@@ -113,7 +113,6 @@ class MainMenuActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main_menu)
-        FontHelper.applyPoppinsAsync(this, findViewById(android.R.id.content))
         contactUsFab = FloatingContactHelper.attach(this)
 
         window.statusBarColor = ContextCompat.getColor(this, R.color.vg_green)
@@ -553,6 +552,13 @@ class MainMenuActivity : AppCompatActivity() {
             }
             optionsContainer.addView(optionRow)
         }
+
+        // popupView is inflated standalone (inflater.inflate(..., null))
+        // rather than into the Activity's own content view, so
+        // BaseActivity's setContentView-time font pass never sees it.
+        // Apply it here, after every option row has been added, so the
+        // whole popup - shell and rows together - picks up Poppins.
+        FontHelper.applyPoppinsAsync(this, popupView)
 
         popupWindow.isOutsideTouchable = true
         popupWindow.showAsDropDown(syncFrequencyAlarmIcon, 0, 8)
