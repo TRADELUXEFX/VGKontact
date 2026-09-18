@@ -95,7 +95,7 @@ class PermissionSetupActivity : AppCompatActivity() {
                 stepTitleText.text = "Contacts Access"
                 stepDescriptionText.text =
                     "VG Kontact needs contacts access to add and sync numbers on your phone."
-                stepIcon.setImageResource(R.drawable.ic_contacts)
+                stepIcon.setImageResource(R.drawable.illus_onboarding_sync)
                 stepActionButton.text = "Allow Contacts Access"
                 stepActionButton.setOnClickListener { requestContactsPermission() }
             }
@@ -104,7 +104,7 @@ class PermissionSetupActivity : AppCompatActivity() {
                 stepTitleText.text = "Stay Notified"
                 stepDescriptionText.text =
                     "Get notified when new Kontacts are ready to sync."
-                stepIcon.setImageResource(R.drawable.ic_notification_bell)
+                stepIcon.setImageResource(R.drawable.illus_empty_contacts)
                 stepActionButton.text = "Allow Notifications"
                 stepActionButton.setOnClickListener { requestNotificationPermission() }
             }
@@ -113,7 +113,7 @@ class PermissionSetupActivity : AppCompatActivity() {
                 stepTitleText.text = "Reliable Background Sync"
                 stepDescriptionText.text =
                     "Allow VG Kontact to run in the background so syncing stays reliable."
-                stepIcon.setImageResource(R.drawable.ic_battery)
+                stepIcon.setImageResource(R.drawable.illus_sync_success)
                 stepActionButton.text = "Allow Background Activity"
                 stepActionButton.setOnClickListener { requestBatteryExemption() }
             }
