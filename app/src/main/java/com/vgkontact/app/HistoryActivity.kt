@@ -43,7 +43,7 @@ import java.util.concurrent.TimeUnit
  * "Leaderboard" shows the ranked list above (search + pager unchanged).
  * Each tab only fetches its data the first time it's opened.
  */
-class HistoryActivity : AppCompatActivity() {
+class HistoryActivity : BaseActivity() {
 
     private lateinit var progressBar: ProgressBar
     private lateinit var emptyText: TextView
@@ -93,7 +93,6 @@ class HistoryActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_history)
-        FontHelper.applyPoppinsAsync(this, findViewById(android.R.id.content))
         FloatingContactHelper.attach(this)
         BottomNavHelper.setup(this, BottomNavHelper.Tab.HISTORY)
 
@@ -663,6 +662,9 @@ class HistoryActivity : AppCompatActivity() {
                 }
             }
             myReferralsPagerContainer.addView(pageButton)
+            // Inflated after setContentView() already ran, so
+            // BaseActivity's one-time font pass never reaches it.
+            FontHelper.applyPoppinsAsync(this, pageButton)
         }
 
         updateMyReferralsPagerSelection()
@@ -870,6 +872,9 @@ class HistoryActivity : AppCompatActivity() {
                 }
             }
             historyPagerContainer.addView(pageButton)
+            // Inflated after setContentView() already ran, so
+            // BaseActivity's one-time font pass never reaches it.
+            FontHelper.applyPoppinsAsync(this, pageButton)
         }
 
         updatePagerSelection()
