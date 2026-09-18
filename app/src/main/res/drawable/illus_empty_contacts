@@ -1,0 +1,48 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="220dp"
+    android:height="200dp"
+    android:viewportWidth="220"
+    android:viewportHeight="200">
+
+    <!-- Background blob -->
+    <path
+        android:pathData="M110,15 C155,15 192,52 192,97 C192,142 155,179 110,179 C65,179 28,142 28,97 C28,52 65,15 110,15 Z"
+        android:fillColor="#F5FAF6"/>
+
+    <!-- Folder back -->
+    <path
+        android:pathData="M55,75 L95,75 L105,88 L165,88 C168.3,88 171,90.7 171,94 L171,150 C171,153.3 168.3,156 165,156 L55,156 C51.7,156 49,153.3 49,150 L49,81 C49,77.7 51.7,75 55,75 Z"
+        android:fillColor="#DCEEE1"/>
+
+    <!-- Folder front -->
+    <path
+        android:pathData="M46,98 C46,95.2 48.2,93 51,93 L169,93 C171.8,93 174,95.2 174,98 L167,151 C166.6,153.8 164.2,156 161.3,156 L58.7,156 C55.8,156 53.4,153.8 53,151 Z"
+        android:fillColor="#1FAA59"/>
+
+    <!-- Person circle -->
+    <path
+        android:pathData="M110,105 C116.6,105 122,110.4 122,117 C122,123.6 116.6,129 110,129 C103.4,129 98,123.6 98,117 C98,110.4 103.4,105 110,105 Z"
+        android:fillColor="#FFFFFF"/>
+
+    <!-- Plus badge on person -->
+    <path
+        android:pathData="M108,110 L112,110 L112,114 L116,114 L116,118 L112,118 L112,122 L108,122 L108,118 L104,118 L104,114 L108,114 Z"
+        android:fillColor="#158245"/>
+
+    <!-- Small dots (representing absent contacts) -->
+    <path
+        android:pathData="M30,110 C30,107.2 32.2,105 35,105 C37.8,105 40,107.2 40,110 C40,112.8 37.8,115 35,115 C32.2,115 30,112.8 30,110 Z"
+        android:fillColor="#B6F0C9"/>
+    <path
+        android:pathData="M180,130 C180,126.7 182.7,124 186,124 C189.3,124 192,126.7 192,130 C192,133.3 189.3,136 186,136 C182.7,136 180,133.3 180,130 Z"
+        android:fillColor="#B6F0C9"/>
+    <path
+        android:pathData="M175,70 C175,67.8 176.8,66 179,66 C181.2,66 183,67.8 183,70 C183,72.2 181.2,74 179,74 C176.8,74 175,72.2 175,70 Z"
+        android:fillColor="#DCEEE1"/>
+
+    <!-- Ground shadow -->
+    <path
+        android:pathData="M75,182 L165,182 L165,188 L75,188 Z"
+        android:fillColor="#E4EAE5"/>
+
+</vector>
