@@ -71,12 +71,13 @@
 
                 <ImageView
                     android:id="@+id/stepIcon"
-                    android:layout_width="64dp"
-                    android:layout_height="64dp"
-                    android:padding="14dp"
-                    android:background="@drawable/avatar_circle_background"
-                    android:src="@drawable/ic_contacts"
-                    app:tint="@color/vg_green" />
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:maxWidth="200dp"
+                    android:maxHeight="200dp"
+                    android:adjustViewBounds="true"
+                    android:src="@drawable/illus_onboarding_sync"
+                    android:contentDescription="@null" />
 
                 <TextView
                     android:id="@+id/stepDescriptionText"
