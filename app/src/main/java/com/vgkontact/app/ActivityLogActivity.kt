@@ -68,6 +68,9 @@ class ActivityLogActivity : BaseActivity() {
             row.findViewById<TextView>(R.id.rowTime).text = entry.displayTime()
             row.findViewById<ImageView>(R.id.rowIcon).setImageResource(iconFor(entry.type))
             listContainer.addView(row)
+            // Inflated after setContentView() already ran, so
+            // BaseActivity's one-time font pass never reaches it.
+            FontHelper.applyPoppinsAsync(this, row)
 
             // Hairline divider between rows, skipped after the last entry -
             // matches the RECENT REFERRALS divider pattern in
