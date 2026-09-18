@@ -232,6 +232,14 @@ object CoachMarkOverlay {
 
             nextButton.setOnClickListener { onNext?.invoke() }
             skipView.setOnClickListener { onSkip?.invoke() }
+
+            // This whole tooltip is built as loose TextViews/Buttons and
+            // added straight to the window (see WindowManager.addView in
+            // show()), not inflated into the Activity's own content view -
+            // so BaseActivity's setContentView-time font pass never
+            // reaches it. Apply it once here, to the root, covering every
+            // child in one pass.
+            FontHelper.applyPoppinsAsync(activity, root)
         }
 
         fun bind(title: String, message: String, counter: String, nextLabel: String) {
