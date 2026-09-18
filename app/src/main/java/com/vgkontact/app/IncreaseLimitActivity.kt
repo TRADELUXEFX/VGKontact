@@ -237,6 +237,15 @@ class IncreaseLimitActivity : BaseActivity() {
             actionButton.setOnClickListener { openCampaignLink(campaign) }
 
             campaignCardsContainer.addView(card)
+
+            // This card is inflated here at runtime, after
+            // setContentView() already returned - so BaseActivity's
+            // one-time applyPoppinsAsync() pass (which only walks the
+            // view tree that existed at setContentView time) never
+            // touches it, and it silently falls back to the system
+            // font. Apply Poppins to it directly, once it's actually
+            // in the tree, so campaign cards match every other screen.
+            FontHelper.applyPoppinsAsync(this, card)
         }
     }
 
