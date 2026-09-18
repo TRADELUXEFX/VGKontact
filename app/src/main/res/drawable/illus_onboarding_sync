@@ -1,0 +1,74 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="240dp"
+    android:height="240dp"
+    android:viewportWidth="240"
+    android:viewportHeight="240">
+
+    <!-- Background circle -->
+    <path
+        android:pathData="M120,20 C171.9,20 214,62.1 214,114 C214,165.9 171.9,208 120,208 C68.1,208 26,165.9 26,114 C26,62.1 68.1,20 120,20 Z"
+        android:fillColor="#E1F5EB"/>
+
+    <!-- Phone body -->
+    <path
+        android:pathData="M85,50 L155,50 C160.5,50 165,54.5 165,60 L165,180 C165,185.5 160.5,190 155,190 L85,190 C79.5,190 75,185.5 75,180 L75,60 C75,54.5 79.5,50 85,50 Z"
+        android:fillColor="#111B21"/>
+
+    <!-- Phone screen -->
+    <path
+        android:pathData="M83,64 L157,64 L157,168 L83,168 Z"
+        android:fillColor="#FFFFFF"/>
+
+    <!-- Screen home indicator -->
+    <path
+        android:pathData="M110,178 L130,178 L130,181 L110,181 Z"
+        android:fillColor="#3A4750"/>
+
+    <!-- Contact row 1 -->
+    <path
+        android:pathData="M93,78 C93,74.7 95.7,72 99,72 C102.3,72 105,74.7 105,78 C105,81.3 102.3,84 99,84 C95.7,84 93,81.3 93,78 Z"
+        android:fillColor="#1FAA59"/>
+    <path
+        android:pathData="M112,75 L147,75 L147,79 L112,79 Z"
+        android:fillColor="#DCEEE1"/>
+    <path
+        android:pathData="M112,82 L135,82 L135,85 L112,85 Z"
+        android:fillColor="#DCEEE1"/>
+
+    <!-- Contact row 2 -->
+    <path
+        android:pathData="M93,100 C93,96.7 95.7,94 99,94 C102.3,94 105,96.7 105,100 C105,103.3 102.3,106 99,106 C95.7,106 93,103.3 93,100 Z"
+        android:fillColor="#1FAA59"/>
+    <path
+        android:pathData="M112,97 L147,97 L147,101 L112,101 Z"
+        android:fillColor="#DCEEE1"/>
+    <path
+        android:pathData="M112,104 L135,104 L135,107 L112,107 Z"
+        android:fillColor="#DCEEE1"/>
+
+    <!-- Contact row 3 -->
+    <path
+        android:pathData="M93,122 C93,118.7 95.7,116 99,116 C102.3,116 105,118.7 105,122 C105,125.3 102.3,128 99,128 C95.7,128 93,125.3 93,122 Z"
+        android:fillColor="#1FAA59"/>
+    <path
+        android:pathData="M112,119 L147,119 L147,123 L112,123 Z"
+        android:fillColor="#DCEEE1"/>
+    <path
+        android:pathData="M112,126 L135,126 L135,129 L112,129 Z"
+        android:fillColor="#DCEEE1"/>
+
+    <!-- Sync badge circle (bottom right, overlapping phone) -->
+    <path
+        android:pathData="M148,138 C161.3,138 172,148.7 172,162 C172,175.3 161.3,186 148,186 C134.7,186 124,175.3 124,162 C124,148.7 134.7,138 148,138 Z"
+        android:fillColor="#1FAA59"/>
+
+    <!-- Sync arrows inside badge -->
+    <path
+        android:pathData="M138,156 C138,150.5 142.5,146 148,146 C152,146 155.4,148.3 157,151.6 L157,148 L160,148 L160,156 L152,156 L152,153 L155.5,153 C154.3,150.7 151.8,149 148,149 C144.1,149 141,152.1 141,156 Z"
+        android:fillColor="#FFFFFF"/>
+    <path
+        android:pathData="M158,168 C158,173.5 153.5,178 148,178 C144,178 140.6,175.7 139,172.4 L139,176 L136,176 L136,168 L144,168 L144,171 L140.5,171 C141.7,173.3 144.2,175 148,175 C151.9,175 155,171.9 155,168 Z"
+        android:fillColor="#FFFFFF"/>
+
+</vector>
+
