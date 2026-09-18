@@ -5,7 +5,7 @@
     android:layout_height="wrap_content"
     android:textColor="@color/vg_dark"
     android:textSize="15sp"
-    android:fontFamily="@font/baloo2"
+    android:fontFamily="@font/poppins"
     android:paddingStart="20dp"
     android:paddingEnd="20dp"
     android:paddingTop="14dp"
