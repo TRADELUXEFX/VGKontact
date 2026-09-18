@@ -1,0 +1,38 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="220dp"
+    android:height="220dp"
+    android:viewportWidth="220"
+    android:viewportHeight="220">
+
+    <!-- Background circle -->
+    <path
+        android:pathData="M110,20 C160.6,20 202,61.4 202,112 C202,162.6 160.6,204 110,204 C59.4,204 18,162.6 18,112 C18,61.4 59.4,20 110,20 Z"
+        android:fillColor="#E1F5EB"/>
+
+    <!-- Outer ring -->
+    <path
+        android:pathData="M110,50 C143.9,50 172,78.1 172,112 C172,145.9 143.9,174 110,174 C76.1,174 48,145.9 48,112 C48,78.1 76.1,50 110,50 Z M110,58 C80.5,58 56,82.5 56,112 C56,141.5 80.5,166 110,166 C139.5,166 164,141.5 164,112 C164,82.5 139.5,58 110,58 Z"
+        android:fillColor="#B6F0C9"/>
+
+    <!-- Green filled circle -->
+    <path
+        android:pathData="M110,64 C136.5,64 158,85.5 158,112 C158,138.5 136.5,160 110,160 C83.5,160 62,138.5 62,112 C62,85.5 83.5,64 110,64 Z"
+        android:fillColor="#1FAA59"/>
+
+    <!-- Checkmark -->
+    <path
+        android:pathData="M92,113 L104,125 L130,97 L125,92 L104,115 L97,108 Z"
+        android:fillColor="#FFFFFF"/>
+
+    <!-- Sparkle accents -->
+    <path
+        android:pathData="M38,80 L41,87 L48,90 L41,93 L38,100 L35,93 L28,90 L35,87 Z"
+        android:fillColor="#158245"/>
+    <path
+        android:pathData="M178,140 L180,145 L185,147 L180,149 L178,154 L176,149 L171,147 L176,145 Z"
+        android:fillColor="#158245"/>
+    <path
+        android:pathData="M170,55 C170,53.3 171.3,52 173,52 C174.7,52 176,53.3 176,55 C176,56.7 174.7,58 173,58 C171.3,58 170,56.7 170,55 Z"
+        android:fillColor="#DCEEE1"/>
+
+</vector>
