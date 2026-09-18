@@ -57,7 +57,7 @@ class HistoryActivity : BaseActivity() {
     private lateinit var tabLeaderboardButton: Button
     private lateinit var myReferralsPanel: LinearLayout
     private lateinit var leaderboardPanel: LinearLayout
-    private lateinit var headerTotalPill: LinearLayout
+    private lateinit var recentReferralsHeaderRow: LinearLayout
 
     private lateinit var myReferralsTotalText: TextView
     private lateinit var myReferralsSearchInput: EditText
@@ -112,7 +112,7 @@ class HistoryActivity : BaseActivity() {
         leaderboardPanel = findViewById(R.id.leaderboardPanel)
 
         myReferralsTotalText = findViewById(R.id.myReferralsTotalText)
-        headerTotalPill = findViewById(R.id.headerTotalPill)
+        recentReferralsHeaderRow = findViewById(R.id.recentReferralsHeaderRow)
         myReferralsSearchInput = findViewById(R.id.myReferralsSearchInput)
         myReferralsListContainer = findViewById(R.id.myReferralsListContainer)
         myReferralsEmptyText = findViewById(R.id.myReferralsEmptyText)
@@ -160,7 +160,13 @@ class HistoryActivity : BaseActivity() {
     private fun showMyReferralsTab() {
         myReferralsPanel.visibility = View.VISIBLE
         leaderboardPanel.visibility = View.GONE
-        headerTotalPill.visibility = View.VISIBLE
+        recentReferralsHeaderRow.visibility = View.VISIBLE
+        // Both search fields now live in the header (moved up from
+        // inside their panels, per request) and are shown/hidden in
+        // lockstep with which tab is active, same as the panels
+        // themselves.
+        myReferralsSearchInput.visibility = View.VISIBLE
+        historySearchInput.visibility = View.GONE
         tabMyReferralsButton.backgroundTintList = ContextCompat.getColorStateList(this, R.color.white)
         tabMyReferralsButton.setTextColor(ContextCompat.getColor(this, R.color.vg_green))
         tabLeaderboardButton.backgroundTintList = ContextCompat.getColorStateList(this, android.R.color.transparent)
@@ -188,7 +194,9 @@ class HistoryActivity : BaseActivity() {
     private fun showLeaderboardTab() {
         myReferralsPanel.visibility = View.GONE
         leaderboardPanel.visibility = View.VISIBLE
-        headerTotalPill.visibility = View.GONE
+        recentReferralsHeaderRow.visibility = View.GONE
+        myReferralsSearchInput.visibility = View.GONE
+        historySearchInput.visibility = View.VISIBLE
         tabLeaderboardButton.backgroundTintList = ContextCompat.getColorStateList(this, R.color.white)
         tabLeaderboardButton.setTextColor(ContextCompat.getColor(this, R.color.vg_green))
         tabMyReferralsButton.backgroundTintList = ContextCompat.getColorStateList(this, android.R.color.transparent)
@@ -311,6 +319,15 @@ class HistoryActivity : BaseActivity() {
 
     /** Shows/hides and fills the drill-in breadcrumb pill based on current drill depth. */
     private fun updateBreadcrumb() {
+        // "RECENT REFERRALS" + the total-referrals pill only describe the
+        // current user's own list - hide them at any drilled-in depth,
+        // where the list shown belongs to someone else's downline
+        // instead. Runs on every drill-in/drill-out transition since
+        // this function is already called from both directions
+        // (drillIntoReferral -> loadReferralsForStack, and
+        // popReferralLevel).
+        recentReferralsHeaderRow.visibility = if (referralStack.isEmpty()) View.VISIBLE else View.GONE
+
         if (referralStack.isEmpty()) {
             myReferralsBreadcrumb.visibility = View.GONE
             return
