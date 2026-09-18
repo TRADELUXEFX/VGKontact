@@ -32,7 +32,7 @@
             android:layout_height="wrap_content"
             android:textColor="@color/vg_dark"
             android:textSize="14sp"
-            android:fontFamily="@font/baloo2"
+            android:fontFamily="@font/poppins"
             tools:text="Contact synced" />
 
         <TextView
@@ -42,7 +42,7 @@
             android:layout_marginTop="2dp"
             android:textColor="@color/text_muted"
             android:textSize="12sp"
-            android:fontFamily="@font/baloo2"
+            android:fontFamily="@font/poppins"
             tools:text="Sep 9, 14:02" />
 
     </LinearLayout>
