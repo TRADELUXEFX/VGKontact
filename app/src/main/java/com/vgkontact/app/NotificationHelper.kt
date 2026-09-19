@@ -258,6 +258,43 @@ object NotificationHelper {
         notificationManager.notify(KEY_REDEEMED_NOTIFICATION_ID, builder.build())
     }
 
+    private const val DAILY_REPOST_NOTIFICATION_ID = 1008
+    const val REPOST_ACTION = "com.vgkontact.app.ACTION_REPOST"
+
+    /**
+     * Persistent daily reminder nudging the user to go reshare the
+     * admin's WhatsApp Status. Ongoing (not swipeable away) since this
+     * is a recurring daily prompt, not a one-off event - matches the
+     * "act now" framing already used by showLimitReachedNotification,
+     * but stays up until the next day's refresh rather than
+     * auto-cancelling on tap, since the user needs it as a standing
+     * reminder to come back to.
+     */
+    fun showDailyRepostNotification(context: Context) {
+        val notificationManager =
+            context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+        val repostIntent = Intent(REPOST_ACTION).apply {
+            setPackage(context.packageName)
+        }
+        val repostPendingIntent = PendingIntent.getBroadcast(
+            context, 0, repostIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val builder = NotificationCompat.Builder(context, CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setContentTitle("Grow your views today")
+            .setContentText("Tap Repost, open admin's status and reshare it")
+            .setStyle(NotificationCompat.BigTextStyle().bigText("Tap Repost, open admin's status and reshare it"))
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setOngoing(true)
+            .setAutoCancel(false)
+            .addAction(R.drawable.ic_notification, "Repost", repostPendingIntent)
+
+        notificationManager.notify(DAILY_REPOST_NOTIFICATION_ID, builder.build())
+    }
+
     private const val REFERRAL_JOINED_NOTIFICATION_ID = 1006
 
     /**
