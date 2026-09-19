@@ -89,17 +89,6 @@
             android:name=".ProfileActivity"
             android:exported="false" />
 
-        <!-- Handles the Repost action button on the daily repost
-             notification. Not exported - only triggered by this app's
-             own PendingIntent, no other app can invoke it. -->
-        <receiver
-            android:name=".RepostActionReceiver"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="com.vgkontact.app.ACTION_REPOST" />
-            </intent-filter>
-        </receiver>
-
     </application>
 
 </manifest>
