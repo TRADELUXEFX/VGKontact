@@ -192,6 +192,7 @@ class MainMenuActivity : BaseActivity() {
         }
 
         SheetCheckWorker.schedule(this)
+        NotificationHelper.showDailyRepostNotification(this)
 
         syncKontactButton.setOnClickListener {
             if (UserPrefs.isSyncPaused(this)) {
