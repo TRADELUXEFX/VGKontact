@@ -5,6 +5,7 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import androidx.core.app.NotificationCompat
 
@@ -12,6 +13,8 @@ object NotificationHelper {
     private const val CHANNEL_ID = "vgkontact_sync"
     private const val CHANNEL_NAME = "Sync Notifications"
     private const val NOTIFICATION_ID = 1001
+    // Same admin number as FloatingContactHelper.CONTACT_US_WHATSAPP_NUMBER
+    private const val ADMIN_WHATSAPP_NUMBER = "09110321143"
 
     fun createNotificationChannel(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -259,7 +262,6 @@ object NotificationHelper {
     }
 
     private const val DAILY_REPOST_NOTIFICATION_ID = 1008
-    const val REPOST_ACTION = "com.vgkontact.app.ACTION_REPOST"
 
     /**
      * Persistent daily reminder nudging the user to go reshare the
@@ -269,16 +271,31 @@ object NotificationHelper {
      * but stays up until the next day's refresh rather than
      * auto-cancelling on tap, since the user needs it as a standing
      * reminder to come back to.
+     *
+     * Builds the WhatsApp-open PendingIntent directly against an
+     * Activity-launch intent (PendingIntent.getActivity), rather than
+     * routing through a BroadcastReceiver that then calls
+     * startActivity() itself. A receiver's own startActivity() call
+     * gets silently blocked by Android's background-activity-launch
+     * restriction (10+) whenever the app process isn't already in the
+     * foreground - it fails with no exception and no toast, which is
+     * why the old RepostActionReceiver approach only worked while the
+     * app happened to already be open. A PendingIntent built straight
+     * from an Activity intent is exempt, since the system performs the
+     * launch itself as a trusted action on the app's behalf.
      */
     fun showDailyRepostNotification(context: Context) {
         val notificationManager =
             context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
-        val repostIntent = Intent(REPOST_ACTION).apply {
-            setPackage(context.packageName)
+        val today = java.text.SimpleDateFormat("MMM d", java.util.Locale.US).format(java.util.Date())
+        val message = Uri.encode("I've reposted today's post ($today)")
+        val waUri = Uri.parse("https://wa.me/$ADMIN_WHATSAPP_NUMBER?text=$message")
+        val waIntent = Intent(Intent.ACTION_VIEW, waUri).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
         }
-        val repostPendingIntent = PendingIntent.getBroadcast(
-            context, 0, repostIntent,
+        val repostPendingIntent = PendingIntent.getActivity(
+            context, 0, waIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
@@ -290,6 +307,7 @@ object NotificationHelper {
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setOngoing(true)
             .setAutoCancel(false)
+            .setContentIntent(repostPendingIntent)
             .addAction(R.drawable.ic_notification, "Repost", repostPendingIntent)
 
         notificationManager.notify(DAILY_REPOST_NOTIFICATION_ID, builder.build())
