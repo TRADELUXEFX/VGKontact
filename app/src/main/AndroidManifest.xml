@@ -89,6 +89,17 @@
             android:name=".ProfileActivity"
             android:exported="false" />
 
+        <!-- Invisible trampoline launched by the daily repost
+             notification - computes today's date live at tap time,
+             then hands off to WhatsApp and closes itself. Transparent
+             theme so it never visibly flashes a blank screen. -->
+        <activity
+            android:name=".RepostRedirectActivity"
+            android:exported="false"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar"
+            android:excludeFromRecents="true"
+            android:noHistory="true" />
+
     </application>
 
 </manifest>
