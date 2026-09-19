@@ -94,7 +94,11 @@
              own PendingIntent, no other app can invoke it. -->
         <receiver
             android:name=".RepostActionReceiver"
-            android:exported="false" />
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.vgkontact.app.ACTION_REPOST" />
+            </intent-filter>
+        </receiver>
 
     </application>
 
