@@ -44,26 +44,103 @@
         </LinearLayout>
 
         <!-- ==== WHITE BODY ==== -->
-        <LinearLayout
+        <ScrollView
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1"
-            android:orientation="vertical"
-            android:paddingStart="20dp"
-            android:paddingEnd="20dp"
-            android:paddingTop="24dp">
+            android:fillViewport="true">
 
-            <TextView
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="You no longer have access to group contacts."
-                android:textSize="13sp"
-                android:textColor="@color/text_muted"
-                android:gravity="center"
-                android:lineSpacingMultiplier="1.3"
-                android:layout_marginTop="16dp" />
+                android:orientation="vertical"
+                android:paddingStart="20dp"
+                android:paddingEnd="20dp"
+                android:paddingTop="24dp"
+                android:paddingBottom="8dp">
 
-        </LinearLayout>
+                <TextView
+                    android:id="@+id/bannedNumberText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center_horizontal"
+                    android:background="@drawable/banned_number_pill_background"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp"
+                    android:paddingTop="6dp"
+                    android:paddingBottom="6dp"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/vg_red"
+                    android:visibility="gone" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="This account has been suspended for breaking VG Kontact's rules."
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/vg_red"
+                    android:gravity="center"
+                    android:lineSpacingMultiplier="1.2"
+                    android:layout_marginTop="16dp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="What this means"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/vg_green_dark"
+                    android:layout_marginTop="24dp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="•  You can no longer sync or receive group contacts.\n•  Your viewers, referrals and limit are frozen.\n•  Contacts already saved on your phone are no longer updated.\n•  Signing up again with another number or on this device will not work."
+                    android:textSize="13sp"
+                    android:textColor="@color/text_muted"
+                    android:lineSpacingMultiplier="1.35"
+                    android:layout_marginTop="6dp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Common reasons"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/vg_green_dark"
+                    android:layout_marginTop="20dp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="•  Fake, duplicate or multiple accounts.\n•  Removing or deleting group contacts to cheat the system.\n•  Abuse, spam or misuse of the app or its referral system."
+                    android:textSize="13sp"
+                    android:textColor="@color/text_muted"
+                    android:lineSpacingMultiplier="1.35"
+                    android:layout_marginTop="6dp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Think this is a mistake?"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/vg_green_dark"
+                    android:layout_marginTop="20dp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Contact customer care on WhatsApp with the number above and we will review your account. If the ban is lifted, this app will unlock automatically."
+                    android:textSize="13sp"
+                    android:textColor="@color/text_muted"
+                    android:lineSpacingMultiplier="1.35"
+                    android:layout_marginTop="6dp" />
+
+            </LinearLayout>
+        </ScrollView>
 
         <LinearLayout
             android:layout_width="match_parent"
