@@ -307,34 +307,13 @@ class MainMenuActivity : BaseActivity() {
             goToBannedScreen()
             return
         }
-        // Cover the dashboard until the check answers, so a banned user
-        // never sees it flash. The cover always comes off after at most
-        // BAN_CHECK_TIMEOUT_MS, so a slow or dead connection can't trap a
-        // normal user behind a spinner.
-        val cover = findViewById<View>(R.id.banCheckCover)
-        var resolved = false
-        fun uncover() {
-            if (resolved) return
-            resolved = true
-            cover?.visibility = View.GONE
-        }
-        // Only cover on a fresh app open. Coming back from another screen
-        // inside the app re-checks silently, so there's no spinner flicker.
-        if (!banCheckedThisLaunch) {
-            cover?.visibility = View.VISIBLE
-            cover?.postDelayed({ uncover() }, BAN_CHECK_TIMEOUT_MS)
-        } else {
-            resolved = true
-        }
+        // Quiet background check - no spinner, no blocking. If the account
+        // is banned the user is moved to the banned screen as soon as the
+        // answer arrives; once detected, the saved flag above makes every
+        // later open instant.
         SheetSync.checkBanStatus(this) { banned ->
-            runOnUiThread {
-                if (banned != null) banCheckedThisLaunch = true
-                if (banned == true) {
-                    resolved = true
-                    goToBannedScreen()
-                } else {
-                    uncover()
-                }
+            if (banned == true) {
+                runOnUiThread { goToBannedScreen() }
             }
         }
         // Covers the case where permission state changed elsewhere (e.g. the user
@@ -385,12 +364,6 @@ class MainMenuActivity : BaseActivity() {
      * handled, and finish() here prevents pressing back into a
      * functionally-dead dashboard.
      */
-    private val BAN_CHECK_TIMEOUT_MS = 4000L
-
-    // True once a ban check has gotten a definite answer during this
-    // activity's life; later onResume calls then skip the loading cover.
-    private var banCheckedThisLaunch = false
-
     private var bannedScreenLaunched = false
 
     private fun goToBannedScreen() {
