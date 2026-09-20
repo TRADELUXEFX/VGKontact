@@ -222,6 +222,12 @@ class OnboardingActivity : AppCompatActivity() {
                         startActivity(Intent(this, PermissionSetupActivity::class.java))
                         finish()
                     }
+                    message == "BANNED" -> {
+                        val intent = Intent(this, BannedActivity::class.java)
+                        intent.putExtra(BannedActivity.EXTRA_ATTEMPTED_NUMBER, whatsapp)
+                        startActivity(intent)
+                        finish()
+                    }
                     registeredNumber != null -> {
                         val intent = Intent(this, DeviceBlockedActivity::class.java)
                         intent.putExtra(DeviceBlockedActivity.EXTRA_REGISTERED_NUMBER, registeredNumber)
