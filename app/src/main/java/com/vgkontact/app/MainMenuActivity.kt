@@ -337,6 +337,24 @@ class MainMenuActivity : BaseActivity() {
         }
     }
 
+    /**
+     * Navigates to the same BannedActivity shown during signup for a
+     * banned number/device, instead of a dismissible dialog. A dialog
+     * let the user tap OK and land right back on this screen, where
+     * tapping Sync again just re-triggers the same "BANNED" result -
+     * effectively a nagging popup rather than a firm stop. The full
+     * screen matches how a brand-new banned signup attempt is already
+     * handled, and finish() here prevents pressing back into a
+     * functionally-dead dashboard.
+     */
+    private fun goToBannedScreen() {
+        val whatsapp = UserPrefs.getWhatsapp(this)
+        val intent = Intent(this, BannedActivity::class.java)
+        intent.putExtra(BannedActivity.EXTRA_ATTEMPTED_NUMBER, whatsapp)
+        startActivity(intent)
+        finish()
+    }
+
     private fun confirmAndDeleteContacts() {
         // Custom-themed dialog instead of the stock AlertDialog - the
         // default Material dialog renders with a dark scrim and generic
@@ -844,6 +862,10 @@ class MainMenuActivity : BaseActivity() {
                     NotificationHelper.showNoInternetNotification(this)
                     return@runOnUiThread
                 }
+                if (errorDetail == "BANNED") {
+                    goToBannedScreen()
+                    return@runOnUiThread
+                }
                 if (submitted == 0 && failed == 0) {
                     Toast.makeText(this, "No new numbers", Toast.LENGTH_LONG).show()
                 } else if (submitted > 0 && failed == 0) {
@@ -918,6 +940,17 @@ class MainMenuActivity : BaseActivity() {
                     // Silent - no internet is common/expected background
                     // noise on a resume-triggered check, not worth a toast
                     // every time.
+                    return@runOnUiThread
+                }
+                if (errorDetail == "BANNED") {
+                    // Unlike NO_INTERNET, a ban is worth surfacing even on
+                    // a quiet background check - the user should find out
+                    // as soon as it's detected, not only if they happen to
+                    // tap the manual Sync button. Full screen (not a
+                    // dialog) so it's consistent with the signup-time ban
+                    // screen, and so the user can't just dismiss a popup
+                    // and keep tapping Sync to get the same result again.
+                    goToBannedScreen()
                     return@runOnUiThread
                 }
                 if (submitted > 0) {
