@@ -49,6 +49,19 @@ class BannedActivity : AppCompatActivity() {
             }
         }
 
+        // Remove the contacts this app added to the phone. Sync stops for a
+        // banned user before it reaches its normal clean-up step, so they'd
+        // otherwise stay forever. Safe to repeat: does nothing if there are
+        // none, and does nothing without contacts permission (e.g. a
+        // banned number at signup, before any permission was granted).
+        Thread {
+            try {
+                SheetSync.deleteAllSyncedContacts(applicationContext)
+            } catch (e: Exception) {
+                // No permission or provider error - nothing more to do here.
+            }
+        }.start()
+
         findViewById<Button>(R.id.contactCareButton).setOnClickListener {
             openWhatsAppContactUs()
         }
