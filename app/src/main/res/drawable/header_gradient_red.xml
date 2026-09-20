@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Red equivalent of header_gradient.xml, used only by the Banned
+     screen. Kept as a separate drawable rather than editing
+     header_gradient.xml directly, since that one is shared with
+     DeviceBlockedActivity and other green header screens - changing it
+     in place would turn those red too. Same vertical top-to-bottom
+     angle for the same reason: a flat vg_red status bar seam at the top. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <gradient
+        android:angle="270"
+        android:startColor="@color/vg_red"
+        android:endColor="@color/vg_red_dark" />
+</shape>
