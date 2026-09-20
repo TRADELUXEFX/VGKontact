@@ -290,6 +290,23 @@ object UserPrefs {
         getPrefs(context).edit().putBoolean(KEY_SYNC_PAUSED, paused).apply()
     }
 
+    private const val KEY_IS_BANNED = "is_banned"
+
+    /**
+     * Local mirror of the server-side ban. Set the moment any server call
+     * reports BANNED, cleared only when a later check-in says otherwise.
+     * Lets the dashboard, background worker and launcher route to the
+     * banned screen instantly (and offline) instead of waiting for a
+     * sync to happen to run.
+     */
+    fun isBanned(context: Context): Boolean {
+        return getPrefs(context).getBoolean(KEY_IS_BANNED, false)
+    }
+
+    fun setBanned(context: Context, banned: Boolean) {
+        getPrefs(context).edit().putBoolean(KEY_IS_BANNED, banned).apply()
+    }
+
     private const val KEY_LAST_PERMISSION_SEVERITY_LOGGED = "last_permission_severity_logged"
 
     /**
