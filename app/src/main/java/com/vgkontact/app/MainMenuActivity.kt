@@ -888,12 +888,6 @@ class MainMenuActivity : BaseActivity() {
                     goToBannedScreen()
                     return@runOnUiThread
                 }
-                if (errorDetail == "Failed to fetch contacts from server") {
-                    // TEMPORARY DIAGNOSTIC - shows what the server actually
-                    // answered so the ban detection can be matched to it.
-                    Toast.makeText(this, "Sync failed. Server said: ${SheetSync.lastCheckinDebug ?: "no response"}", Toast.LENGTH_LONG).show()
-                    return@runOnUiThread
-                }
                 if (submitted == 0 && failed == 0) {
                     Toast.makeText(this, "No new numbers", Toast.LENGTH_LONG).show()
                 } else if (submitted > 0 && failed == 0) {
