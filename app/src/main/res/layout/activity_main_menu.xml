@@ -755,4 +755,24 @@
 
     </LinearLayout>
 
+    <!-- Ban-check cover: sits on top of the dashboard until the server
+         confirms the account is not banned, so a banned user never sees
+         the dashboard flash before the banned screen. -->
+    <FrameLayout
+        android:id="@+id/banCheckCover"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/stats_card_fill"
+        android:clickable="true"
+        android:focusable="true"
+        android:visibility="gone">
+
+        <ProgressBar
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_gravity="center"
+            android:indeterminateTint="@color/vg_green" />
+
+    </FrameLayout>
+
 </FrameLayout>
