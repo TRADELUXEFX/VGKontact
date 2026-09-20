@@ -30,6 +30,11 @@ class SheetCheckWorker(context: Context, params: WorkerParameters) : CoroutineWo
                 return Result.success()
             }
 
+            if (UserPrefs.isBanned(applicationContext)) {
+                // Banned: nothing to sync, and no "new numbers" notification.
+                return Result.success()
+            }
+
             if (UserPrefs.isSyncPaused(applicationContext)) {
                 // User tapped "Delete My Contacts" - checked locally, so
                 // this blocks syncing instantly and even offline, without
