@@ -57,7 +57,7 @@
                 android:paddingStart="20dp"
                 android:paddingEnd="20dp"
                 android:paddingTop="24dp"
-                android:paddingBottom="8dp">
+                android:paddingBottom="24dp">
 
                 <TextView
                     android:id="@+id/bannedNumberText"
@@ -77,7 +77,7 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="This account has been suspended for breaking VG Kontact's rules."
+                    android:text="We've suspended this account."
                     android:textSize="16sp"
                     android:textStyle="bold"
                     android:textColor="@color/vg_red"
@@ -97,7 +97,7 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="•  You can no longer sync or receive group contacts.\n•  Your viewers, referrals and limit are frozen.\n•  Contacts already saved on your phone are no longer updated.\n•  Signing up again with another number or on this device will not work."
+                    android:text="•  You won't get any new contacts.\n•  Your account can't be used until we review it.\n•  Contacts already saved on your phone won't get you status views.\n•  Creating a new account won't get around this."
                     android:textSize="13sp"
                     android:textColor="@color/text_muted"
                     android:lineSpacingMultiplier="1.35"
@@ -106,7 +106,7 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Common reasons"
+                    android:text="Why this happens"
                     android:textSize="13sp"
                     android:textStyle="bold"
                     android:textColor="@color/vg_green_dark"
@@ -115,7 +115,7 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="•  Fake, duplicate or multiple accounts.\n•  Removing or deleting group contacts to cheat the system.\n•  Abuse, spam or misuse of the app or its referral system."
+                    android:text="•  Using more than one account.\n•  Deleting the contacts from your phone after getting them.\n•  Scamming or misusing the app."
                     android:textSize="13sp"
                     android:textColor="@color/text_muted"
                     android:lineSpacingMultiplier="1.35"
@@ -124,7 +124,7 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Think this is a mistake?"
+                    android:text="Think we got this wrong?"
                     android:textSize="13sp"
                     android:textStyle="bold"
                     android:textColor="@color/vg_green_dark"
@@ -133,7 +133,7 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Contact customer care on WhatsApp with the number above and we will review your account. If the ban is lifted, this app will unlock automatically."
+                    android:text="Message customer care on WhatsApp and we'll look into it. If we lift the suspension, the app opens again on its own."
                     android:textSize="13sp"
                     android:textColor="@color/text_muted"
                     android:lineSpacingMultiplier="1.35"
