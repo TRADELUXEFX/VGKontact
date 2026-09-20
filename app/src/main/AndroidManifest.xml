@@ -46,6 +46,10 @@
             android:exported="false" />
 
         <activity
+            android:name=".BannedActivity"
+            android:exported="false" />
+
+        <activity
             android:name=".DeviceUnverifiedActivity"
             android:exported="false" />
 
