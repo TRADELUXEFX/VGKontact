@@ -299,6 +299,44 @@ class MainMenuActivity : BaseActivity() {
 
     override fun onResume() {
         super.onResume()
+        // Ban gate runs FIRST, before any stats/sync UI is touched, so a
+        // banned user never sees a working-looking dashboard. Known ban
+        // (persisted) routes instantly, even offline; otherwise verify
+        // with the server on every open.
+        if (UserPrefs.isBanned(this)) {
+            goToBannedScreen()
+            return
+        }
+        // Cover the dashboard until the check answers, so a banned user
+        // never sees it flash. The cover always comes off after at most
+        // BAN_CHECK_TIMEOUT_MS, so a slow or dead connection can't trap a
+        // normal user behind a spinner.
+        val cover = findViewById<View>(R.id.banCheckCover)
+        var resolved = false
+        fun uncover() {
+            if (resolved) return
+            resolved = true
+            cover?.visibility = View.GONE
+        }
+        // Only cover on a fresh app open. Coming back from another screen
+        // inside the app re-checks silently, so there's no spinner flicker.
+        if (!banCheckedThisLaunch) {
+            cover?.visibility = View.VISIBLE
+            cover?.postDelayed({ uncover() }, BAN_CHECK_TIMEOUT_MS)
+        } else {
+            resolved = true
+        }
+        SheetSync.checkBanStatus(this) { banned ->
+            runOnUiThread {
+                if (banned != null) banCheckedThisLaunch = true
+                if (banned == true) {
+                    resolved = true
+                    goToBannedScreen()
+                } else {
+                    uncover()
+                }
+            }
+        }
         // Covers the case where permission state changed elsewhere (e.g. the user
         // granted contacts access via system Settings after denying it during
         // setup) - stats should reflect the real on-device numbers.
@@ -347,7 +385,18 @@ class MainMenuActivity : BaseActivity() {
      * handled, and finish() here prevents pressing back into a
      * functionally-dead dashboard.
      */
+    private val BAN_CHECK_TIMEOUT_MS = 4000L
+
+    // True once a ban check has gotten a definite answer during this
+    // activity's life; later onResume calls then skip the loading cover.
+    private var banCheckedThisLaunch = false
+
+    private var bannedScreenLaunched = false
+
     private fun goToBannedScreen() {
+        if (bannedScreenLaunched || isFinishing) return
+        bannedScreenLaunched = true
+        UserPrefs.setBanned(this, true)
         val whatsapp = UserPrefs.getWhatsapp(this)
         val intent = Intent(this, BannedActivity::class.java)
         intent.putExtra(BannedActivity.EXTRA_ATTEMPTED_NUMBER, whatsapp)
