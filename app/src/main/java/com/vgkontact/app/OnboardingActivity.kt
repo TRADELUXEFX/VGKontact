@@ -30,6 +30,13 @@ class OnboardingActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
 
         if (UserPrefs.isRegistered(this)) {
+            if (UserPrefs.isBanned(this)) {
+                val bannedIntent = Intent(this, BannedActivity::class.java)
+                bannedIntent.putExtra(BannedActivity.EXTRA_ATTEMPTED_NUMBER, UserPrefs.getWhatsapp(this))
+                startActivity(bannedIntent)
+                finish()
+                return
+            }
             startActivity(Intent(this, PermissionSetupActivity::class.java))
             finish()
             return
