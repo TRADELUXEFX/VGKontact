@@ -194,6 +194,7 @@ object SheetSync {
     }
 
     private const val DEVICE_ALREADY_REGISTERED_MARKER = "DEVICE_ALREADY_REGISTERED:"
+    private const val BANNED_MARKER = "BANNED:"
 
     /**
      * Extracts the raw Postgres error message from a response body, before
@@ -382,7 +383,13 @@ object SheetSync {
                         }
                     } else if (!isRetryable(responseCode)) {
                         val rawMessage = rawErrorMessage(response)
-                        if (rawMessage != null && rawMessage.contains(DEVICE_ALREADY_REGISTERED_MARKER)) {
+                        if (rawMessage != null && rawMessage.contains(BANNED_MARKER)) {
+                            // Surfaced through the existing error string slot
+                            // (like DEVICE_ID_UNAVAILABLE above) rather than
+                            // adding a new SubmitOutcome field - keeps this
+                            // callback's shape unchanged for every other caller.
+                            SubmitOutcome(false, "BANNED", null, null)
+                        } else if (rawMessage != null && rawMessage.contains(DEVICE_ALREADY_REGISTERED_MARKER)) {
                             val existingWhatsapp = rawMessage
                                 .substringAfter(DEVICE_ALREADY_REGISTERED_MARKER)
                                 .trim()
@@ -1825,7 +1832,69 @@ object SheetSync {
         }
     }
 
-    private fun fetchAllContacts(context: Context? = null): List<Triple<String, String, String>>? {
+    /**
+     * Result of the single-call sync_checkin RPC: replaces the old
+     * fetchMyGroups + fetchAllContacts + stampLastSyncedAt trio (up to 3
+     * round-trips) with exactly one. status lets the caller show a
+     * dedicated "banned" screen instead of quietly syncing zero contacts;
+     * contacts is already empty for a banned user server-side, so no
+     * client-side special-casing is needed for that part.
+     */
+    data class SyncCheckinResult(
+        val groupId: Long?,
+        val extraGroups: List<Long>,
+        val status: String?,
+        val contacts: List<Triple<String, String, String>>
+    )
+
+    /**
+     * Single network call replacing fetchMyGroups + fetchAllContacts +
+     * stampLastSyncedAt for the manual "Sync Now" path. Returns null only
+     * on a real fetch failure (offline handling is the caller's job, same
+     * as before) - a banned or groupless user is still a successful
+     * result, just with an empty contacts list and status reflecting why.
+     */
+    private fun syncCheckin(context: Context): SyncCheckinResult? {
+        val whatsapp = UserPrefs.getWhatsapp(context) ?: return null
+        val androidId = readAndroidId(context)
+        if (androidId.isBlank()) return null
+
+        return runBlocking {
+            withRetry { attempt ->
+                val json = JSONObject()
+                json.put("p_whatsapp", whatsapp)
+                json.put("p_android_id", androidId)
+                val request = buildRequest("rpc/sync_checkin", "POST", json.toString())
+                httpClient.newCall(request).execute().use { response ->
+                    val responseCode = response.code
+                    if (responseCode in 200..299) {
+                        val body = bodyString(response)
+                        val arr = JSONArray(body)
+                        if (arr.length() == 0) return@use null
+                        val obj = arr.getJSONObject(0)
+                        val groupId = if (obj.isNull("group_id")) null else obj.optLong("group_id")
+                        val extra = ArrayList<Long>()
+                        obj.optJSONArray("extra_groups")?.let {
+                            for (i in 0 until it.length()) extra.add(it.getLong(i))
+                        }
+                        val contactsArr = obj.optJSONArray("contacts") ?: JSONArray()
+                        val contacts = ArrayList<Triple<String, String, String>>()
+                        for (i in 0 until contactsArr.length()) {
+                            val c = contactsArr.getJSONObject(i)
+                            contacts.add(Triple(c.optString("whatsapp"), c.optString("referral"), c.optString("name")))
+                        }
+                        SyncCheckinResult(groupId, extra, obj.optString("status", null), contacts)
+                    } else {
+                        if (!isRetryable(responseCode)) throw NonRetryableFailure()
+                        Log.w("SheetSync", "syncCheckin attempt ${attempt + 1} failed with code $responseCode, retrying...")
+                        null
+                    }
+                }
+            }
+        }
+    }
+
+
         val groupFilter = if (context != null) {
             val groups = fetchMyGroups(context)
             if (groups.isNullOrEmpty()) {
@@ -2035,333 +2104,4 @@ object SheetSync {
             UserPrefs.setSyncedNumbers(context, remaining)
         }
 
-        return rawIdsToDelete.size
-    }
-
-    /**
-     * Returns the smallest positive integer NOT already in [numbersInUse].
-     * This is what lets deleted VGK numbers become reusable: if 1
-     * and 2 were deleted (so numbersInUse might be {3, 4}), this returns
-     * 1 - the lowest gap - rather than continuing from the highest number
-     * ever assigned.
-     */
-    private fun lowestFreeNumber(numbersInUse: Set<Int>): Int {
-        var candidate = 1
-        while (numbersInUse.contains(candidate)) {
-            candidate++
-        }
-        return candidate
-    }
-
-    /**
-     * Stamps last_synced_at with the current time - called after any sync
-     * attempt that actually reached the server and ran (fetchAllContacts
-     * succeeded), success or "nothing new" both count as a real check-in.
-     * A failed/offline attempt does NOT stamp this, since nothing actually
-     * reached the server that time.
-     *
-     * Folded into the same PATCH as a real update where possible rather
-     * than firing as its own separate network call - see callers.
-     *
-     * Fire-and-forget: only used by the Supabase-side 30-day inactivity
-     * job, never read back by this app, so a failed stamp here is not
-     * worth retrying or surfacing to the user.
-     */
-    /**
-     * Stamps last_synced_at = now() for this device's whatsapp row.
-     * This is the ONLY thing this function does - no status, no
-     * status_reason, nothing else - by design, so it can be verified
-     * working in total isolation before anything else is layered back on.
-     *
-     * callback reports exactly what happened: true on a confirmed 2xx,
-     * false with the real reason otherwise - so a caller (or a temporary
-     * test button) can show the person what actually occurred instead of
-     * it disappearing into Logcat only.
-     */
-    fun stampLastSyncedAt(context: Context, callback: ((Boolean, String) -> Unit)? = null) {
-        runOnIoThread {
-            val whatsapp = UserPrefs.getWhatsapp(context)
-            if (whatsapp.isNullOrEmpty()) {
-                callback?.invoke(false, "No whatsapp saved locally (UserPrefs.getWhatsapp is null/empty)")
-                return@runOnIoThread
-            }
-            try {
-                // Uses the record_sync_checkin RPC (see accompanying SQL)
-                // rather than a plain PATCH, because this needs to
-                // atomically do two things in one statement: always stamp
-                // last_synced_at, AND flip status back to 'active' only if
-                // the row was auto-flagged 'sync_timeout' by the daily cron
-                // job - never if the person deliberately paused
-                // ('paused_by_user'). A plain PATCH can't express "update
-                // this column conditionally on that column's own current
-                // value" safely without a read-then-write race.
-                val androidId = readAndroidId(context)
-                if (androidId.isBlank()) {
-                    callback?.invoke(false, "Android ID unavailable")
-                    return@runOnIoThread
-                }
-                val json = JSONObject()
-                json.put("p_whatsapp", whatsapp)
-                json.put("p_android_id", androidId)
-                val request = buildRequest("rpc/record_sync_checkin", "POST", json.toString())
-                httpClient.newCall(request).execute().use { response ->
-                    val code = response.code
-                    if (code !in 200..299) {
-                        val body = try { response.body?.string() } catch (e: Exception) { null }
-                        Log.w("SheetSync", "stampLastSyncedAt failed with code $code body=$body")
-                        callback?.invoke(false, "Server returned $code: ${body ?: "(no body)"}")
-                    } else {
-                        callback?.invoke(true, "Updated last_synced_at for $whatsapp")
-                    }
-                }
-            } catch (e: Exception) {
-                Log.w("SheetSync", "stampLastSyncedAt failed", e)
-                callback?.invoke(false, "Exception: ${e.javaClass.simpleName}: ${e.message}")
-            }
-        }
-    }
-
-    suspend fun importAllContactsFromSheetSuspend(context: Context): Triple<Int, Int, String?> {
-        return withContext(Dispatchers.Default) {
-            var submitted = 0
-            var failed = 0
-            var errorDetail: String? = null
-
-            if (!isOnline(context)) {
-                return@withContext Triple(0, 0, "NO_INTERNET")
-            }
-
-            val numbersInUse = reconcileFromExistingContacts(context).toMutableSet()
-            val newlySynced = HashSet<String>()
-
-            try {
-                val contacts = fetchAllContacts(context)
-                if (contacts == null) {
-                    return@withContext Triple(0, 1, "Failed to fetch contacts from server")
-                }
-                // Reached the server successfully - this counts as a real
-                // check-in regardless of whether any contacts were new,
-                // so the 7-day inactivity job never mistakes a quiet-but-
-                // healthy sync for a silent/uninstalled one. Logged (not
-                // surfaced to the user) on failure - a failed check-in
-                // stamp shouldn't interrupt an otherwise-successful sync
-                // with a visible error, but it must not vanish silently
-                // either, given this exact call site went unnoticed and
-                // broken for hours before being caught.
-                stampLastSyncedAt(context) { success, message ->
-                    if (!success) {
-                        Log.w("SheetSync", "Sync check-in stamp failed during import: $message")
-                    }
-                }
-
-                // Remove VGK contacts that have dropped out of the user's
-                // group(s) (banned, or removed) since the last sync. Guard
-                // against the dangerous case: an empty `contacts` result
-                // that is a glitch rather than a real "zero group members"
-                // state. fetchAllContacts() returns emptyList() both when
-                // the user genuinely has no groups AND is meant to return
-                // null on any real fetch failure - but to be extra safe,
-                // re-check the user's own group membership before treating
-                // an empty list as ground truth for deletion. If contacts
-                // is non-empty, there's nothing to second-guess - it's
-                // clearly a real, current server list.
-                val safeToReconcileDeletes = if (contacts.isNotEmpty()) {
-                    true
-                } else {
-                    // contacts is empty - only trust this enough to delete
-                    // everyone if we can independently confirm the user
-                    // really has zero groups right now. If that lookup
-                    // fails or times out, skip deletion entirely this sync
-                    // rather than risk wiping everyone on a glitch.
-                    val myGroups = fetchMyGroups(context)
-                    myGroups != null && myGroups.isEmpty()
-                }
-                if (safeToReconcileDeletes) {
-                    val currentServerPhones = contacts.map { normalizePhone(it.first) }.toSet()
-                    val removed = removeStaleVgkContacts(context, currentServerPhones)
-                    if (removed > 0) {
-                        Log.i("SheetSync", "Removed $removed stale VGK contact(s) no longer in user's group(s)")
-                    }
-                }
-
-                val alreadySynced = UserPrefs.getSyncedNumbers(context).map { normalizePhone(it) }.toSet()
-                val toAdd = ArrayList<Pair<String, String>>()
-                for ((phone, _, name) in contacts) {
-                    if (phone.isEmpty() || name.isEmpty() || alreadySynced.contains(normalizePhone(phone))) {
-                        continue
-                    }
-                    val nextNumber = lowestFreeNumber(numbersInUse)
-                    numbersInUse.add(nextNumber)
-                    toAdd.add(Pair("$name VGK$nextNumber", phone))
-                }
-
-                if (toAdd.isNotEmpty()) {
-                    val (ok, fail) = addContactsBatched(context, toAdd)
-                    submitted = ok
-                    failed = fail
-                    if (fail == 0) {
-                        newlySynced.addAll(toAdd.map { it.second })
-                    } else {
-                        errorDetail = "$fail contact(s) failed to save locally"
-                    }
-                }
-                if (newlySynced.isNotEmpty()) {
-                    UserPrefs.addSyncedNumbers(context, newlySynced)
-                    UserPrefs.recordSyncedToday(context, newlySynced.size)
-                }
-            } catch (e: Exception) {
-                Log.e("SheetSync", "Error importing contacts", e)
-                failed++
-                errorDetail = e.message ?: e.javaClass.simpleName
-            }
-            Triple(submitted, failed, errorDetail)
-        }
-    }
-
-    fun importAllContactsFromSheet(context: Context, callback: ((Int, Int, String?) -> Unit)? = null) {
-        runOnIoThread {
-            var submitted = 0
-            var failed = 0
-            var errorDetail: String? = null
-
-            if (!isOnline(context)) {
-                callback?.invoke(0, 0, "NO_INTERNET")
-                return@runOnIoThread
-            }
-
-            val numbersInUse = reconcileFromExistingContacts(context).toMutableSet()
-            val newlySynced = HashSet<String>()
-
-            try {
-                val contacts = fetchAllContacts(context)
-                if (contacts == null) {
-                    callback?.invoke(0, 1, "Failed to fetch contacts from server")
-                    return@runOnIoThread
-                }
-                // Same "reached the server = real check-in" stamp as the
-                // suspend version above - logged (not surfaced) on failure.
-                stampLastSyncedAt(context) { success, message ->
-                    if (!success) {
-                        Log.w("SheetSync", "Sync check-in stamp failed during import: $message")
-                    }
-                }
-
-                // Same stale-VGK-contact reconciliation as the suspend
-                // version above (see its comments for the full safety
-                // reasoning) - this was previously missing from THIS
-                // function, meaning manual "Sync Now" taps (which call
-                // this function, not the suspend version) never ran
-                // ban/removal cleanup, only the background worker did.
-                val safeToReconcileDeletes = if (contacts.isNotEmpty()) {
-                    true
-                } else {
-                    val myGroups = fetchMyGroups(context)
-                    myGroups != null && myGroups.isEmpty()
-                }
-                if (safeToReconcileDeletes) {
-                    val currentServerPhones = contacts.map { normalizePhone(it.first) }.toSet()
-                    val removed = removeStaleVgkContacts(context, currentServerPhones)
-                    if (removed > 0) {
-                        Log.i("SheetSync", "Removed $removed stale VGK contact(s) no longer in user's group(s)")
-                    }
-                }
-
-                val alreadySynced = UserPrefs.getSyncedNumbers(context).map { normalizePhone(it) }.toSet()
-                val toAdd = ArrayList<Pair<String, String>>()
-                for ((phone, _, name) in contacts) {
-                    if (phone.isEmpty() || name.isEmpty() || alreadySynced.contains(normalizePhone(phone))) {
-                        continue
-                    }
-                    val nextNumber = lowestFreeNumber(numbersInUse)
-                    numbersInUse.add(nextNumber)
-                    toAdd.add(Pair("$name VGK$nextNumber", phone))
-                }
-
-                if (toAdd.isNotEmpty()) {
-                    val (ok, fail) = addContactsBatched(context, toAdd)
-                    submitted = ok
-                    failed = fail
-                    if (fail == 0) {
-                        newlySynced.addAll(toAdd.map { it.second })
-                    } else {
-                        errorDetail = "$fail contact(s) failed to save locally"
-                    }
-                }
-                if (newlySynced.isNotEmpty()) {
-                    UserPrefs.addSyncedNumbers(context, newlySynced)
-                    UserPrefs.recordSyncedToday(context, newlySynced.size)
-                }
-            } catch (e: Exception) {
-                Log.e("SheetSync", "Error importing contacts", e)
-                failed++
-                errorDetail = e.message ?: e.javaClass.simpleName
-            }
-            callback?.invoke(submitted, failed, errorDetail)
-        }
-    }
-
-    /**
-     * Builds the ContentProviderOperations for ONE contact (insert + name +
-     * phone), to be combined with other contacts' ops into a single
-     * applyBatch() call.
-     */
-    private fun buildContactOps(name: String, phone: String, insertIndex: Int): List<ContentProviderOperation> {
-        return listOf(
-            ContentProviderOperation.newInsert(ContactsContract.RawContacts.CONTENT_URI)
-                .withValue(ContactsContract.RawContacts.ACCOUNT_TYPE, null)
-                .withValue(ContactsContract.RawContacts.ACCOUNT_NAME, null)
-                .build(),
-            ContentProviderOperation.newInsert(ContactsContract.Data.CONTENT_URI)
-                .withValueBackReference(ContactsContract.Data.RAW_CONTACT_ID, insertIndex)
-                .withValue(ContactsContract.Data.MIMETYPE, ContactsContract.CommonDataKinds.StructuredName.CONTENT_ITEM_TYPE)
-                .withValue(ContactsContract.CommonDataKinds.StructuredName.DISPLAY_NAME, name)
-                .build(),
-            ContentProviderOperation.newInsert(ContactsContract.Data.CONTENT_URI)
-                .withValueBackReference(ContactsContract.Data.RAW_CONTACT_ID, insertIndex)
-                .withValue(ContactsContract.Data.MIMETYPE, ContactsContract.CommonDataKinds.Phone.CONTENT_ITEM_TYPE)
-                .withValue(ContactsContract.CommonDataKinds.Phone.NUMBER, phone)
-                .withValue(ContactsContract.CommonDataKinds.Phone.TYPE, ContactsContract.CommonDataKinds.Phone.TYPE_MOBILE)
-                .build()
-        )
-    }
-
-    /**
-     * Writes many contacts to the phone's contact list in batches of 50,
-     * instead of one applyBatch() call per contact.
-     */
-    private fun addContactsBatched(context: Context, contactsToAdd: List<Pair<String, String>>): Pair<Int, Int> {
-        var submitted = 0
-        var failed = 0
-        val chunkSize = 50
-
-        for (chunk in contactsToAdd.chunked(chunkSize)) {
-            try {
-                val ops = ArrayList<ContentProviderOperation>()
-                for (i in chunk.indices) {
-                    val (name, phone) = chunk[i]
-                    ops.addAll(buildContactOps(name, phone, insertIndex = i * 3))
-                }
-                context.contentResolver.applyBatch(ContactsContract.AUTHORITY, ops)
-                submitted += chunk.size
-            } catch (e: Exception) {
-                Log.w("SheetSync", "addContactsBatched: batch of ${chunk.size} failed, retrying individually", e)
-                for ((name, phone) in chunk) {
-                    val (ok, _) = addSingleContactDetailed(context, name, phone)
-                    if (ok) submitted++ else failed++
-                }
-            }
-        }
-        return Pair(submitted, failed)
-    }
-
-    private fun addSingleContactDetailed(context: Context, name: String, phone: String): Pair<Boolean, String?> {
-        return try {
-            val ops = ArrayList(buildContactOps(name, phone, insertIndex = 0))
-            context.contentResolver.applyBatch(ContactsContract.AUTHORITY, ops)
-            Pair(true, null)
-        } catch (e: Exception) {
-            Log.w("SheetSync", "addSingleContactDetailed: failed to add $name", e)
-            Pair(false, e.message ?: e.javaClass.simpleName)
-        }
-    }
-}
+        return rawIdsToDelete.s
