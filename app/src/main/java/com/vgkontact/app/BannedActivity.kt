@@ -3,7 +3,9 @@ package com.vgkontact.app
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.view.View
 import android.widget.Button
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
@@ -35,10 +37,46 @@ class BannedActivity : AppCompatActivity() {
         window.statusBarColor = ContextCompat.getColor(this, R.color.vg_red)
 
         attemptedNumber = intent.getStringExtra(EXTRA_ATTEMPTED_NUMBER)
+            ?: UserPrefs.getWhatsapp(this)
+
+        findViewById<TextView>(R.id.bannedNumberText)?.let { tv ->
+            val n = attemptedNumber?.takeIf { it.isNotBlank() }
+            if (n != null) {
+                tv.text = n
+                tv.visibility = View.VISIBLE
+            } else {
+                tv.visibility = View.GONE
+            }
+        }
 
         findViewById<Button>(R.id.contactCareButton).setOnClickListener {
             openWhatsAppContactUs()
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // If support lifted the ban, let the user back in without a reinstall.
+        if (UserPrefs.isRegistered(this)) {
+            SheetSync.checkBanStatus(this) { banned ->
+                if (banned == false) {
+                    runOnUiThread {
+                        startActivity(
+                            Intent(this, MainMenuActivity::class.java)
+                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                        )
+                        finish()
+                    }
+                }
+            }
+        }
+    }
+
+    // A banned user has nowhere to go back to - leave the app instead of
+    // popping back into the dashboard.
+    @Deprecated("Deprecated in Java")
+    override fun onBackPressed() {
+        finishAffinity()
     }
 
     private fun openWhatsAppContactUs() {
