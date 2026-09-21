@@ -113,6 +113,7 @@
                     android:layout_marginTop="20dp" />
 
                 <TextView
+                    android:id="@+id/bannedReasonText"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="•  Using more than one account.\n•  Deleting the contacts from your phone after getting them.\n•  Scamming or misusing the app."
