@@ -35,6 +35,7 @@ object RepostPrefs {
     private const val KEY_HISTORY = "repost_dates"             // comma-separated yyyy-MM-dd, last 60 days
     private const val KEY_REACHED = "milestones_reached"       // comma-separated milestone day counts
     private const val KEY_PENDING = "pending_upload_date"      // yyyy-MM-dd of a repost the server hasn't confirmed
+    private const val KEY_GUIDE_HIDDEN = "task_guide_hidden"     // user tapped X on the task guide
 
     /** Streak lengths that unlock a milestone. */
     val MILESTONES = listOf(3, 7, 14, 30)
@@ -185,6 +186,14 @@ object RepostPrefs {
     /** True only if there is an unconfirmed repost from TODAY. */
     fun hasPendingUploadToday(context: Context): Boolean =
         prefs(context).getString(KEY_PENDING, null) == today()
+
+    /** True if the user has hidden the "Today's task" guide with its X. */
+    fun isTaskGuideHidden(context: Context): Boolean =
+        prefs(context).getBoolean(KEY_GUIDE_HIDDEN, false)
+
+    fun setTaskGuideHidden(context: Context, hidden: Boolean) {
+        prefs(context).edit().putBoolean(KEY_GUIDE_HIDDEN, hidden).apply()
+    }
 
     /** The next milestone above [streak], or null once all are passed. */
     fun nextMilestone(streak: Int): Int? = MILESTONES.firstOrNull { it > streak }
