@@ -22,7 +22,6 @@
 
     <string name="btn_repost_now">I\'ve reposted today</string>
     <string name="btn_repost_done">Reposted today</string>
-    <string name="repost_already_done">Already counted for today</string>
 
     <string name="repost_milestones">Milestones</string>
     <string name="repost_days_label">days</string>
@@ -35,7 +34,7 @@
         <item quantity="other">%d days to go</item>
     </plurals>
 
-    <string name="repost_col_rank_number">Rank \u00B7 Reposter</string>
+    <string name="repost_col_rank_number">Phone number</string>
     <string name="repost_col_reposts">Reposts</string>
     <string name="repost_you">You</string>
     <string name="repost_board_offline_note">Couldn\'t reach the leaderboard. Showing your own reposts only.</string>
