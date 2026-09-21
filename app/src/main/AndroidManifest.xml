@@ -93,6 +93,14 @@
             android:name=".ProfileActivity"
             android:exported="false" />
 
+        <!-- Wallet - referral commission balance, withdraw and recent
+             activity. Reached from the Wallet bottom-nav tab. It was
+             missing from the manifest before, which made tapping the tab
+             crash with ActivityNotFoundException. -->
+        <activity
+            android:name=".WalletActivity"
+            android:exported="false" />
+
         <!-- Repost & Earn screen (streak + leaderboard) - opened from the
              floating Repost button on every screen. -->
         <activity
