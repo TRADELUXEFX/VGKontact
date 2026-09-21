@@ -58,63 +58,6 @@
             android:textAlignment="center"
             android:fontFamily="@font/poppins" />
 
-        <!-- ============ TAB SWITCHER (segmented control) ============
-             Moved up into the header, replacing the subtitle text, per
-             request. Track uses its own dedicated fill
-             (tab_track_fill) rather than the card backgrounds used
-             elsewhere, so the inactive tab (fully transparent) always
-             shows real contrast against the track instead of blending
-             into a white/near-white card. Against the green header
-             background the track itself uses a translucent white fill
-             instead of tab_track_background so it still reads as a
-             distinct control on top of the gradient. -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:background="@drawable/header_tab_track_background"
-            android:padding="4dp"
-            android:layout_marginTop="16dp">
-
-            <Button
-                android:id="@+id/tabReferralButton"
-                android:layout_width="0dp"
-                android:layout_height="44dp"
-                android:layout_weight="1"
-                android:text="@string/tab_referral_rewards"
-                android:textAllCaps="false"
-                android:textSize="13sp"
-                android:textStyle="bold"
-                android:backgroundTint="@android:color/transparent"
-                android:textColor="@color/white"
-                app:cornerRadius="12dp"
-                app:elevation="0dp"
-                app:rippleColor="@color/vg_green_tint"
-                android:stateListAnimator="@null"
-                android:insetTop="0dp"
-                android:insetBottom="0dp" />
-
-            <Button
-                android:id="@+id/tabKeyButton"
-                android:layout_width="0dp"
-                android:layout_height="44dp"
-                android:layout_weight="1"
-                android:layout_marginStart="4dp"
-                android:text="@string/tab_redeem_key"
-                android:textAllCaps="false"
-                android:textSize="13sp"
-                android:textStyle="bold"
-                android:backgroundTint="@android:color/transparent"
-                android:textColor="@color/white"
-                app:cornerRadius="12dp"
-                app:elevation="0dp"
-                app:rippleColor="@color/vg_green_tint"
-                android:stateListAnimator="@null"
-                android:insetTop="0dp"
-                android:insetBottom="0dp" />
-
-        </LinearLayout>
-
     </LinearLayout>
 
     <ScrollView
@@ -133,72 +76,16 @@
             android:paddingTop="20dp"
             android:paddingBottom="28dp">
 
-            <!-- ============ REFERRAL REWARDS PANEL ============ -->
-            <LinearLayout
-                android:id="@+id/referralPanel"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:visibility="visible">
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/label_earn_more_views"
-                    android:textSize="15sp"
-                    android:textStyle="bold"
-                    android:textColor="@color/vg_dark"
-                    android:gravity="center"
-                    android:layout_marginBottom="10dp" />
-
-                <ProgressBar
-                    android:id="@+id/campaignsProgressBar"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="center"
-                    android:layout_marginTop="12dp"
-                    android:visibility="gone" />
-
-                <TextView
-                    android:id="@+id/campaignsEmptyText"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:padding="24dp"
-                    android:gravity="center"
-                    android:textColor="@color/text_muted"
-                    android:visibility="gone" />
-
-                <!-- Paid campaign cards inserted at runtime, one per
-                     active campaign from the admin panel - see
-                     IncreaseLimitActivity.renderCampaignCards(). Each
-                     card's button just opens the campaign's
-                     WhatsApp/DM link; nothing is tracked in-app. -->
-                <LinearLayout
-                    android:id="@+id/campaignCardsContainer"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical" />
-
-                <TextView
-                    android:id="@+id/noCampaignsText"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:padding="24dp"
-                    android:gravity="center"
-                    android:textSize="13sp"
-                    android:textColor="@color/text_muted"
-                    android:text="@string/empty_no_active_campaigns"
-                    android:visibility="gone" />
-
-            </LinearLayout>
-
-            <!-- ============ REDEEM A KEY PANEL ============ -->
+            <!-- ============ REDEEM A KEY PANEL ============
+                 Now the only panel on this screen - the former
+                 "By tasks" / referral rewards panel and its tab
+                 switcher have been removed entirely per request. -->
             <LinearLayout
                 android:id="@+id/keyPanel"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:visibility="gone">
+                android:visibility="visible">
 
                 <TextView
                     android:id="@+id/upgradeSubtitleText"
