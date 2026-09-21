@@ -49,6 +49,19 @@ class BannedActivity : AppCompatActivity() {
             }
         }
 
+        // Show the specific reason when the server has one; otherwise the
+        // generic list from the layout stays. The last known reason is
+        // cached so it also shows offline.
+        val reasonText = findViewById<TextView>(R.id.bannedReasonText)
+        val defaultReasonText = reasonText?.text?.toString() ?: ""
+        applyBanReason(reasonText, defaultReasonText, UserPrefs.getBanReason(this))
+        SheetSync.fetchBanReason(applicationContext, attemptedNumber) { reason ->
+            if (reason != null) {
+                UserPrefs.setBanReason(applicationContext, reason)
+                runOnUiThread { applyBanReason(reasonText, defaultReasonText, reason) }
+            }
+        }
+
         // Remove the contacts this app added to the phone. Sync stops for a
         // banned user before it reaches its normal clean-up step, so they'd
         // otherwise stay forever. Safe to repeat: does nothing if there are
@@ -65,6 +78,17 @@ class BannedActivity : AppCompatActivity() {
         findViewById<Button>(R.id.contactCareButton).setOnClickListener {
             openWhatsAppContactUs()
         }
+    }
+
+    private fun applyBanReason(view: TextView?, defaultText: String, code: String?) {
+        if (view == null) return
+        val line = when (code) {
+            "multiple_accounts" -> "Using more than one account."
+            "deleted_contacts" -> "Deleting the contacts from your phone after getting them."
+            "scam" -> "Scamming or misusing the app."
+            else -> null
+        }
+        view.text = if (line != null) "•  $line" else defaultText
     }
 
     override fun onResume() {
