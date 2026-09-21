@@ -393,6 +393,8 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
+                        android:paddingStart="12dp"
+                        android:paddingEnd="12dp"
                         android:paddingBottom="8dp">
 
                         <TextView
@@ -434,7 +436,25 @@
                         android:id="@+id/boardListContainer"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
                         android:orientation="vertical" />
+
+                    <HorizontalScrollView
+                        android:id="@+id/boardPagerScroll"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="16dp"
+                        android:scrollbars="none"
+                        android:visibility="gone">
+
+                        <LinearLayout
+                            android:id="@+id/boardPagerContainer"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center" />
+
+                    </HorizontalScrollView>
 
                     <TextView
                         android:id="@+id/boardNoteText"
