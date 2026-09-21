@@ -10,6 +10,8 @@
         android:id="@+id/walletRowDivider"
         android:layout_width="match_parent"
         android:layout_height="1dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
         android:background="@color/stats_card_border" />
 
     <LinearLayout
@@ -18,13 +20,15 @@
         android:orientation="horizontal"
         android:gravity="center_vertical"
         android:paddingTop="14dp"
-        android:paddingBottom="14dp">
+        android:paddingBottom="14dp"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp">
 
         <ImageView
             android:id="@+id/walletRowIcon"
-            android:layout_width="44dp"
-            android:layout_height="44dp"
-            android:padding="12dp"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:padding="11dp"
             tools:src="@drawable/ic_arrow_in"
             tools:background="@drawable/wallet_chip_in" />
 
@@ -41,16 +45,19 @@
                 android:layout_height="wrap_content"
                 android:maxLines="1"
                 android:ellipsize="end"
-                android:textSize="15sp"
+                android:textSize="14sp"
+                android:textStyle="bold"
                 android:textColor="@color/vg_dark"
                 tools:text="Commission from Chidi" />
 
             <TextView
                 android:id="@+id/walletRowSubtitle"
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="2dp"
-                android:textSize="13sp"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:textSize="12sp"
                 android:textColor="@color/text_muted"
                 tools:text="Bought 500 viewers" />
         </LinearLayout>
@@ -59,8 +66,10 @@
             android:id="@+id/walletRowAmount"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
-            android:textSize="16sp"
+            android:layout_marginStart="12dp"
+            android:maxLines="1"
+            android:gravity="end"
+            android:textSize="15sp"
             android:textStyle="bold"
             tools:text="+₦250" />
     </LinearLayout>
