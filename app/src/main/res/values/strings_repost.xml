@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Strings + plurals for the Repost feature. Kept in its own file so the
+    existing strings.xml is not touched. Android merges every
+    res/values/*.xml automatically, so no other change is needed.
+-->
+<resources>
+    <string name="title_repost">Repost &amp; Earn</string>
+    <string name="repost_subtitle">Repost daily. Build your streak. Climb the board.</string>
+    <string name="repost_fab_description">Repost</string>
+
+    <string name="tab_my_streak">My streak</string>
+
+    <string name="repost_day_streak">day streak</string>
+    <string name="repost_sub_pending">Repost today to keep it alive</string>
+    <string name="repost_sub_done">You\'re done for today. Come back tomorrow</string>
+
+    <string name="repost_todays_task">Today\'s task</string>
+    <string name="repost_step_1">1.  Tap the button below to open admin\'s WhatsApp.</string>
+    <string name="repost_step_2">2.  View today\'s status and tap Repost on it. No need to create anything.</string>
+    <string name="repost_step_3">3.  Send the prefilled message so we can count it.</string>
+
+    <string name="btn_repost_now">I\'ve reposted today</string>
+    <string name="btn_repost_done">Reposted today</string>
+    <string name="repost_already_done">Already counted for today</string>
+
+    <string name="repost_milestones">Milestones</string>
+    <string name="repost_days_label">days</string>
+    <string name="repost_unlocked">Unlocked</string>
+    <string name="repost_all_milestones">All milestones reached</string>
+    <string name="repost_milestone_unlocked">%1$d-day streak unlocked!</string>
+
+    <plurals name="repost_days_to_go">
+        <item quantity="one">%d day to go</item>
+        <item quantity="other">%d days to go</item>
+    </plurals>
+
+    <string name="repost_col_rank_number">Rank \u00B7 Reposter</string>
+    <string name="repost_col_reposts">Reposts</string>
+    <string name="repost_you">You</string>
+    <string name="repost_board_local_note">Only your own reposts show here for now. Other reposters will appear once syncing is added.</string>
+</resources>
