@@ -4,7 +4,6 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
-import android.view.LayoutInflater
 import android.view.View
 import android.widget.Button
 import android.widget.LinearLayout
@@ -16,42 +15,21 @@ import androidx.core.content.ContextCompat
 import android.widget.EditText
 
 /**
- * Increase Contact Limit - merged entry point that replaces both
- * GrowYourViewsActivity (originally referral milestone campaigns, now
- * a simple listing of manually-run paid campaigns - see below) and
- * UpgradePlanActivity (key code redemption). Both screens existed to do
- * the same underlying thing - raise the user's contact limit - via two
- * different mechanisms, and both already duplicated the same limit-meter
- * fetch/render logic against SheetSync.fetchImportStats(). This activity
- * keeps that fetch in one place, shown in a header that's shared across
- * both tabs, so a redemption on the key tab is reflected immediately
- * without the user needing to leave the screen.
+ * Increase Contact Limit - key code redemption screen. Used to also
+ * host a "By tasks" / referral rewards tab (paid campaign listing),
+ * which has been removed entirely per request; this screen now only
+ * shows the key redemption panel, unconditionally.
  *
- * The "Referral Rewards" tab's campaign section used to auto-track
- * referral counts and auto-unlock a shared reward code. That's gone -
- * campaigns are now created and managed entirely from the admin panel
- * (name, rate, requirements, destination link) and the app just lists
- * them as cards. Tapping a card's button opens the destination link
- * (a WhatsApp group or DM); nothing is tracked, verified, or claimed
- * in-app.
- *
- * Launched from two places, which now open on different tabs so they
- * don't look like the same screen twice:
- *  - MainMenuActivity's "Grow WhatsApp Views" button (kontactGroupsButton)
- *    opens straight to the Key tab.
- *  - The bottom nav's "Get Viewers" tab opens straight to the Referral
- *    Rewards tab.
- * Whichever tab isn't requested via EXTRA_INITIAL_TAB defaults to the
- * Referral tab, since referring friends doesn't require the user to
- * already have something (a code) in hand, unlike the key tab.
+ * EXTRA_INITIAL_TAB/TAB_KEY/TAB_REFERRAL are kept as no-op constants
+ * since MainMenuActivity and BottomNavHelper still pass them when
+ * launching this activity - harmless now that there's only one panel.
  */
 class IncreaseLimitActivity : BaseActivity() {
 
     companion object {
-        // Callers can pass this to control which tab opens first - e.g.
-        // MainMenuActivity's key-redemption button vs the bottom nav's
-        // "Get Viewers" tab, which now lead to different tabs of this
-        // same screen instead of both landing on the default.
+        // No longer change behavior (only one panel remains) - kept so
+        // existing callers (MainMenuActivity, BottomNavHelper) that pass
+        // these extras don't need to change.
         const val EXTRA_INITIAL_TAB = "initial_tab"
         const val TAB_KEY = "key"
         const val TAB_REFERRAL = "referral"
@@ -63,17 +41,7 @@ class IncreaseLimitActivity : BaseActivity() {
         private const val RATE_PER_STEP = 250
     }
 
-    // Tabs
-    private lateinit var tabReferralButton: Button
-    private lateinit var tabKeyButton: Button
-    private lateinit var referralPanel: LinearLayout
     private lateinit var keyPanel: LinearLayout
-
-    // Referral rewards panel
-    private lateinit var campaignsProgressBar: ProgressBar
-    private lateinit var campaignsEmptyText: TextView
-    private lateinit var campaignCardsContainer: LinearLayout
-    private lateinit var noCampaignsText: TextView
 
     // Redeem a key panel
     private lateinit var upgradeSubtitleText: TextView
@@ -103,15 +71,7 @@ class IncreaseLimitActivity : BaseActivity() {
 
         window.statusBarColor = ContextCompat.getColor(this, R.color.vg_green)
 
-        tabReferralButton = findViewById(R.id.tabReferralButton)
-        tabKeyButton = findViewById(R.id.tabKeyButton)
-        referralPanel = findViewById(R.id.referralPanel)
         keyPanel = findViewById(R.id.keyPanel)
-
-        campaignsProgressBar = findViewById(R.id.campaignsProgressBar)
-        campaignsEmptyText = findViewById(R.id.campaignsEmptyText)
-        campaignCardsContainer = findViewById(R.id.campaignCardsContainer)
-        noCampaignsText = findViewById(R.id.noCampaignsText)
 
         upgradeSubtitleText = findViewById(R.id.upgradeSubtitleText)
         keyCodeInput = findViewById(R.id.keyCodeInput)
@@ -125,9 +85,6 @@ class IncreaseLimitActivity : BaseActivity() {
         contactsTotalPriceText = findViewById(R.id.contactsTotalPriceText)
 
         upgradeSubtitleText.text = getString(R.string.upgrade_plan_coming_soon)
-
-        tabReferralButton.setOnClickListener { showReferralTab() }
-        tabKeyButton.setOnClickListener { showKeyTab() }
 
         redeemKeyButton.setOnClickListener { redeemKey() }
         noCodeContactUsButton.setOnClickListener { openWhatsAppForUnlockCode() }
@@ -143,119 +100,6 @@ class IncreaseLimitActivity : BaseActivity() {
             renderContactsPicker()
         }
         renderContactsPicker()
-
-        // XML no longer hardcodes which tab looks active/inactive - both
-        // buttons start visually neutral, and this call is what actually
-        // applies the correct selected styling on first render. Without
-        // this, the screen's initial look depended on whatever was left
-        // in the XML defaults, which could drift out of sync with what
-        // showReferralTab()/showKeyTab() consider "inactive".
-        // showReferralTab() also triggers loadCampaigns() on every call,
-        // so it isn't called separately here when that's the tab being
-        // opened.
-        if (intent.getStringExtra(EXTRA_INITIAL_TAB) == TAB_KEY) {
-            showKeyTab()
-        } else {
-            showReferralTab()
-        }
-    }
-
-    private fun showReferralTab() {
-        referralPanel.visibility = View.VISIBLE
-        keyPanel.visibility = View.GONE
-        tabReferralButton.backgroundTintList = ContextCompat.getColorStateList(this, R.color.white)
-        tabReferralButton.setTextColor(ContextCompat.getColor(this, R.color.vg_green))
-        tabKeyButton.backgroundTintList = ContextCompat.getColorStateList(this, android.R.color.transparent)
-        tabKeyButton.setTextColor(ContextCompat.getColor(this, R.color.white))
-
-        loadCampaigns()
-    }
-
-    private fun showKeyTab() {
-        referralPanel.visibility = View.GONE
-        keyPanel.visibility = View.VISIBLE
-        tabKeyButton.backgroundTintList = ContextCompat.getColorStateList(this, R.color.white)
-        tabKeyButton.setTextColor(ContextCompat.getColor(this, R.color.vg_green))
-        tabReferralButton.backgroundTintList = ContextCompat.getColorStateList(this, android.R.color.transparent)
-        tabReferralButton.setTextColor(ContextCompat.getColor(this, R.color.white))
-    }
-
-    // ==================== Paid campaigns ====================
-    // Pure listing + redirect. Campaigns are created and managed
-    // entirely from the admin panel (name, rate, requirements,
-    // destination link). Tapping a card's button just opens that
-    // link - a WhatsApp group invite or a DM to the team. Nothing
-    // is tracked, verified, or claimed in-app.
-
-    private fun loadCampaigns() {
-        campaignsProgressBar.visibility = View.VISIBLE
-        campaignsEmptyText.visibility = View.GONE
-        campaignCardsContainer.removeAllViews()
-        noCampaignsText.visibility = View.GONE
-
-        SheetSync.fetchPaidCampaigns(this) { list, error ->
-            runOnUiThread {
-                campaignsProgressBar.visibility = View.GONE
-                if (list == null) {
-                    val message = if (error == "NO_INTERNET") {
-                        "No internet connection. Check your connection and try again."
-                    } else {
-                        "Couldn't load campaigns right now."
-                    }
-                    campaignsEmptyText.visibility = View.VISIBLE
-                    campaignsEmptyText.text = message
-                    return@runOnUiThread
-                }
-                if (list.isEmpty()) {
-                    noCampaignsText.visibility = View.VISIBLE
-                    return@runOnUiThread
-                }
-                renderCampaignCards(list)
-            }
-        }
-    }
-
-    private fun renderCampaignCards(campaigns: List<PaidCampaign>) {
-        campaignCardsContainer.removeAllViews()
-        val inflater = LayoutInflater.from(this)
-
-        for (campaign in campaigns) {
-            val card = inflater.inflate(R.layout.item_campaign_card, campaignCardsContainer, false)
-
-            val nameText = card.findViewById<TextView>(R.id.campaignNameText)
-            val descriptionText = card.findViewById<TextView>(R.id.campaignDescriptionText)
-            val rewardBadge = card.findViewById<TextView>(R.id.campaignRewardBadge)
-            val actionButton = card.findViewById<Button>(R.id.campaignClaimButton)
-
-            nameText.text = campaign.name
-            descriptionText.text = campaign.requirements?.takeIf { it.isNotBlank() } ?: campaign.name
-            rewardBadge.text = campaign.rate
-
-            actionButton.isEnabled = true
-            actionButton.alpha = 1f
-            actionButton.text = "I'm interested"
-            actionButton.setOnClickListener { openCampaignLink(campaign) }
-
-            campaignCardsContainer.addView(card)
-
-            // This card is inflated here at runtime, after
-            // setContentView() already returned - so BaseActivity's
-            // one-time applyPoppinsAsync() pass (which only walks the
-            // view tree that existed at setContentView time) never
-            // touches it, and it silently falls back to the system
-            // font. Apply Poppins to it directly, once it's actually
-            // in the tree, so campaign cards match every other screen.
-            FontHelper.applyPoppinsAsync(this, card)
-        }
-    }
-
-    private fun openCampaignLink(campaign: PaidCampaign) {
-        try {
-            val uri = Uri.parse(campaign.destinationUrl)
-            startActivity(Intent(Intent.ACTION_VIEW, uri))
-        } catch (e: Exception) {
-            Toast.makeText(this, "Couldn't open the link", Toast.LENGTH_SHORT).show()
-        }
     }
 
     // ==================== Contact amount picker ====================
