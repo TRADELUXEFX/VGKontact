@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Full wallet withdrawal/commission history - opened from the
+    "History" link on the Wallet screen (activity_wallet.xml). Same
+    back-header + single grouped card pattern as
+    activity_activity_log.xml.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/stats_card_fill">
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/header_gradient"
+        android:paddingTop="48dp"
+        android:paddingBottom="36dp"
+        android:paddingStart="20dp"
+        android:paddingEnd="20dp">
+
+        <ImageView
+            android:id="@+id/walletHistoryBackButton"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:layout_gravity="start|center_vertical"
+            android:rotation="180"
+            android:src="@drawable/ic_arrow_forward"
+            app:tint="@color/white"
+            android:clickable="true"
+            android:focusable="true" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:text="Wallet history"
+            android:textColor="@color/white"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:fontFamily="@font/poppins" />
+
+    </FrameLayout>
+
+    <TextView
+        android:id="@+id/walletHistoryEmptyText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="60dp"
+        android:gravity="center"
+        android:text="No wallet activity yet"
+        android:textColor="@color/text_muted"
+        android:textSize="14sp"
+        android:paddingStart="32dp"
+        android:paddingEnd="32dp"
+        android:fontFamily="@font/poppins"
+        android:visibility="gone" />
+
+    <ScrollView
+        android:id="@+id/walletHistoryScroll"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:clipToPadding="false"
+        android:paddingBottom="24dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingStart="20dp"
+            android:paddingEnd="20dp"
+            android:paddingTop="16dp">
+
+            <LinearLayout
+                android:id="@+id/walletHistoryListContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@drawable/wallet_balance_card" />
+
+        </LinearLayout>
+
+    </ScrollView>
+
+</LinearLayout>
