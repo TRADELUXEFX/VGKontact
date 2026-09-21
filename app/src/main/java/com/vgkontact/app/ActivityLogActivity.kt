@@ -100,6 +100,7 @@ class ActivityLogActivity : BaseActivity() {
             ActivityLog.Type.REFERRAL_JOINED -> R.drawable.ic_notification_bell
             ActivityLog.Type.PERMISSION_ISSUE -> R.drawable.ic_notification_bell
             ActivityLog.Type.SYNC_FREQUENCY_CHANGED -> R.drawable.ic_arrow_forward
+            ActivityLog.Type.CONTACTS_REMOVED -> R.drawable.ic_notification_bell
         }
     }
 }
