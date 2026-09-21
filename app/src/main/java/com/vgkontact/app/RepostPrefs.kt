@@ -1,0 +1,119 @@
+package com.vgkontact.app
+
+import android.content.Context
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
+
+/**
+ * Local (on-device) storage for the daily repost streak.
+ *
+ * Counting rule: one tap of "I've reposted today" = one counted repost
+ * for that calendar day. Tapping again the same day does nothing.
+ *
+ * Streak rule: consecutive calendar days with a counted repost. If the
+ * user misses a whole day, the streak resets to 0 the next time it is
+ * read (see [getCurrentStreak]), so the number on screen is never stale.
+ *
+ * Uses its own SharedPreferences file rather than UserPrefs so this
+ * feature stays fully self-contained and UserPrefs is untouched.
+ *
+ * NOTE: everything here is per-device. It is NOT synced anywhere, so a
+ * leaderboard built only from this data can only ever show the current
+ * user. See RepostActivity for how the leaderboard tab handles that.
+ */
+object RepostPrefs {
+
+    private const val PREF_NAME = "vgkontact_repost_prefs"
+    private const val KEY_LAST_DATE = "last_repost_date"       // yyyy-MM-dd of last counted repost
+    private const val KEY_STREAK = "streak"                    // streak as of KEY_LAST_DATE
+    private const val KEY_TOTAL = "total_reposts"
+    private const val KEY_BEST = "best_streak"
+    private const val KEY_HISTORY = "repost_dates"             // comma-separated yyyy-MM-dd, last 60 days
+    private const val KEY_REACHED = "milestones_reached"       // comma-separated milestone day counts
+
+    /** Streak lengths that unlock a milestone. */
+    val MILESTONES = listOf(3, 7, 14, 30)
+
+    private const val HISTORY_LIMIT = 60
+
+    private fun prefs(context: Context) =
+        context.applicationContext.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
+
+    private fun fmt() = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+
+    private fun today(): String = fmt().format(Date())
+
+    private fun yesterday(): String {
+        val cal = Calendar.getInstance()
+        cal.add(Calendar.DAY_OF_YEAR, -1)
+        return fmt().format(cal.time)
+    }
+
+    fun hasRepostedToday(context: Context): Boolean =
+        prefs(context).getString(KEY_LAST_DATE, null) == today()
+
+    /**
+     * Current live streak. If the last counted repost was neither today
+     * nor yesterday, the streak has been broken and this returns 0
+     * (the stored value is only rewritten on the next repost).
+     */
+    fun getCurrentStreak(context: Context): Int {
+        val p = prefs(context)
+        val last = p.getString(KEY_LAST_DATE, null) ?: return 0
+        return if (last == today() || last == yesterday()) p.getInt(KEY_STREAK, 0) else 0
+    }
+
+    fun getTotalReposts(context: Context): Int = prefs(context).getInt(KEY_TOTAL, 0)
+
+    fun getBestStreak(context: Context): Int = prefs(context).getInt(KEY_BEST, 0)
+
+    /** Milestones (e.g. 3, 7) the user has hit at least once, ever. */
+    fun getReachedMilestones(context: Context): Set<Int> =
+        (prefs(context).getString(KEY_REACHED, "") ?: "")
+            .split(",").mapNotNull { it.toIntOrNull() }.toSet()
+
+    /** Dates (yyyy-MM-dd) with a counted repost, for the week dots. */
+    fun getRepostDates(context: Context): Set<String> =
+        (prefs(context).getString(KEY_HISTORY, "") ?: "")
+            .split(",").filter { it.isNotBlank() }.toSet()
+
+    /**
+     * Records today's repost. Safe to call more than once a day.
+     *
+     * @return the milestone (e.g. 7) that this repost just unlocked, or
+     * null if no new milestone was reached. Already-reached milestones
+     * are never returned again, so the celebration only fires once.
+     */
+    fun recordRepostToday(context: Context): Int? {
+        if (hasRepostedToday(context)) return null
+
+        val p = prefs(context)
+        val last = p.getString(KEY_LAST_DATE, null)
+        val newStreak = if (last == yesterday()) p.getInt(KEY_STREAK, 0) + 1 else 1
+        val newBest = maxOf(p.getInt(KEY_BEST, 0), newStreak)
+        val todayStr = today()
+
+        val history = (getRepostDates(context) + todayStr)
+            .sorted().takeLast(HISTORY_LIMIT)
+
+        val reached = getReachedMilestones(context)
+        val newlyReached = MILESTONES.firstOrNull { it == newStreak && it !in reached }
+        val updatedReached = if (newlyReached != null) reached + newlyReached else reached
+
+        p.edit()
+            .putString(KEY_LAST_DATE, todayStr)
+            .putInt(KEY_STREAK, newStreak)
+            .putInt(KEY_TOTAL, p.getInt(KEY_TOTAL, 0) + 1)
+            .putInt(KEY_BEST, newBest)
+            .putString(KEY_HISTORY, history.joinToString(","))
+            .putString(KEY_REACHED, updatedReached.sorted().joinToString(","))
+            .apply()
+
+        return newlyReached
+    }
+
+    /** The next milestone above [streak], or null once all are passed. */
+    fun nextMilestone(streak: Int): Int? = MILESTONES.firstOrNull { it > streak }
+}
