@@ -104,13 +104,29 @@ object FloatingRepostHelper {
     }
 
     /**
-     * Shows the red dot only while today's repost is still pending.
-     * Safe to call any time; does nothing if the button isn't attached.
+     * Updates the FAB for today's repost status. Safe to call any time;
+     * does nothing if the button isn't attached.
+     *
+     * Pending (not yet reposted today): button is red, corner dot shown.
+     * Done (already reposted today): button is green, corner dot hidden.
+     *
+     * Call this after attach() and again right after the user completes
+     * a repost, so the button flips from red to green immediately
+     * without waiting for the next screen load.
      */
     fun refreshBadge(activity: Activity) {
         val contentRoot = activity.findViewById<ViewGroup>(android.R.id.content) ?: return
-        val dot = contentRoot.findViewWithTag<View>(BADGE_TAG) ?: return
-        dot.visibility =
-            if (RepostPrefs.hasRepostedToday(activity)) View.GONE else View.VISIBLE
+        val fab = contentRoot.findViewWithTag<View>(FAB_TAG)
+        val dot = contentRoot.findViewWithTag<View>(BADGE_TAG)
+
+        val repostedToday = RepostPrefs.hasRepostedToday(activity)
+
+        fab?.background = ContextCompat.getDrawable(
+            activity,
+            if (repostedToday) R.drawable.floating_repost_fab_background
+            else R.drawable.floating_repost_fab_background_pending
+        )
+
+        dot?.visibility = if (repostedToday) View.GONE else View.VISIBLE
     }
 }
