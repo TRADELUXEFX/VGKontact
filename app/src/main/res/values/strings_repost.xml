@@ -15,12 +15,28 @@
     <string name="repost_sub_pending">Repost today to keep it alive</string>
     <string name="repost_sub_done">You\'re done for today. Come back tomorrow</string>
 
+    <!-- Stats card rows (new Repost & Earn design) -->
+    <string name="repost_row_today">Today\'s repost</string>
+    <string name="repost_row_current_streak">Current streak</string>
+    <string name="repost_row_best_streak">Best streak</string>
+    <string name="repost_row_total">Total reposts</string>
+    <string name="repost_status_pending">Pending</string>
+    <string name="repost_status_done">Done</string>
+
+    <plurals name="repost_days_count">
+        <item quantity="one">%d day</item>
+        <item quantity="other">%d days</item>
+    </plurals>
+
+    <string name="repost_show_guide">Show today\'s task guide</string>
+    <string name="repost_hide_guide">Hide task guide</string>
+
     <string name="repost_todays_task">Today\'s task</string>
     <string name="repost_step_1">1.  Tap the button below to open admin\'s WhatsApp.</string>
     <string name="repost_step_2">2.  View today\'s status and tap Repost on it. No need to create anything.</string>
     <string name="repost_step_3">3.  Send the prefilled message so we can count it.</string>
 
-    <string name="btn_repost_now">I\'ve reposted today</string>
+    <string name="btn_repost_now">Repost now</string>
     <string name="btn_repost_done">Reposted today</string>
 
     <string name="repost_milestones">Milestones</string>
