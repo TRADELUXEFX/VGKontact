@@ -5,6 +5,7 @@ import android.graphics.Typeface
 import android.net.Uri
 import android.os.Bundle
 import android.view.Gravity
+import android.view.LayoutInflater
 import android.view.View
 import android.widget.Button
 import android.widget.ImageView
@@ -62,10 +63,14 @@ class RepostActivity : BaseActivity() {
 
     private lateinit var boardProgress: ProgressBar
     private lateinit var boardListContainer: LinearLayout
+    private lateinit var boardPagerScroll: View
+    private lateinit var boardPagerContainer: LinearLayout
     private lateinit var boardNoteText: TextView
 
     /** One row on the leaderboard. */
     private data class BoardRow(
+        /** Real leaderboard rank (1 = top), as ranked by the server. */
+        val rank: Int,
         val label: String,
         val reposts: Int,
         val streak: Int,
@@ -100,6 +105,8 @@ class RepostActivity : BaseActivity() {
 
         boardProgress = findViewById(R.id.boardProgress)
         boardListContainer = findViewById(R.id.boardListContainer)
+        boardPagerScroll = findViewById(R.id.boardPagerScroll)
+        boardPagerContainer = findViewById(R.id.boardPagerContainer)
         boardNoteText = findViewById(R.id.boardNoteText)
 
         backButton.setOnClickListener { finish() }
@@ -193,7 +200,13 @@ class RepostActivity : BaseActivity() {
 
     private fun onRepostTapped() {
         if (RepostPrefs.hasRepostedToday(this)) {
-            Toast.makeText(this, getString(R.string.repost_already_done), Toast.LENGTH_SHORT).show()
+            // Already counted today: do NOT count again, but still open
+            // WhatsApp so the user can retry if the first attempt never
+            // got there (slow network, WhatsApp didn't open, etc).
+            // If the earlier count never reached the server, this is also
+            // a good moment to resend it (safe: one row per user per day).
+            if (RepostPrefs.hasPendingUploadToday(this)) syncStatsFromServer()
+            openWhatsAppToAdmin()
             return
         }
 
@@ -430,6 +443,9 @@ class RepostActivity : BaseActivity() {
     /** Rows currently shown; replaced when the server answers. */
     private var boardRows: List<BoardRow> = emptyList()
 
+    /** Which leaderboard page is showing (0 = first). */
+    private var boardPage = 0
+
     /** True once a real server response has been received this session. */
     private var boardFromServer = false
 
@@ -439,6 +455,7 @@ class RepostActivity : BaseActivity() {
      */
     private fun localOnlyBoard(): List<BoardRow> = listOf(
         BoardRow(
+            rank = 1,
             label = getString(R.string.repost_you),
             reposts = RepostPrefs.getTotalReposts(this),
             streak = RepostPrefs.getCurrentStreak(this),
@@ -464,6 +481,7 @@ class RepostActivity : BaseActivity() {
                     boardFromServer = true
                     boardRows = entries.map {
                         BoardRow(
+                            rank = it.rank,
                             label = if (it.isMe) getString(R.string.repost_you) else it.displayNumber,
                             reposts = it.totalReposts,
                             streak = it.streak,
@@ -479,7 +497,14 @@ class RepostActivity : BaseActivity() {
     private fun renderLeaderboard() {
         boardListContainer.removeAllViews()
         // Server rows arrive already ranked; the local fallback is one row.
-        val rows = if (boardFromServer) boardRows else localOnlyBoard()
+        val allRows = if (boardFromServer) boardRows else localOnlyBoard()
+
+        // Show BOARD_PAGE_SIZE (10) rows at a time. If the list shrank
+        // since the last render (e.g. after a refresh), clamp the page.
+        val pageCount = maxOf(1, (allRows.size + BOARD_PAGE_SIZE - 1) / BOARD_PAGE_SIZE)
+        if (boardPage >= pageCount) boardPage = pageCount - 1
+        val start = boardPage * BOARD_PAGE_SIZE
+        val rows = allRows.subList(start, minOf(start + BOARD_PAGE_SIZE, allRows.size))
         val density = resources.displayMetrics.density
         val rankBackgrounds = listOf(
             R.drawable.repost_rank_1,
@@ -491,15 +516,21 @@ class RepostActivity : BaseActivity() {
             val line = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
-                setPadding(0, (13 * density).toInt(), 0, (13 * density).toInt())
+                // Same horizontal inset on EVERY row (and on the column
+                // headers in activity_repost.xml), so the rank badge, name
+                // and count line up under their headers. Only the "You"
+                // row adds a tinted background, which spans the full width
+                // of the divider above it.
+                setPadding(
+                    (12 * density).toInt(), (13 * density).toInt(),
+                    (12 * density).toInt(), (13 * density).toInt()
+                )
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT
                 )
                 if (row.isMe) {
                     setBackgroundResource(R.drawable.repost_row_me_background)
-                    setPadding((12 * density).toInt(), (13 * density).toInt(),
-                        (12 * density).toInt(), (13 * density).toInt())
                 }
             }
 
@@ -507,13 +538,13 @@ class RepostActivity : BaseActivity() {
             // soft green for everyone else. Plain vector shapes + a digit,
             // so it renders identically on every Android version.
             line.addView(TextView(this).apply {
-                text = (index + 1).toString()
+                text = row.rank.toString()
                 textSize = 13f
                 setTypeface(typeface, Typeface.BOLD)
                 gravity = Gravity.CENTER
-                val top3 = index < 3
+                val top3 = row.rank in 1..3
                 setBackgroundResource(
-                    if (top3) rankBackgrounds[index] else R.drawable.repost_rank_other
+                    if (top3) rankBackgrounds[row.rank - 1] else R.drawable.repost_rank_other
                 )
                 setTextColor(
                     ContextCompat.getColor(
@@ -599,9 +630,54 @@ class RepostActivity : BaseActivity() {
         } else {
             boardNoteText.visibility = View.GONE
         }
+
+        renderBoardPager(pageCount)
+    }
+
+    /**
+     * Numbered page buttons under the leaderboard, same look as the
+     * Referrals screen (item_group_page_button + the page_button_*
+     * backgrounds). Hidden when everything fits on one page.
+     */
+    private fun renderBoardPager(pageCount: Int) {
+        if (pageCount <= 1) {
+            boardPagerScroll.visibility = View.GONE
+            return
+        }
+        boardPagerScroll.visibility = View.VISIBLE
+        boardPagerContainer.removeAllViews()
+        val inflater = LayoutInflater.from(this)
+
+        for (pageIndex in 0 until pageCount) {
+            val button = inflater.inflate(
+                R.layout.item_group_page_button, boardPagerContainer, false
+            ) as TextView
+            button.text = (pageIndex + 1).toString()
+            val selected = pageIndex == boardPage
+            button.setBackgroundResource(
+                if (selected) R.drawable.page_button_selected_background
+                else R.drawable.page_button_default_background
+            )
+            button.setTextColor(
+                ContextCompat.getColor(this, if (selected) R.color.white else R.color.vg_dark)
+            )
+            button.setOnClickListener {
+                if (boardPage != pageIndex) {
+                    boardPage = pageIndex
+                    renderLeaderboard()
+                }
+            }
+            boardPagerContainer.addView(button)
+            // Inflated after setContentView(), so BaseActivity's one-time
+            // font pass never reaches it.
+            FontHelper.applyPoppinsAsync(this, button)
+        }
     }
 
     companion object {
+        /** Leaderboard rows per page. */
+        private const val BOARD_PAGE_SIZE = 10
+
         // Same admin number used by RepostRedirectActivity and
         // FloatingContactHelper.
         private const val ADMIN_WHATSAPP_NUMBER = "09110321143"
