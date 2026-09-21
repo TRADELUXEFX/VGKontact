@@ -57,113 +57,189 @@
                 android:paddingStart="20dp"
                 android:paddingEnd="20dp"
                 android:paddingTop="24dp"
-                android:paddingBottom="24dp">
+                android:paddingBottom="16dp">
 
-                <TextView
-                    android:id="@+id/bannedNumberText"
-                    android:layout_width="wrap_content"
+                <!-- One card, three divided sections -->
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_gravity="center_horizontal"
-                    android:background="@drawable/banned_number_pill_background"
-                    android:paddingStart="16dp"
-                    android:paddingEnd="16dp"
-                    android:paddingTop="6dp"
-                    android:paddingBottom="6dp"
-                    android:textSize="14sp"
-                    android:textStyle="bold"
-                    android:textColor="@color/vg_red"
-                    android:visibility="gone" />
+                    android:orientation="vertical"
+                    android:background="@drawable/card_background">
+
+                    <!-- ACCOUNT -->
+                    <LinearLayout
+                        android:id="@+id/bannedAccountSection"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:paddingStart="18dp"
+                        android:paddingEnd="18dp"
+                        android:paddingTop="16dp"
+                        android:paddingBottom="16dp"
+                        android:visibility="gone">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="ACCOUNT"
+                            android:textSize="11sp"
+                            android:textStyle="bold"
+                            android:letterSpacing="0.1"
+                            android:textColor="@color/text_muted" />
+
+                        <TextView
+                            android:id="@+id/bannedNumberText"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:textSize="17sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/vg_dark" />
+
+                    </LinearLayout>
+
+                    <!-- REASON -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:background="@drawable/limit_breakdown_divider"
+                        android:paddingStart="18dp"
+                        android:paddingEnd="18dp"
+                        android:paddingTop="16dp"
+                        android:paddingBottom="16dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="REASON"
+                            android:textSize="11sp"
+                            android:textStyle="bold"
+                            android:letterSpacing="0.1"
+                            android:textColor="@color/text_muted" />
+
+                        <TextView
+                            android:id="@+id/bannedReasonText"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:text="Breaking the app's rules"
+                            android:textSize="18sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/vg_red" />
+
+                    </LinearLayout>
+
+                    <!-- WHAT THIS MEANS -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:background="@drawable/limit_breakdown_divider"
+                        android:paddingStart="18dp"
+                        android:paddingEnd="18dp"
+                        android:paddingTop="16dp"
+                        android:paddingBottom="18dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="WHAT THIS MEANS"
+                            android:textSize="11sp"
+                            android:textStyle="bold"
+                            android:letterSpacing="0.1"
+                            android:textColor="@color/text_muted" />
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:layout_marginTop="14dp">
+
+                            <TextView
+                                android:layout_width="26dp"
+                                android:layout_height="26dp"
+                                android:background="@drawable/dialog_warning_icon_background"
+                                android:gravity="center"
+                                android:text="✕"
+                                android:textSize="11sp"
+                                android:textStyle="bold"
+                                android:textColor="@color/vg_red" />
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:orientation="vertical"
+                                android:layout_marginStart="12dp">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="No status views"
+                                    android:textSize="15sp"
+                                    android:textStyle="bold"
+                                    android:textColor="@color/vg_dark" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="1dp"
+                                    android:text="Contacts already saved on your phone won't get you views."
+                                    android:textSize="13sp"
+                                    android:textColor="@color/text_muted" />
+
+                            </LinearLayout>
+                        </LinearLayout>
+
+                    </LinearLayout>
+                </LinearLayout>
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="We've suspended this account."
-                    android:textSize="16sp"
-                    android:textStyle="bold"
-                    android:textColor="@color/vg_red"
+                    android:layout_marginTop="16dp"
                     android:gravity="center"
-                    android:lineSpacingMultiplier="1.2"
-                    android:layout_marginTop="16dp" />
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="What this means"
+                    android:text="Opening a new account won't get around this."
                     android:textSize="13sp"
                     android:textStyle="bold"
-                    android:textColor="@color/vg_green_dark"
-                    android:layout_marginTop="24dp" />
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="•  You won't get any new contacts.\n•  Your account can't be used until we review it.\n•  Contacts already saved on your phone won't get you status views.\n•  Creating a new account won't get around this."
-                    android:textSize="13sp"
-                    android:textColor="@color/text_muted"
-                    android:lineSpacingMultiplier="1.35"
-                    android:layout_marginTop="6dp" />
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Why this happens"
-                    android:textSize="13sp"
-                    android:textStyle="bold"
-                    android:textColor="@color/vg_green_dark"
-                    android:layout_marginTop="20dp" />
-
-                <TextView
-                    android:id="@+id/bannedReasonText"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="•  Using more than one account.\n•  Deleting the contacts from your phone after getting them.\n•  Scamming or misusing the app."
-                    android:textSize="13sp"
-                    android:textColor="@color/text_muted"
-                    android:lineSpacingMultiplier="1.35"
-                    android:layout_marginTop="6dp" />
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Think we got this wrong?"
-                    android:textSize="13sp"
-                    android:textStyle="bold"
-                    android:textColor="@color/vg_green_dark"
-                    android:layout_marginTop="20dp" />
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Message customer care on WhatsApp and we'll look into it. If we lift the suspension, the app opens again on its own."
-                    android:textSize="13sp"
-                    android:textColor="@color/text_muted"
-                    android:lineSpacingMultiplier="1.35"
-                    android:layout_marginTop="6dp" />
+                    android:textColor="@color/text_secondary" />
 
             </LinearLayout>
         </ScrollView>
 
+        <!-- ==== ACTION ==== -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="20dp">
+            android:paddingStart="20dp"
+            android:paddingEnd="20dp"
+            android:paddingTop="8dp"
+            android:paddingBottom="20dp">
 
             <Button
                 android:id="@+id/contactCareButton"
                 android:layout_width="match_parent"
                 android:layout_height="56dp"
                 android:text="Contact customer care"
-                android:textSize="15sp"
+                android:textSize="16sp"
                 android:textStyle="bold"
                 android:textAllCaps="false"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                android:textColor="@color/vg_green_dark"
-                app:strokeColor="@color/vg_green"
-                app:strokeWidth="1.5dp"
-                app:backgroundTint="@android:color/transparent"
+                android:backgroundTint="@color/vg_green"
+                android:textColor="@color/white"
                 android:gravity="center"
                 app:cornerRadius="16dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:gravity="center"
+                android:text="Contact us if you think we're wrong"
+                android:textSize="12sp"
+                android:lineSpacingMultiplier="1.25"
+                android:textColor="@color/text_muted" />
 
         </LinearLayout>
 
