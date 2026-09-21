@@ -16,14 +16,14 @@ import java.util.Locale
  * Wallet screen - referral commission balance, Withdraw button and a
  * Recent activity list.
  *
- * DATA: everything shown comes from [loadWallet], which currently returns
- * SAMPLE numbers. The database is wired up later - when that happens,
- * replace the body of [loadWallet] (or call [render] from a network
- * callback) and nothing else in this file or the layout needs to change.
+ * DATA: real numbers come from Supabase via WalletSync.fetchWallet()
+ * (get_my_wallet RPC - see wallet_fix.sql). If the server can't be
+ * reached, the screen shows a "couldn't load" state with a Retry tap
+ * instead of fake numbers.
  */
 class WalletActivity : BaseActivity() {
 
-    // ---- Data model (swap loadWallet() for real data later) -----------
+    // ---- Data model ---------------------------------------------------
 
     private enum class Kind { COMMISSION, WITHDRAWAL }
 
@@ -51,6 +51,7 @@ class WalletActivity : BaseActivity() {
     private lateinit var withdrawLabel: TextView
     private lateinit var activityList: LinearLayout
     private lateinit var emptyState: View
+    private lateinit var emptyText: TextView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -58,7 +59,8 @@ class WalletActivity : BaseActivity() {
 
         window.statusBarColor = ContextCompat.getColor(this, R.color.vg_green)
 
-        FloatingContactHelper.attach(this)
+        // No floating chat/repost buttons here: they sat on top of the
+        // amounts on the right of each activity row and hid them.
         BottomNavHelper.setup(this, BottomNavHelper.Tab.WALLET)
 
         balanceText = findViewById(R.id.walletBalanceText)
@@ -69,26 +71,72 @@ class WalletActivity : BaseActivity() {
         withdrawLabel = findViewById(R.id.walletWithdrawLabel)
         activityList = findViewById(R.id.walletActivityList)
         emptyState = findViewById(R.id.walletEmptyState)
+        emptyText = findViewById(R.id.walletEmptyText)
 
-        render(loadWallet())
+        loadWallet()
     }
 
-    /** SAMPLE DATA - replace with the real database call later. */
-    private fun loadWallet(): WalletData = WalletData(
-        available = 4_250,
-        pending = 750,
-        totalEarned = 12_500,
-        withdrawn = 7_500,
-        activity = listOf(
-            WalletEntry(Kind.COMMISSION, "Commission from Chidi", "Bought 500 viewers", 250),
-            WalletEntry(Kind.COMMISSION, "Commission from Amaka", "Bought 1,000 viewers", 500),
-            WalletEntry(Kind.WITHDRAWAL, "Withdrawal to Opay", "Paid", -3_000)
-        )
-    )
+    override fun onResume() {
+        super.onResume()
+        // Refresh when coming back to the tab so new commissions show up.
+        if (::balanceText.isInitialized) loadWallet()
+    }
+
+    private var loading = false
+
+    private fun loadWallet() {
+        if (loading) return
+        loading = true
+        WalletSync.fetchWallet(this) { wallet ->
+            runOnUiThread {
+                loading = false
+                if (isFinishing || isDestroyed) return@runOnUiThread
+                if (wallet == null) {
+                    showLoadError()
+                } else {
+                    render(
+                        WalletData(
+                            available = wallet.available,
+                            pending = wallet.pending,
+                            totalEarned = wallet.totalEarned,
+                            withdrawn = wallet.withdrawn,
+                            activity = wallet.activity.map {
+                                WalletEntry(
+                                    if (it.kind == "WITHDRAWAL") Kind.WITHDRAWAL else Kind.COMMISSION,
+                                    it.title,
+                                    it.subtitle,
+                                    it.amount
+                                )
+                            }
+                        )
+                    )
+                }
+            }
+        }
+    }
+
+    /** Server unreachable: show dashes and let the user tap to retry. */
+    private fun showLoadError() {
+        balanceText.text = "\u2014"
+        pendingText.text = "Couldn't load wallet. Tap to retry"
+        pendingText.setOnClickListener { loadWallet() }
+        totalEarnedText.text = "\u2014"
+        withdrawnText.text = "\u2014"
+        withdrawButton.setBackgroundResource(R.drawable.wallet_withdraw_button_disabled)
+        withdrawButton.setOnClickListener {
+            Toast.makeText(this, "Wallet not loaded yet", Toast.LENGTH_SHORT).show()
+        }
+        activityList.removeAllViews()
+        activityList.visibility = View.GONE
+        emptyText.text = "Connect to the internet to see your activity"
+        emptyState.visibility = View.VISIBLE
+    }
 
     private fun render(data: WalletData) {
         balanceText.text = naira(data.available)
         pendingText.text = "${naira(data.pending)} pending"
+        pendingText.setOnClickListener(null)
+        pendingText.isClickable = false
         totalEarnedText.text = naira(data.totalEarned)
         withdrawnText.text = naira(data.withdrawn)
 
@@ -119,6 +167,7 @@ class WalletActivity : BaseActivity() {
 
         if (entries.isEmpty()) {
             activityList.visibility = View.GONE
+            emptyText.text = "No wallet activity yet"
             emptyState.visibility = View.VISIBLE
             return
         }
