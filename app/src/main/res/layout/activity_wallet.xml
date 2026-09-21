@@ -1,19 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Cleaned-up pass: fewer competing visual weights than the previous
-    revision (one filled primary button instead of three, no duplicate
-    "Join More Groups" entry point, no separate helper-banner text block).
-
-    Kontact Groups (joined-groups summary + join-more-groups action) has
-    been moved off this dashboard entirely into its own screen,
-    GroupsActivity/activity_groups.xml. This screen now only needs a
-    single "Kontact Groups" button as the entry point to that screen -
-    see kontactGroupsButton below.
--->
-<!--
-    Root is a FrameLayout, not a LinearLayout, so the bottom nav bar
-    (see bottom_nav_bar.xml) can float over the scrollable content as
-    a rounded pill instead of sitting in-flow as a full-width bar.
+    Wallet dashboard - referral commission balance, Withdraw button and a
+    Recent activity list. Backing code: WalletActivity.kt.
 -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -29,755 +17,207 @@
         android:clipToPadding="false"
         android:paddingBottom="88dp">
 
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical">
-
-        <!-- ================= HEADER (reference: .header) ================= -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:background="@drawable/header_gradient"
-            android:paddingTop="48dp"
-            android:paddingBottom="18dp"
-            android:paddingStart="20dp"
-            android:paddingEnd="20dp">
+            android:orientation="vertical">
 
+            <!-- ================= HEADER ================= -->
             <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical">
-
-                <com.google.android.material.imageview.ShapeableImageView
-                    android:id="@+id/profileIcon"
-                    android:layout_width="68dp"
-                    android:layout_height="68dp"
-                    android:padding="14dp"
-                    android:src="@drawable/ic_profile"
-                    app:tint="@color/vg_green"
-                    android:background="@color/white"
-                    android:scaleType="fitCenter"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:foreground="?android:attr/selectableItemBackgroundBorderless"
-                    app:shapeAppearanceOverlay="@style/CircleImageShape" />
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:layout_marginStart="12dp"
-                    android:orientation="vertical">
-
-                    <!-- Shows the user's username (UserPrefs.getName), not
-                         their phone number - the phone number now lives
-                         only in the referral code row below, since it's
-                         the value used for referrals. Id kept as
-                         phoneNumberText to minimize Kotlin churn, but it
-                         now displays the username. -->
-                    <TextView
-                        android:id="@+id/phoneNumberText"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:textSize="19sp"
-                        android:textStyle="bold"
-                        android:letterSpacing="0.01"
-                        android:textColor="@color/white"
-                        android:fontFamily="@font/poppins"
-                        tools:text="Jay" />
-
-                    <LinearLayout
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="5dp"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical">
-
-                        <LinearLayout
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:orientation="horizontal"
-                            android:gravity="center_vertical"
-                            android:background="@drawable/group_badge_background"
-                            android:paddingStart="8dp"
-                            android:paddingEnd="10dp"
-                            android:paddingTop="3dp"
-                            android:paddingBottom="3dp">
-
-                            <View
-                                android:layout_width="6dp"
-                                android:layout_height="6dp"
-                                android:layout_marginEnd="6dp"
-                                android:background="@drawable/badge_dot" />
-
-                            <TextView
-                                android:id="@+id/planPreviewText"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:textSize="11sp"
-                                android:textStyle="bold"
-                                android:textAllCaps="true"
-                                android:letterSpacing="0.04"
-                                android:textColor="@color/white"
-                                android:fontFamily="@font/poppins"
-                                tools:text="FREE PLAN" />
-
-                        </LinearLayout>
-
-                        <!-- Alarm icon shortcut to the sync-frequency
-                             preview popup (1/6/12/24 hours), placed next
-                             to the VERIFIED/UNVERIFIED badge per request -
-                             this is where the old syncFrequencyRow pill
-                             used to sit before it was pulled for space
-                             (see removed comment above). Opens the same
-                             popup_sync_frequency_menu.xml/
-                             item_sync_frequency_option.xml used on the
-                             Notification Settings screen; see
-                             MainMenuActivity.showSyncFrequencyPopup(). -->
-                        <ImageView
-                            android:id="@+id/syncFrequencyAlarmIcon"
-                            android:layout_width="26dp"
-                            android:layout_height="26dp"
-                            android:padding="4dp"
-                            android:layout_marginStart="8dp"
-                            android:src="@drawable/ic_alarm"
-                            app:tint="@color/white"
-                            android:clickable="true"
-                            android:focusable="true"
-                            android:background="?android:attr/selectableItemBackgroundBorderless" />
-
-                    </LinearLayout>
-
-                </LinearLayout>
-
-                <!-- Notification bell - enlarged from 42dp to 48dp and the
-                     icon itself from an 11dp inset to 12dp padding (bigger
-                     glyph), since it previously read as too small next to
-                     the 52dp profile photo it sits across from. The unread
-                     dot's margins were tuned to this new size so it still
-                     sits snugly in the bell's top-right corner instead of
-                     floating off-center. -->
-                <FrameLayout
-                    android:layout_width="48dp"
-                    android:layout_height="48dp">
-
-                    <ImageView
-                        android:id="@+id/notificationIcon"
-                        android:layout_width="48dp"
-                        android:layout_height="48dp"
-                        android:padding="12dp"
-                        android:src="@drawable/ic_notification_bell"
-                        android:background="@drawable/notification_circle_background"
-                        android:clickable="true"
-                        android:focusable="true"
-                        app:tint="@color/white" />
-
-                    <!-- Red dot shown when ActivityLog.hasUnread() is true;
-                         see MainMenuActivity.renderNotificationDot(). Hidden
-                         by default so it never flashes on first layout pass. -->
-                    <View
-                        android:id="@+id/notificationUnreadDot"
-                        android:layout_width="11dp"
-                        android:layout_height="11dp"
-                        android:layout_gravity="top|end"
-                        android:layout_marginTop="3dp"
-                        android:layout_marginEnd="3dp"
-                        android:background="@drawable/notification_unread_dot"
-                        android:visibility="gone" />
-
-                </FrameLayout>
-
-                <!-- "Delete My Contacts" / "Resume Syncing" toggle - moved
-                     here from a full-width outlined button at the bottom of
-                     the screen so it sits with the other account-level
-                     controls (bell) instead of competing with the primary
-                     action buttons in the actions section below. Icon and
-                     content-description swap at runtime in
-                     MainMenuActivity.renderSyncPauseButton(), same as the
-                     button it replaces. -->
-                <FrameLayout
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
-                    android:layout_marginStart="6dp">
-
-                    <ImageView
-                        android:id="@+id/deleteContactsIcon"
-                        android:layout_width="48dp"
-                        android:layout_height="48dp"
-                        android:padding="12dp"
-                        android:src="@drawable/ic_delete"
-                        android:background="@drawable/notification_circle_background"
-                        android:clickable="true"
-                        android:focusable="true"
-                        android:contentDescription="@string/menu_delete_contacts"
-                        app:tint="@color/white" />
-
-                </FrameLayout>
-
-            </LinearLayout>
-
-            <!-- Hairline separating the sync row from the profile row above -
-                 a plain 1dp View instead of a background-drawable border, so
-                 it doesn't depend on guessing the row's height. -->
-            <!-- Referral code row (Option B) - shows the user's WhatsApp
-                 number as their referral code, with a Copy action. This
-                 is the same value previously shown as the big header
-                 text; that spot now shows the username instead, so this
-                 row is what surfaces the number for referral purposes.
-                 Text set at runtime from UserPrefs.getWhatsapp(). -->
-            <LinearLayout
-                android:id="@+id/referralCodeRow"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="14dp"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:background="@drawable/header_tab_track_background"
-                android:paddingStart="12dp"
-                android:paddingEnd="8dp"
-                android:paddingTop="8dp"
-                android:paddingBottom="8dp">
-
-                <TextView
-                    android:id="@+id/referralCodeLabelText"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:textSize="11sp"
-                    android:textColor="@color/white"
-                    tools:text="Referral code: 08108709625" />
-
-                <Button
-                    android:id="@+id/copyReferralCodeButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="24dp"
-                    android:minWidth="0dp"
-                    android:minHeight="0dp"
-                    android:paddingStart="10dp"
-                    android:paddingEnd="10dp"
-                    android:text="@string/btn_copy"
-                    android:textSize="10sp"
-                    android:textStyle="bold"
-                    android:textColor="@color/vg_green_dark"
-                    android:backgroundTint="@color/white"
-                    android:insetTop="0dp"
-                    android:insetBottom="0dp"
-                    app:cornerRadius="12dp" />
-
-            </LinearLayout>
-
-        </LinearLayout>
-
-        <!-- Permission health banner - app-specific safety feature with no
-             reference equivalent, kept as-is (unchanged id/logic) since it's
-             functionally important; it simply sits below the header instead
-             of overlapping it. -->
-        <LinearLayout
-            android:id="@+id/permissionWarningBanner"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:background="@drawable/permission_banner_background"
-            android:padding="14dp"
-            android:layout_marginStart="20dp"
-            android:layout_marginEnd="20dp"
-            android:layout_marginTop="16dp"
-            android:visibility="gone"
-            android:clickable="true"
-            android:focusable="true">
-
-            <ImageView
-                android:id="@+id/permissionWarningIcon"
-                android:layout_width="22dp"
-                android:layout_height="22dp"
-                android:src="@drawable/ic_battery"
-                app:tint="@color/white" />
-
-            <TextView
-                android:id="@+id/permissionWarningText"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginStart="10dp"
-                android:textSize="13sp"
-                android:textStyle="bold"
-                android:textColor="@color/white"
-                tools:text="Contacts permission is off - Sync is disabled" />
-
-            <TextView
-                android:id="@+id/permissionWarningAction"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="FIX"
-                android:textSize="12sp"
-                android:textStyle="bold"
-                android:textColor="@color/white"
-                android:paddingStart="10dp"
-                android:paddingEnd="4dp" />
-
-        </LinearLayout>
-
-        <!-- Update available banner - mirrors permissionWarningBanner's
-             structure (icon + weighted text + action label). No dismiss
-             control - stays visible for the whole session once shown
-             (see MainMenuActivity.checkForAppUpdate), same as the
-             permission banner above which disappears only once the
-             underlying condition resolves, not on a user tap. -->
-        <LinearLayout
-            android:id="@+id/updateAvailableBanner"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:background="@drawable/permission_banner_background"
-            android:padding="14dp"
-            android:layout_marginStart="20dp"
-            android:layout_marginEnd="20dp"
-            android:layout_marginTop="16dp"
-            android:visibility="gone"
-            android:clickable="true"
-            android:focusable="true">
-
-            <ImageView
-                android:layout_width="22dp"
-                android:layout_height="22dp"
-                android:src="@drawable/ic_notification_bell"
-                app:tint="@color/white" />
-
-            <TextView
-                android:id="@+id/updateAvailableText"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginStart="10dp"
-                android:textSize="13sp"
-                android:textStyle="bold"
-                android:textColor="@color/white"
-                tools:text="A new version of VGKontact is available" />
-
-            <TextView
-                android:id="@+id/updateAvailableAction"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="UPDATE"
-                android:textSize="12sp"
-                android:textStyle="bold"
-                android:textColor="@color/white"
-                android:paddingStart="10dp"
-                android:paddingEnd="4dp" />
-
-        </LinearLayout>
-
-        <!-- ================= BODY (reference: .body) ================= -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:paddingTop="20dp"
-            android:paddingStart="20dp"
-            android:paddingEnd="20dp"
-            android:paddingBottom="8dp">
-
-            <!-- Sync stats card -->
-            <LinearLayout
-                android:id="@+id/statsCard"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:background="@drawable/card_background"
-                android:padding="20dp">
+                android:background="@drawable/header_gradient"
+                android:paddingTop="48dp"
+                android:paddingBottom="24dp"
+                android:paddingStart="20dp"
+                android:paddingEnd="20dp">
 
-                <ProgressBar
-                    android:id="@+id/statsProgressBar"
+                <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_gravity="center_horizontal"
-                    android:visibility="gone" />
+                    android:text="@string/wallet_title"
+                    android:textSize="22sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/white"
+                    android:fontFamily="@font/poppins" />
 
+                <!-- Balance card -->
                 <LinearLayout
-                    android:id="@+id/statsContent"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical">
+                    android:layout_marginTop="18dp"
+                    android:orientation="vertical"
+                    android:background="@drawable/wallet_balance_card"
+                    android:padding="20dp">
 
-                    <LinearLayout
-                        android:layout_width="match_parent"
+                    <TextView
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:text="Available balance"
+                        android:textSize="13sp"
+                        android:textColor="@color/text_muted" />
+
+                    <TextView
+                        android:id="@+id/walletBalanceText"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:textSize="30sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/vg_dark"
+                        android:fontFamily="@font/poppins"
+                        tools:text="₦4,250" />
+
+                    <TextView
+                        android:id="@+id/walletPendingText"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:textSize="13sp"
+                        android:textColor="@color/text_muted"
+                        tools:text="₦750 pending" />
+
+                    <!-- Withdraw button -->
+                    <LinearLayout
+                        android:id="@+id/walletWithdrawButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="52dp"
+                        android:layout_marginTop="16dp"
                         android:orientation="horizontal"
                         android:gravity="center"
-                        android:layout_marginBottom="18dp">
-
-                        <ImageView
-                            android:layout_width="16dp"
-                            android:layout_height="16dp"
-                            android:layout_marginEnd="8dp"
-                            android:src="@drawable/ic_sync"
-                            app:tint="@color/vg_green" />
+                        android:background="@drawable/wallet_withdraw_button"
+                        android:clickable="true"
+                        android:focusable="true">
 
                         <TextView
-                            android:id="@+id/statsTodayText"
+                            android:id="@+id/walletWithdrawLabel"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:textSize="13sp"
+                            android:text="Withdraw"
+                            android:textAllCaps="true"
+                            android:letterSpacing="0.02"
                             android:textStyle="bold"
-                            android:textColor="@color/vg_dark"
-                            tools:text="3 kontacts synced today" />
+                            android:textSize="15sp"
+                            android:textColor="@color/white" />
 
                     </LinearLayout>
 
-                    <!-- ===== Contact Limit meter =====
-                         Replaces the old "total in database / available to
-                         import" two-tile row. current = syncedToPhone,
-                         limit = contactLimit (sum of joined groups' real
-                         caps on Supabase - see ImportStats.contactLimit).
-                         Bar color + width are set entirely in Kotlin
-                         (updateLimitMeter in MainMenuActivity), same
-                         green -> amber -> red threshold behavior as the
-                         approved HTML preview. -->
-                    <!-- ===== Viewers block (replaces old combined limit
-                         meter) =====
-                         Three separate rows instead of one combined
-                         current/limit meter:
-                           - Free viewers: home group only (get_my_free_viewers)
-                           - Purchased viewers: extra_groups only (get_my_purchased_viewers)
-                           - Referred viewers: first+second level referral count
-                             (get_my_referred_viewers_count)
-                         Kept the limitBlock id on the outer container so the
-                         existing show/hide logic in MainMenuActivity (the
-                         stats-card progress swap) still resolves it. The old
-                         limit-reached/almost-full PUSH NOTIFICATION logic in
-                         updateLimitMeter() is intentionally kept and still
-                         runs headlessly off stats.syncedToPhone/contactLimit -
-                         only the visible current/limit/%/breakdown UI was
-                         removed, since this block replaces it. -->
+                    <!-- Earned / Withdrawn summary row -->
                     <LinearLayout
-                        android:id="@+id/limitBlock"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="vertical"
-                        android:background="@drawable/limit_block_background"
-                        android:padding="18dp">
+                        android:layout_marginTop="18dp"
+                        android:orientation="horizontal">
 
-                        <TextView
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:text="@string/contact_limit_label"
-                            android:textSize="11sp"
-                            android:textStyle="bold"
-                            android:textAllCaps="true"
-                            android:letterSpacing="0.05"
-                            android:textColor="@color/text_muted"
-                            android:gravity="center" />
-
-                        <!-- Free viewers row -->
                         <LinearLayout
-                            android:layout_width="match_parent"
+                            android:layout_width="0dp"
                             android:layout_height="wrap_content"
-                            android:orientation="horizontal"
-                            android:gravity="center_vertical"
-                            android:layout_marginTop="14dp"
-                            android:paddingTop="10dp"
-                            android:paddingBottom="10dp">
-
-                            <View
-                                android:layout_width="8dp"
-                                android:layout_height="8dp"
-                                android:layout_marginEnd="10dp"
-                                android:background="@drawable/viewers_dot_green" />
+                            android:layout_weight="1"
+                            android:orientation="vertical">
 
                             <TextView
-                                android:layout_width="0dp"
-                                android:layout_height="wrap_content"
-                                android:layout_weight="1"
-                                android:text="@string/label_free_viewers"
-                                android:textSize="13sp"
-                                android:textStyle="bold"
-                                android:textColor="@color/vg_dark" />
-
-                            <TextView
-                                android:id="@+id/freeViewersCurrentText"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:textSize="15sp"
+                                android:text="Total earned"
+                                android:textSize="12sp"
+                                android:textColor="@color/text_muted" />
+
+                            <TextView
+                                android:id="@+id/walletTotalEarnedText"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="2dp"
+                                android:textSize="16sp"
                                 android:textStyle="bold"
                                 android:textColor="@color/vg_dark"
-                                tools:text="3" />
-
-                            <TextView
-                                android:id="@+id/freeViewersMaxText"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:textSize="12sp"
-                                android:textStyle="bold"
-                                android:textColor="@color/text_secondary"
-                                tools:text="/5" />
+                                tools:text="₦12,500" />
 
                         </LinearLayout>
 
-                        <!-- 1dp hairline between Free and Purchased rows -->
-                        <View
-                            android:layout_width="match_parent"
-                            android:layout_height="1dp"
-                            android:background="@color/tab_track_fill" />
-
-                        <!-- Purchased viewers row -->
                         <LinearLayout
-                            android:layout_width="match_parent"
+                            android:layout_width="0dp"
                             android:layout_height="wrap_content"
-                            android:orientation="horizontal"
-                            android:gravity="center_vertical"
-                            android:paddingTop="10dp"
-                            android:paddingBottom="10dp">
-
-                            <View
-                                android:layout_width="8dp"
-                                android:layout_height="8dp"
-                                android:layout_marginEnd="10dp"
-                                android:background="@drawable/viewers_dot_blue" />
+                            android:layout_weight="1"
+                            android:orientation="vertical">
 
                             <TextView
-                                android:layout_width="0dp"
-                                android:layout_height="wrap_content"
-                                android:layout_weight="1"
-                                android:text="@string/label_purchased_viewers"
-                                android:textSize="13sp"
-                                android:textStyle="bold"
-                                android:textColor="@color/vg_dark" />
-
-                            <TextView
-                                android:id="@+id/purchasedViewersCurrentText"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:textSize="15sp"
-                                android:textStyle="bold"
-                                android:textColor="@color/vg_dark"
-                                tools:text="0" />
-
-                            <TextView
-                                android:id="@+id/purchasedViewersMaxText"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
+                                android:text="Withdrawn"
                                 android:textSize="12sp"
-                                android:textStyle="bold"
-                                android:textColor="@color/text_secondary"
-                                tools:text="/0" />
-
-                        </LinearLayout>
-
-                        <!-- 1dp hairline between Purchased and Referred rows -->
-                        <View
-                            android:layout_width="match_parent"
-                            android:layout_height="1dp"
-                            android:background="@color/tab_track_fill" />
-
-                        <!-- Referred viewers row (no divider under last row) -->
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:orientation="horizontal"
-                            android:gravity="center_vertical"
-                            android:paddingTop="10dp">
-
-                            <View
-                                android:layout_width="8dp"
-                                android:layout_height="8dp"
-                                android:layout_marginEnd="10dp"
-                                android:background="@drawable/viewers_dot_amber" />
+                                android:textColor="@color/text_muted" />
 
                             <TextView
-                                android:layout_width="0dp"
-                                android:layout_height="wrap_content"
-                                android:layout_weight="1"
-                                android:text="@string/label_referred_viewers"
-                                android:textSize="13sp"
-                                android:textStyle="bold"
-                                android:textColor="@color/vg_dark" />
-
-                            <TextView
-                                android:id="@+id/referredViewersCountText"
+                                android:id="@+id/walletWithdrawnText"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:textSize="15sp"
+                                android:layout_marginTop="2dp"
+                                android:textSize="16sp"
                                 android:textStyle="bold"
                                 android:textColor="@color/vg_dark"
-                                tools:text="2" />
+                                tools:text="₦7,500" />
 
                         </LinearLayout>
 
                     </LinearLayout>
 
-                    <!-- Sync Kontact -->
-                    <Button
-                        android:id="@+id/syncKontactButton"
-                        android:layout_width="match_parent"
-                        android:layout_height="56dp"
-                        android:layout_marginTop="18dp"
-                        android:text="@string/btn_sync_kontact"
-                        android:textAllCaps="true"
-                        android:letterSpacing="0.02"
-                        android:backgroundTint="@color/vg_green"
-                        android:textColor="@color/white"
-                        android:textStyle="bold"
-                        app:icon="@drawable/ic_sync"
-                        app:iconTint="@color/white"
-                        app:iconGravity="textStart"
-                        app:cornerRadius="16dp" />
+                </LinearLayout>
+
+            </LinearLayout>
+
+            <!-- ================= RECENT ACTIVITY ================= -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingStart="20dp"
+                android:paddingEnd="20dp"
+                android:paddingTop="20dp"
+                android:paddingBottom="20dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Recent activity"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/vg_dark" />
+
+                <LinearLayout
+                    android:id="@+id/walletActivityList"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:orientation="vertical"
+                    android:background="@drawable/wallet_balance_card" />
+
+                <LinearLayout
+                    android:id="@+id/walletEmptyState"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:padding="32dp"
+                    android:background="@drawable/wallet_balance_card"
+                    android:visibility="gone">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="No wallet activity yet"
+                        android:textSize="14sp"
+                        android:textColor="@color/text_muted" />
 
                 </LinearLayout>
 
             </LinearLayout>
 
         </LinearLayout>
-
-        <!-- ================= ACTIONS (reference: .actions) ================= -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:paddingStart="20dp"
-            android:paddingEnd="20dp"
-            android:paddingTop="8dp"
-            android:paddingBottom="26dp">
-
-            <!-- Primary upsell action, replacing the old "Kontact Groups"
-                 label/entry point. Same button/id (kontactGroupsButton),
-                 now opens IncreaseLimitActivity - the merged referral
-                 rewards / key redemption screen. -->
-            <Button
-                android:id="@+id/kontactGroupsButton"
-                android:layout_width="match_parent"
-                android:layout_height="56dp"
-                android:text="@string/menu_increase_contact_limit"
-                android:letterSpacing="0.02"
-                android:backgroundTint="@color/vg_green"
-                android:textColor="@color/white"
-                android:textStyle="bold"
-                app:icon="@drawable/ic_contacts"
-                app:iconTint="@color/white"
-                app:iconGravity="textStart"
-                app:cornerRadius="16dp" />
-
-            <!-- growYourViewsButton removed - its content (referral
-                 campaigns + share invite) is now the "Referral rewards"
-                 tab inside IncreaseLimitActivity, opened via
-                 kontactGroupsButton above, so this no longer needs its
-                 own separate dashboard entry point. -->
-
-            <!-- referralHistoryButton removed - History is now reachable
-                 from the bottom nav bar on every screen, so a duplicate
-                 dashboard entry point is redundant. -->
-
-            <Button
-                android:id="@+id/shareAppButton"
-                android:layout_width="match_parent"
-                android:layout_height="56dp"
-                android:layout_marginTop="12dp"
-                android:text="@string/menu_share_app"
-                android:textAllCaps="true"
-                android:letterSpacing="0.02"
-                android:textStyle="bold"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                app:strokeColor="@color/primary_light"
-                android:textColor="@color/primary_light"
-                app:icon="@drawable/ic_share"
-                app:iconTint="@color/primary_light"
-                app:iconGravity="textStart"
-                app:cornerRadius="16dp" />
-
-        </LinearLayout>
-
-    </LinearLayout>
 
     </androidx.core.widget.NestedScrollView>
 
     <include layout="@layout/bottom_nav_bar" />
-
-    <!-- ================= HARD UPDATE BLOCK ================= -->
-    <!-- Full-screen, non-dismissible overlay shown when the running app
-         version is below the backend's min_supported_version_code (see
-         SheetSync.AppUpdateInfo / MainMenuActivity.checkForAppUpdate).
-         Sits as the last FrameLayout child so it draws on top of the
-         scroll content AND the bottom nav bar. gone by default; only
-         shown for a genuine hard block, never for the normal dismissible
-         "update available" banner above. -->
-    <LinearLayout
-        android:id="@+id/hardUpdateBlockOverlay"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:orientation="vertical"
-        android:gravity="center"
-        android:background="@color/primary_dark"
-        android:padding="32dp"
-        android:visibility="gone"
-        android:clickable="true"
-        android:focusable="true">
-
-        <ImageView
-            android:layout_width="56dp"
-            android:layout_height="56dp"
-            android:src="@drawable/ic_notification_bell"
-            app:tint="@color/white" />
-
-        <TextView
-            android:id="@+id/hardUpdateBlockTitle"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            android:textColor="@color/white"
-            android:gravity="center"
-            android:text="Update Required" />
-
-        <TextView
-            android:id="@+id/hardUpdateBlockMessage"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
-            android:textSize="13sp"
-            android:textColor="@color/white"
-            android:gravity="center"
-            tools:text="This version of VGKontact is no longer supported. Please update to continue." />
-
-        <TextView
-            android:id="@+id/hardUpdateBlockAction"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
-            android:background="@drawable/permission_banner_background"
-            android:paddingStart="28dp"
-            android:paddingEnd="28dp"
-            android:paddingTop="12dp"
-            android:paddingBottom="12dp"
-            android:text="UPDATE NOW"
-            android:textSize="14sp"
-            android:textStyle="bold"
-            android:textColor="@color/white" />
-
-    </LinearLayout>
-
-    <!-- Ban-check cover: sits on top of the dashboard until the server
-         confirms the account is not banned, so a banned user never sees
-         the dashboard flash before the banned screen. -->
-    <FrameLayout
-        android:id="@+id/banCheckCover"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:background="@color/stats_card_fill"
-        android:clickable="true"
-        android:focusable="true"
-        android:visibility="gone">
-
-        <ProgressBar
-            android:layout_width="36dp"
-            android:layout_height="36dp"
-            android:layout_gravity="center"
-            android:indeterminateTint="@color/vg_green" />
-
-    </FrameLayout>
 
 </FrameLayout>
