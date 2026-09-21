@@ -1,41 +1,279 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Placeholder screen for the Wallet bottom-nav tab. Intentionally
-    blank aside from a centered wallet icon - no wallet feature exists
-    yet, this just proves the tab is real and clickable. Root is a
-    FrameLayout so the bottom nav bar can float over the content as a
-    rounded pill (see bottom_nav_bar.xml), matching every other screen.
+    Wallet screen: green header, overlapping balance card with Withdraw
+    button, Total earned / Withdrawn tiles, and a Recent activity list.
+    Root is a FrameLayout so the bottom nav bar floats over the content
+    like every other screen. Numbers are filled in by WalletActivity
+    (sample data for now - database wiring comes later).
 -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/stats_card_fill">
 
-    <LinearLayout
+    <ScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:orientation="vertical"
-        android:gravity="center"
-        android:paddingBottom="88dp">
+        android:fillViewport="true"
+        android:clipToPadding="false"
+        android:paddingBottom="96dp"
+        android:overScrollMode="ifContentScrolls">
 
-        <ImageView
-            android:layout_width="72dp"
-            android:layout_height="72dp"
-            android:src="@drawable/ic_wallet"
-            app:tint="@color/text_muted" />
-
-        <TextView
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="@string/nav_wallet"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            android:fontFamily="@font/poppins"
-            android:textColor="@color/text_muted" />
+            android:orientation="vertical">
 
-    </LinearLayout>
+            <!-- ================= HEADER + BALANCE CARD ================= -->
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <!-- Green block sits behind the top of the card -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:gravity="center_horizontal"
+                    android:background="@drawable/header_gradient"
+                    android:paddingTop="48dp"
+                    android:paddingBottom="88dp"
+                    android:paddingStart="24dp"
+                    android:paddingEnd="24dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/wallet_title"
+                        android:textSize="22sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/white" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:text="@string/wallet_subtitle"
+                        android:textSize="13sp"
+                        android:textAlignment="center"
+                        android:textColor="#E6FFFFFF" />
+                </LinearLayout>
+
+                <!-- Balance card overlaps the header's lower edge -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="bottom"
+                    android:layout_marginTop="120dp"
+                    android:layout_marginStart="20dp"
+                    android:layout_marginEnd="20dp"
+                    android:layout_marginBottom="-64dp"
+                    android:orientation="vertical"
+                    android:gravity="center_horizontal"
+                    android:background="@drawable/wallet_balance_card"
+                    android:elevation="4dp"
+                    android:paddingTop="22dp"
+                    android:paddingBottom="18dp"
+                    android:paddingStart="20dp"
+                    android:paddingEnd="20dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/wallet_available_label"
+                        android:textSize="13sp"
+                        android:textColor="@color/text_muted" />
+
+                    <TextView
+                        android:id="@+id/walletBalanceText"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:textSize="38sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/vg_dark"
+                        tools:text="₦4,250" />
+
+                    <TextView
+                        android:id="@+id/walletPendingText"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:textSize="14sp"
+                        android:textColor="@color/text_muted"
+                        tools:text="₦750 pending" />
+
+                    <LinearLayout
+                        android:id="@+id/walletWithdrawButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="52dp"
+                        android:layout_marginTop="16dp"
+                        android:orientation="horizontal"
+                        android:gravity="center"
+                        android:background="@drawable/wallet_withdraw_button"
+                        android:clickable="true"
+                        android:focusable="true">
+
+                        <ImageView
+                            android:id="@+id/walletWithdrawIcon"
+                            android:layout_width="22dp"
+                            android:layout_height="22dp"
+                            android:src="@drawable/ic_bank"
+                            app:tint="@color/white" />
+
+                        <TextView
+                            android:id="@+id/walletWithdrawLabel"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="10dp"
+                            android:text="@string/wallet_withdraw"
+                            android:textSize="17sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/white" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:text="@string/wallet_min_withdrawal"
+                        android:textSize="12sp"
+                        android:textColor="@color/text_muted" />
+                </LinearLayout>
+            </FrameLayout>
+
+            <!-- ================= TOTAL EARNED / WITHDRAWN ================= -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="80dp"
+                android:layout_marginStart="20dp"
+                android:layout_marginEnd="20dp"
+                android:orientation="horizontal">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:background="@drawable/card_background"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/wallet_total_earned"
+                        android:textSize="12sp"
+                        android:textColor="@color/text_muted" />
+
+                    <TextView
+                        android:id="@+id/walletTotalEarnedText"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:textSize="22sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/vg_dark"
+                        tools:text="₦12,500" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="12dp"
+                    android:orientation="vertical"
+                    android:background="@drawable/card_background"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/wallet_withdrawn"
+                        android:textSize="12sp"
+                        android:textColor="@color/text_muted" />
+
+                    <TextView
+                        android:id="@+id/walletWithdrawnText"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:textSize="22sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/vg_dark"
+                        tools:text="₦7,500" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- ================= RECENT ACTIVITY ================= -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:layout_marginStart="20dp"
+                android:layout_marginEnd="20dp"
+                android:orientation="vertical"
+                android:background="@drawable/card_background"
+                android:padding="18dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/wallet_recent_activity"
+                    android:textSize="12sp"
+                    android:textAllCaps="true"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.06"
+                    android:textColor="@color/text_muted" />
+
+                <!-- Rows are added here in code (WalletActivity.renderActivity) -->
+                <LinearLayout
+                    android:id="@+id/walletActivityList"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical" />
+
+                <!-- Shown instead of the list when there is no activity -->
+                <LinearLayout
+                    android:id="@+id/walletEmptyState"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:gravity="center_horizontal"
+                    android:paddingTop="24dp"
+                    android:paddingBottom="12dp"
+                    android:visibility="gone">
+
+                    <ImageView
+                        android:layout_width="44dp"
+                        android:layout_height="44dp"
+                        android:src="@drawable/ic_receipt"
+                        app:tint="@color/locked_chip_text" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:text="@string/wallet_empty_title"
+                        android:textSize="15sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/vg_dark" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="@string/wallet_empty_body"
+                        android:textSize="13sp"
+                        android:textAlignment="center"
+                        android:textColor="@color/text_muted" />
+                </LinearLayout>
+            </LinearLayout>
+
+        </LinearLayout>
+    </ScrollView>
 
     <include layout="@layout/bottom_nav_bar" />
 
