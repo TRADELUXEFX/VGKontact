@@ -134,6 +134,9 @@ class MainMenuActivity : BaseActivity() {
         referralCodeLabelText = findViewById(R.id.referralCodeLabelText)
         copyReferralCodeButton = findViewById(R.id.copyReferralCodeButton)
         profileIcon = findViewById(R.id.profileIcon)
+        profileIcon.setOnClickListener {
+            startActivity(Intent(this, ProfileActivity::class.java))
+        }
         planPreviewText = findViewById(R.id.planPreviewText)
         syncFrequencyAlarmIcon = findViewById(R.id.syncFrequencyAlarmIcon)
         syncFrequencyAlarmIcon.setOnClickListener { showSyncFrequencyPopup() }
