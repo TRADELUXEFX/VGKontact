@@ -14,8 +14,8 @@ import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.core.content.ContextCompat
+import com.google.android.material.button.MaterialButton
 import java.text.SimpleDateFormat
-import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
@@ -24,8 +24,9 @@ import java.util.Locale
  * (FloatingRepostHelper).
  *
  * Two tabs, same segmented-switcher pattern as HistoryActivity:
- *  - My streak: daily streak, last-7-days dots, today's task + button,
- *    milestone tiles (3 / 7 / 14 / 30 days).
+ *  - My streak: stats rows (today / current / best / total), the
+ *    Repost button, a dismissible task guide, milestone tiles
+ *    (3 / 7 / 14 / 30 days).
  *  - Leaderboard: ranked list of reposters.
  *
  * REPOST FLOW: tapping the button opens WhatsApp to the admin with a
@@ -52,11 +53,14 @@ class RepostActivity : BaseActivity() {
     private lateinit var myStreakPanel: View
     private lateinit var leaderboardPanel: View
 
+    private lateinit var todayStatusText: TextView
     private lateinit var streakNumberText: TextView
-    private lateinit var streakSubText: TextView
+    private lateinit var bestStreakText: TextView
     private lateinit var totalRepostsText: TextView
-    private lateinit var weekRow: LinearLayout
-    private lateinit var repostNowButton: Button
+    private lateinit var repostNowButton: MaterialButton
+    private lateinit var taskGuideCard: View
+    private lateinit var taskGuideClose: View
+    private lateinit var taskGuideRestore: TextView
     private lateinit var nextMilestonePill: TextView
     private lateinit var milestoneProgress: ProgressBar
     private lateinit var milestoneRow: LinearLayout
@@ -94,11 +98,14 @@ class RepostActivity : BaseActivity() {
         myStreakPanel = findViewById(R.id.myStreakPanel)
         leaderboardPanel = findViewById(R.id.leaderboardPanel)
 
+        todayStatusText = findViewById(R.id.todayStatusText)
         streakNumberText = findViewById(R.id.streakNumberText)
-        streakSubText = findViewById(R.id.streakSubText)
+        bestStreakText = findViewById(R.id.bestStreakText)
         totalRepostsText = findViewById(R.id.totalRepostsText)
-        weekRow = findViewById(R.id.weekRow)
         repostNowButton = findViewById(R.id.repostNowButton)
+        taskGuideCard = findViewById(R.id.taskGuideCard)
+        taskGuideClose = findViewById(R.id.taskGuideClose)
+        taskGuideRestore = findViewById(R.id.taskGuideRestore)
         nextMilestonePill = findViewById(R.id.nextMilestonePill)
         milestoneProgress = findViewById(R.id.milestoneProgress)
         milestoneRow = findViewById(R.id.milestoneRow)
@@ -113,6 +120,9 @@ class RepostActivity : BaseActivity() {
         tabMyStreakButton.setOnClickListener { showTab(showBoard = false) }
         tabBoardButton.setOnClickListener { showTab(showBoard = true) }
         repostNowButton.setOnClickListener { onRepostTapped() }
+        taskGuideClose.setOnClickListener { setTaskGuideHidden(true) }
+        taskGuideRestore.setOnClickListener { setTaskGuideHidden(false) }
+        renderTaskGuide()
 
         showTab(showBoard = false)
         renderStreakTab()
@@ -267,19 +277,31 @@ class RepostActivity : BaseActivity() {
         val streak = RepostPrefs.getCurrentStreak(this)
         val doneToday = RepostPrefs.hasRepostedToday(this)
 
-        streakNumberText.text = streak.toString()
+        // Best can never be lower than the live streak (e.g. right after
+        // the server copy lags behind a fresh local tap).
+        val best = maxOf(RepostPrefs.getBestStreak(this), streak)
+
+        renderTodayStatus(doneToday)
+        streakNumberText.text = resources.getQuantityString(R.plurals.repost_days_count, streak, streak)
+        bestStreakText.text = resources.getQuantityString(R.plurals.repost_days_count, best, best)
         totalRepostsText.text = RepostPrefs.getTotalReposts(this).toString()
-        streakSubText.text = getString(
-            if (doneToday) R.string.repost_sub_done else R.string.repost_sub_pending
-        )
 
         renderRepostButton(doneToday)
-        renderWeekDots(doneToday)
         renderMilestones(streak)
 
         // Keep the floating button's "pending" badge in sync if it is
         // showing on this screen's parent stack.
         FloatingRepostHelper.refreshBadge(this)
+    }
+
+    /** "Pending" in red until today is counted, then "Done" in green. */
+    private fun renderTodayStatus(doneToday: Boolean) {
+        todayStatusText.text = getString(
+            if (doneToday) R.string.repost_status_done else R.string.repost_status_pending
+        )
+        todayStatusText.setTextColor(
+            ContextCompat.getColor(this, if (doneToday) R.color.vg_green else R.color.vg_red)
+        )
     }
 
     private fun renderRepostButton(doneToday: Boolean) {
@@ -288,65 +310,30 @@ class RepostActivity : BaseActivity() {
             repostNowButton.backgroundTintList =
                 ContextCompat.getColorStateList(this, R.color.vg_green_tint)
             repostNowButton.setTextColor(ContextCompat.getColor(this, R.color.vg_green_dark))
+            // Icon must follow the text colour or it vanishes on the pale button.
+            repostNowButton.iconTint =
+                ContextCompat.getColorStateList(this, R.color.vg_green_dark)
         } else {
             repostNowButton.text = getString(R.string.btn_repost_now)
             repostNowButton.backgroundTintList =
-                ContextCompat.getColorStateList(this, R.color.vg_green)
+                ContextCompat.getColorStateList(this, R.color.vg_red)
             repostNowButton.setTextColor(ContextCompat.getColor(this, R.color.white))
+            repostNowButton.iconTint =
+                ContextCompat.getColorStateList(this, R.color.white)
         }
     }
 
-    /** Last 7 calendar days ending today, oldest on the left. */
-    private fun renderWeekDots(doneToday: Boolean) {
-        weekRow.removeAllViews()
-        val dates = RepostPrefs.getRepostDates(this)
-        val dayFmt = SimpleDateFormat("yyyy-MM-dd", Locale.US)
-        val letterFmt = SimpleDateFormat("EEEEE", Locale.getDefault()) // single letter
-        val density = resources.displayMetrics.density
+    /** X hides the guide; the dashed button brings it back. Remembered. */
+    private fun setTaskGuideHidden(hidden: Boolean) {
+        RepostPrefs.setTaskGuideHidden(this, hidden)
+        renderTaskGuide()
+    }
 
-        for (offset in 6 downTo 0) {
-            val cal = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, -offset) }
-            val key = dayFmt.format(cal.time)
-            val isToday = offset == 0
-            val done = key in dates
-
-            val cell = LinearLayout(this).apply {
-                orientation = LinearLayout.VERTICAL
-                gravity = Gravity.CENTER_HORIZONTAL
-                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-            }
-
-            val dot = ImageView(this).apply {
-                val size = (32 * density).toInt()
-                layoutParams = LinearLayout.LayoutParams(size, size)
-                val pad = (7 * density).toInt()
-                setPadding(pad, pad, pad, pad)
-                when {
-                    done -> {
-                        setBackgroundResource(R.drawable.repost_dot_on)
-                        setImageResource(R.drawable.ic_check)
-                        setColorFilter(ContextCompat.getColor(this@RepostActivity, R.color.white))
-                    }
-                    isToday -> setBackgroundResource(R.drawable.repost_dot_today)
-                    else -> setBackgroundResource(R.drawable.repost_dot_off)
-                }
-            }
-
-            val letter = TextView(this).apply {
-                text = letterFmt.format(cal.time)
-                textSize = 10f
-                setTypeface(typeface, Typeface.BOLD)
-                setTextColor(ContextCompat.getColor(this@RepostActivity, R.color.text_muted))
-                layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT
-                ).apply { topMargin = (6 * density).toInt() }
-            }
-
-            cell.addView(dot)
-            cell.addView(letter)
-            weekRow.addView(cell)
-        }
+    /** Guide is visible by default; only the user's own X hides it. */
+    private fun renderTaskGuide() {
+        val hidden = RepostPrefs.isTaskGuideHidden(this)
+        taskGuideCard.visibility = if (hidden) View.GONE else View.VISIBLE
+        taskGuideRestore.visibility = if (hidden) View.VISIBLE else View.GONE
     }
 
     private fun renderMilestones(streak: Int) {
