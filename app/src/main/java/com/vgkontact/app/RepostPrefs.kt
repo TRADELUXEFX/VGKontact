@@ -19,9 +19,11 @@ import java.util.Locale
  * Uses its own SharedPreferences file rather than UserPrefs so this
  * feature stays fully self-contained and UserPrefs is untouched.
  *
- * NOTE: everything here is per-device. It is NOT synced anywhere, so a
- * leaderboard built only from this data can only ever show the current
- * user. See RepostActivity for how the leaderboard tab handles that.
+ * ROLE WITH SUPABASE: the server (see RepostSync + repost_supabase.sql) is
+ * the source of truth. This file is the on-device COPY - it lets the
+ * screen show something instantly and keep working offline. When the
+ * server answers, [saveServerStats] overwrites this copy. When the
+ * server can't be reached, RepostActivity falls back to what's stored here.
  */
 object RepostPrefs {
 
@@ -32,6 +34,7 @@ object RepostPrefs {
     private const val KEY_BEST = "best_streak"
     private const val KEY_HISTORY = "repost_dates"             // comma-separated yyyy-MM-dd, last 60 days
     private const val KEY_REACHED = "milestones_reached"       // comma-separated milestone day counts
+    private const val KEY_PENDING = "pending_upload_date"      // yyyy-MM-dd of a repost the server hasn't confirmed
 
     /** Streak lengths that unlock a milestone. */
     val MILESTONES = listOf(3, 7, 14, 30)
@@ -113,6 +116,75 @@ object RepostPrefs {
 
         return newlyReached
     }
+
+    /**
+     * Overwrites the local copy with numbers from the server.
+     *
+     * @param todayIfDone true when the server says today is already
+     * counted, so [hasRepostedToday] agrees with it.
+     * @param recentDates dates (yyyy-MM-dd) the server has for the last
+     * 7 days; merged into local history for the week dots.
+     * @return the milestone this update newly unlocked, if any (same
+     * once-only rule as [recordRepostToday]).
+     */
+    fun saveServerStats(
+        context: Context,
+        streak: Int,
+        total: Int,
+        best: Int,
+        todayIfDone: Boolean,
+        recentDates: Set<String>
+    ): Int? {
+        val p = prefs(context)
+        val reached = getReachedMilestones(context)
+        // Any milestone at or below the server's BEST streak counts as
+        // earned. The celebration only fires for the one this update
+        // lands exactly on, and only once.
+        val newlyReached = MILESTONES.firstOrNull { it == streak && it !in reached }
+        val updatedReached = reached + MILESTONES.filter { it <= best }
+
+        val history = (getRepostDates(context) + recentDates).sorted().takeLast(HISTORY_LIMIT)
+
+        val edit = p.edit()
+            .putInt(KEY_STREAK, streak)
+            .putInt(KEY_TOTAL, total)
+            .putInt(KEY_BEST, best)
+            .putString(KEY_HISTORY, history.joinToString(","))
+            .putString(KEY_REACHED, updatedReached.sorted().joinToString(","))
+        if (todayIfDone) {
+            edit.putString(KEY_LAST_DATE, today())
+        } else if (hasPendingUploadToday(context)) {
+            // The user tapped today but the server hasn't heard yet.
+            // Keep today marked done; the caller retries the upload.
+            // (Server numbers are still saved above; they'll catch up
+            // once the retry lands.)
+        } else if (p.getString(KEY_LAST_DATE, null) == today()) {
+            // Local thinks today is done but the server says it isn't
+            // (e.g. an earlier tap never reached the server). Trust the
+            // server: step the marker back so the button is tappable and
+            // the streak logic stays consistent.
+            edit.putString(KEY_LAST_DATE, yesterday())
+        }
+        edit.apply()
+        return newlyReached
+    }
+
+    /**
+     * A repost counted on this phone that the server has NOT yet
+     * confirmed (the tap happened offline, or the request failed).
+     * Stored as the date it was tapped so it can't leak onto a later day.
+     */
+    fun markPendingUpload(context: Context) {
+        prefs(context).edit().putString(KEY_PENDING, today()).apply()
+    }
+
+    fun clearPendingUpload(context: Context) {
+        prefs(context).edit().remove(KEY_PENDING).apply()
+    }
+
+    /** True only if there is an unconfirmed repost from TODAY. */
+    fun hasPendingUploadToday(context: Context): Boolean =
+        prefs(context).getString(KEY_PENDING, null) == today()
 
     /** The next milestone above [streak], or null once all are passed. */
     fun nextMilestone(streak: Int): Int? = MILESTONES.firstOrNull { it > streak }
