@@ -8,18 +8,18 @@ import android.widget.TextView
 
 object BottomNavHelper {
 
-    enum class Tab { HOME, UPGRADE, HISTORY, PROFILE }
+    enum class Tab { HOME, UPGRADE, HISTORY, WALLET }
 
-    fun setup(activity: Activity, current: Tab) {
+    fun setup(activity: Activity, current: Tab?) {
         val homeIcon = activity.findViewById<ImageView>(R.id.navHomeIcon)
         val upgradeIcon = activity.findViewById<ImageView>(R.id.navUpgradeIcon)
         val historyIcon = activity.findViewById<ImageView>(R.id.navHistoryIcon)
-        val profileIcon = activity.findViewById<ImageView>(R.id.navProfileIcon)
+        val walletIcon = activity.findViewById<ImageView>(R.id.navWalletIcon)
 
         val homeLabel = activity.findViewById<TextView>(R.id.navHomeLabel)
         val upgradeLabel = activity.findViewById<TextView>(R.id.navUpgradeLabel)
         val historyLabel = activity.findViewById<TextView>(R.id.navHistoryLabel)
-        val profileLabel = activity.findViewById<TextView>(R.id.navProfileLabel)
+        val walletLabel = activity.findViewById<TextView>(R.id.navWalletLabel)
 
         val activeColor = ContextCompat.getColor(activity, R.color.vg_green)
         val inactiveColor = ContextCompat.getColor(activity, R.color.text_muted)
@@ -27,7 +27,7 @@ object BottomNavHelper {
         val homeTab = activity.findViewById<android.widget.LinearLayout>(R.id.navHomeTab)
         val upgradeTab = activity.findViewById<android.widget.LinearLayout>(R.id.navUpgradeTab)
         val historyTab = activity.findViewById<android.widget.LinearLayout>(R.id.navHistoryTab)
-        val profileTab = activity.findViewById<android.widget.LinearLayout>(R.id.navProfileTab)
+        val walletTab = activity.findViewById<android.widget.LinearLayout>(R.id.navWalletTab)
 
         val activeTabBackground = ContextCompat.getDrawable(activity, R.drawable.nav_active_tab_background)
 
@@ -35,7 +35,7 @@ object BottomNavHelper {
             Tab.HOME to Triple(homeIcon, homeLabel, homeTab),
             Tab.UPGRADE to Triple(upgradeIcon, upgradeLabel, upgradeTab),
             Tab.HISTORY to Triple(historyIcon, historyLabel, historyTab),
-            Tab.PROFILE to Triple(profileIcon, profileLabel, profileTab)
+            Tab.WALLET to Triple(walletIcon, walletLabel, walletTab)
         )
         for ((tab, views) in pairs) {
             val (icon, label, tabContainer) = views
@@ -74,14 +74,18 @@ object BottomNavHelper {
         historyTab?.setOnClickListener {
             navigateTo(activity, current, Tab.HISTORY, HistoryActivity::class.java)
         }
-        profileTab?.setOnClickListener {
-            navigateTo(activity, current, Tab.PROFILE, ProfileActivity::class.java)
+        // Wallet has no screen yet - just a placeholder destination so the
+        // tab is clickable and visibly navigates somewhere (blank screen
+        // with a wallet icon), per current design. Wire this up to a real
+        // wallet feature/activity later.
+        walletTab?.setOnClickListener {
+            navigateTo(activity, current, Tab.WALLET, WalletActivity::class.java)
         }
     }
 
     private fun navigateTo(
         activity: Activity,
-        current: Tab,
+        current: Tab?,
         target: Tab,
         destination: Class<*>,
         extras: Map<String, String> = emptyMap()
