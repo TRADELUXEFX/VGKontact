@@ -421,6 +421,15 @@
                         android:layout_height="1dp"
                         android:background="@color/stats_card_border" />
 
+                    <ProgressBar
+                        android:id="@+id/boardProgress"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center"
+                        android:layout_marginTop="16dp"
+                        android:indeterminateTint="@color/vg_green"
+                        android:visibility="gone" />
+
                     <LinearLayout
                         android:id="@+id/boardListContainer"
                         android:layout_width="match_parent"
