@@ -93,6 +93,12 @@
             android:name=".ProfileActivity"
             android:exported="false" />
 
+        <!-- Repost & Earn screen (streak + leaderboard) - opened from the
+             floating Repost button on every screen. -->
+        <activity
+            android:name=".RepostActivity"
+            android:exported="false" />
+
         <!-- Invisible trampoline launched by the daily repost
              notification - computes today's date live at tap time,
              then hands off to WhatsApp and closes itself. Transparent
