@@ -46,7 +46,10 @@ class ProfileActivity : BaseActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_profile)
         FloatingContactHelper.attach(this)
-        BottomNavHelper.setup(this, BottomNavHelper.Tab.PROFILE)
+        // Profile is no longer a bottom-nav destination - it's reached via
+        // the profile icon in the dashboard header instead - so no tab is
+        // shown as active here.
+        BottomNavHelper.setup(this, null)
 
         window.statusBarColor = ContextCompat.getColor(this, R.color.vg_green)
 
