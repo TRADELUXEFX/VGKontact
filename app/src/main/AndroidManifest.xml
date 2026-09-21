@@ -101,6 +101,12 @@
             android:name=".WalletActivity"
             android:exported="false" />
 
+        <!-- Full wallet history - opened from the "History" link next
+             to "Recent activity" on WalletActivity. -->
+        <activity
+            android:name=".WalletHistoryActivity"
+            android:exported="false" />
+
         <!-- Repost & Earn screen (streak + leaderboard) - opened from the
              floating Repost button on every screen. -->
         <activity
