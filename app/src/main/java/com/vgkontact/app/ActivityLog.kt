@@ -28,7 +28,8 @@ object ActivityLog {
         LIMIT_INCREASED,
         REFERRAL_JOINED,
         PERMISSION_ISSUE,
-        SYNC_FREQUENCY_CHANGED
+        SYNC_FREQUENCY_CHANGED,
+        CONTACTS_REMOVED
     }
 
     private const val PREF_NAME = "vgkontact_activity_log"
