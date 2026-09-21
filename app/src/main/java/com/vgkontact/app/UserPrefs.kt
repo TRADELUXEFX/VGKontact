@@ -291,6 +291,15 @@ object UserPrefs {
     }
 
     private const val KEY_IS_BANNED = "is_banned"
+    private const val KEY_BAN_REASON = "ban_reason"
+
+    fun getBanReason(context: Context): String? {
+        return getPrefs(context).getString(KEY_BAN_REASON, null)
+    }
+
+    fun setBanReason(context: Context, reason: String?) {
+        getPrefs(context).edit().putString(KEY_BAN_REASON, reason).apply()
+    }
 
     /**
      * Local mirror of the server-side ban. Set the moment any server call
