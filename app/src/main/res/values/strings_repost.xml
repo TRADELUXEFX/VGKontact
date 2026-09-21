@@ -38,5 +38,6 @@
     <string name="repost_col_rank_number">Rank \u00B7 Reposter</string>
     <string name="repost_col_reposts">Reposts</string>
     <string name="repost_you">You</string>
-    <string name="repost_board_local_note">Only your own reposts show here for now. Other reposters will appear once syncing is added.</string>
+    <string name="repost_board_offline_note">Couldn\'t reach the leaderboard. Showing your own reposts only.</string>
+    <string name="repost_board_empty_note">No reposts yet. Be the first on the board.</string>
 </resources>
