@@ -1,0 +1,449 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Repost & Earn screen. Same structure as activity_history.xml:
+    green gradient header with a segmented tab switcher, then a scroll
+    area of card_background cards.
+
+    Two panels share the scroll area and are toggled by the header tabs
+    (RepostActivity.showTab):
+      - myStreakPanel: streak hero, today's task + button, milestones
+      - leaderboardPanel: ranked list
+
+    No bottom nav on this screen (it is reached from the floating
+    Repost button, not a nav tab), so scroll padding is smaller than on
+    the nav screens.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/stats_card_fill">
+
+    <!-- ============ HEADER ============ -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="@drawable/header_gradient"
+        android:paddingTop="48dp"
+        android:paddingBottom="20dp"
+        android:paddingStart="20dp"
+        android:paddingEnd="20dp">
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <ImageView
+                android:id="@+id/repostBackButton"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:layout_gravity="start|center_vertical"
+                android:rotation="180"
+                android:src="@drawable/ic_arrow_forward"
+                app:tint="@color/white"
+                android:clickable="true"
+                android:focusable="true"
+                android:contentDescription="Back" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:text="@string/title_repost"
+                android:textColor="@color/white"
+                android:textSize="22sp"
+                android:textStyle="bold"
+                android:fontFamily="@font/poppins" />
+
+        </FrameLayout>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="@string/repost_subtitle"
+            android:textColor="@color/white"
+            android:textSize="12sp"
+            android:alpha="0.9"
+            android:textAlignment="center"
+            android:fontFamily="@font/poppins" />
+
+        <!-- Segmented tab switcher, same drawables as HistoryActivity -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:background="@drawable/header_tab_track_background"
+            android:padding="4dp"
+            android:layout_marginTop="16dp">
+
+            <Button
+                android:id="@+id/tabMyStreakButton"
+                android:layout_width="0dp"
+                android:layout_height="44dp"
+                android:layout_weight="1"
+                android:text="@string/tab_my_streak"
+                android:textAllCaps="false"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:backgroundTint="@android:color/transparent"
+                android:textColor="@color/white"
+                app:cornerRadius="12dp"
+                app:elevation="0dp"
+                app:rippleColor="@color/vg_green_tint"
+                android:stateListAnimator="@null"
+                android:insetTop="0dp"
+                android:insetBottom="0dp" />
+
+            <Button
+                android:id="@+id/tabBoardButton"
+                android:layout_width="0dp"
+                android:layout_height="44dp"
+                android:layout_weight="1"
+                android:layout_marginStart="4dp"
+                android:text="@string/tab_leaderboard"
+                android:textAllCaps="false"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:backgroundTint="@android:color/transparent"
+                android:textColor="@color/white"
+                app:cornerRadius="12dp"
+                app:elevation="0dp"
+                app:rippleColor="@color/vg_green_tint"
+                android:stateListAnimator="@null"
+                android:insetTop="0dp"
+                android:insetBottom="0dp" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:clipToPadding="false"
+        android:paddingBottom="24dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingStart="20dp"
+            android:paddingEnd="20dp"
+            android:paddingTop="16dp">
+
+            <!-- ================= MY STREAK PANEL ================= -->
+            <LinearLayout
+                android:id="@+id/myStreakPanel"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <!-- Streak hero card -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:background="@drawable/card_background"
+                    android:padding="18dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <ImageView
+                            android:layout_width="56dp"
+                            android:layout_height="56dp"
+                            android:background="@drawable/avatar_circle_tint_background"
+                            android:padding="14dp"
+                            android:src="@drawable/ic_flame"
+                            app:tint="@color/vg_green"
+                            android:contentDescription="@null" />
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginStart="14dp"
+                            android:orientation="vertical">
+
+                            <LinearLayout
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                android:gravity="bottom">
+
+                                <TextView
+                                    android:id="@+id/streakNumberText"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:textSize="32sp"
+                                    android:textStyle="bold"
+                                    android:textColor="@color/vg_green"
+                                    tools:text="4" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="6dp"
+                                    android:layout_marginBottom="5dp"
+                                    android:text="@string/repost_day_streak"
+                                    android:textSize="14sp"
+                                    android:textStyle="bold"
+                                    android:textColor="@color/text_secondary" />
+
+                            </LinearLayout>
+
+                            <TextView
+                                android:id="@+id/streakSubText"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:textSize="12sp"
+                                android:textColor="@color/text_secondary"
+                                tools:text="Repost today to keep it alive" />
+
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:background="@drawable/freq_summary_pill_background"
+                            android:paddingStart="12dp"
+                            android:paddingEnd="12dp"
+                            android:paddingTop="5dp"
+                            android:paddingBottom="5dp">
+
+                            <TextView
+                                android:id="@+id/totalRepostsText"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:textSize="12sp"
+                                android:textStyle="bold"
+                                android:textColor="@color/vg_green_dark"
+                                tools:text="12" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text=" total"
+                                android:textSize="11sp"
+                                android:textColor="@color/vg_green_dark" />
+
+                        </LinearLayout>
+
+                    </LinearLayout>
+
+                    <!-- Last 7 days, filled programmatically -->
+                    <LinearLayout
+                        android:id="@+id/weekRow"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="16dp"
+                        android:orientation="horizontal" />
+
+                </LinearLayout>
+
+                <!-- Today's task card -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:background="@drawable/card_background"
+                    android:padding="18dp"
+                    android:layout_marginTop="14dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/repost_todays_task"
+                        android:textSize="11sp"
+                        android:textAllCaps="true"
+                        android:letterSpacing="0.05"
+                        android:textColor="@color/text_muted" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:text="@string/repost_step_1"
+                        android:textSize="13sp"
+                        android:lineSpacingMultiplier="1.3"
+                        android:textColor="@color/text_secondary" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="@string/repost_step_2"
+                        android:textSize="13sp"
+                        android:lineSpacingMultiplier="1.3"
+                        android:textColor="@color/text_secondary" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:layout_marginBottom="16dp"
+                        android:text="@string/repost_step_3"
+                        android:textSize="13sp"
+                        android:lineSpacingMultiplier="1.3"
+                        android:textColor="@color/text_secondary" />
+
+                    <Button
+                        android:id="@+id/repostNowButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="56dp"
+                        android:text="@string/btn_repost_now"
+                        android:textAllCaps="true"
+                        android:letterSpacing="0.02"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:backgroundTint="@color/vg_green"
+                        android:textColor="@color/white"
+                        app:cornerRadius="12dp" />
+
+                </LinearLayout>
+
+                <!-- Milestones card -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:background="@drawable/card_background"
+                    android:padding="18dp"
+                    android:layout_marginTop="14dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/repost_milestones"
+                            android:textSize="11sp"
+                            android:textAllCaps="true"
+                            android:letterSpacing="0.05"
+                            android:textColor="@color/text_muted" />
+
+                        <TextView
+                            android:id="@+id/nextMilestonePill"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:background="@drawable/freq_summary_pill_background"
+                            android:paddingStart="12dp"
+                            android:paddingEnd="12dp"
+                            android:paddingTop="5dp"
+                            android:paddingBottom="5dp"
+                            android:textSize="12sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/vg_green_dark"
+                            tools:text="3 days to go" />
+
+                    </LinearLayout>
+
+                    <ProgressBar
+                        android:id="@+id/milestoneProgress"
+                        style="?android:attr/progressBarStyleHorizontal"
+                        android:layout_width="match_parent"
+                        android:layout_height="8dp"
+                        android:layout_marginTop="12dp"
+                        android:layout_marginBottom="14dp"
+                        android:max="100"
+                        android:progressDrawable="@drawable/limit_meter_progress" />
+
+                    <!-- 4 milestone tiles, filled programmatically -->
+                    <LinearLayout
+                        android:id="@+id/milestoneRow"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal" />
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+            <!-- ================= LEADERBOARD PANEL ================= -->
+            <LinearLayout
+                android:id="@+id/leaderboardPanel"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:background="@drawable/card_background"
+                    android:padding="20dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:paddingBottom="8dp">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/repost_col_rank_number"
+                            android:textSize="11sp"
+                            android:textAllCaps="true"
+                            android:letterSpacing="0.05"
+                            android:textColor="@color/text_muted" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/repost_col_reposts"
+                            android:textSize="11sp"
+                            android:textAllCaps="true"
+                            android:letterSpacing="0.05"
+                            android:textColor="@color/text_muted" />
+
+                    </LinearLayout>
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="@color/stats_card_border" />
+
+                    <LinearLayout
+                        android:id="@+id/boardListContainer"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical" />
+
+                    <TextView
+                        android:id="@+id/boardNoteText"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:paddingTop="16dp"
+                        android:gravity="center"
+                        android:textSize="12sp"
+                        android:lineSpacingMultiplier="1.3"
+                        android:textColor="@color/text_muted"
+                        android:visibility="gone" />
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+    </ScrollView>
+
+</LinearLayout>
