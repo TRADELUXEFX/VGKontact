@@ -6,7 +6,8 @@
 
     Two panels share the scroll area and are toggled by the header tabs
     (RepostActivity.showTab):
-      - myStreakPanel: streak hero, today's task + button, milestones
+      - myStreakPanel: stats rows + repost button, dismissible task guide,
+        milestones
       - leaderboardPanel: ranked list
 
     No bottom nav on this screen (it is reached from the floating
@@ -143,7 +144,7 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical">
 
-                <!-- Streak hero card -->
+                <!-- Stats card: 4 plain rows + the action button -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -151,168 +152,232 @@
                     android:background="@drawable/card_background"
                     android:padding="18dp">
 
+                    <!-- Today's repost -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
-                        android:gravity="center_vertical">
+                        android:gravity="center_vertical"
+                        android:paddingTop="8dp"
+                        android:paddingBottom="8dp">
 
-                        <ImageView
-                            android:layout_width="56dp"
-                            android:layout_height="56dp"
-                            android:background="@drawable/avatar_circle_tint_background"
-                            android:padding="14dp"
-                            android:src="@drawable/ic_flame"
-                            app:tint="@color/vg_green"
-                            android:contentDescription="@null" />
-
-                        <LinearLayout
+                        <TextView
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:layout_marginStart="14dp"
-                            android:orientation="vertical">
+                            android:text="@string/repost_row_today"
+                            android:textSize="16sp"
+                            android:textColor="@color/text_secondary" />
 
-                            <LinearLayout
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:orientation="horizontal"
-                                android:gravity="bottom">
-
-                                <TextView
-                                    android:id="@+id/streakNumberText"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:textSize="32sp"
-                                    android:textStyle="bold"
-                                    android:textColor="@color/vg_green"
-                                    tools:text="4" />
-
-                                <TextView
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:layout_marginStart="6dp"
-                                    android:layout_marginBottom="5dp"
-                                    android:text="@string/repost_day_streak"
-                                    android:textSize="14sp"
-                                    android:textStyle="bold"
-                                    android:textColor="@color/text_secondary" />
-
-                            </LinearLayout>
-
-                            <TextView
-                                android:id="@+id/streakSubText"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:textSize="12sp"
-                                android:textColor="@color/text_secondary"
-                                tools:text="Repost today to keep it alive" />
-
-                        </LinearLayout>
-
-                        <LinearLayout
+                        <TextView
+                            android:id="@+id/todayStatusText"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:orientation="horizontal"
-                            android:gravity="center_vertical"
-                            android:background="@drawable/freq_summary_pill_background"
-                            android:paddingStart="12dp"
-                            android:paddingEnd="12dp"
-                            android:paddingTop="5dp"
-                            android:paddingBottom="5dp">
-
-                            <TextView
-                                android:id="@+id/totalRepostsText"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:textSize="12sp"
-                                android:textStyle="bold"
-                                android:textColor="@color/vg_green_dark"
-                                tools:text="12" />
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text=" total"
-                                android:textSize="11sp"
-                                android:textColor="@color/vg_green_dark" />
-
-                        </LinearLayout>
+                            android:textSize="16sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/vg_red"
+                            tools:text="Pending" />
 
                     </LinearLayout>
 
-                    <!-- Last 7 days, filled programmatically -->
+                    <!-- Current streak -->
                     <LinearLayout
-                        android:id="@+id/weekRow"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="16dp"
-                        android:orientation="horizontal" />
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:paddingTop="8dp"
+                        android:paddingBottom="8dp">
 
-                </LinearLayout>
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/repost_row_current_streak"
+                            android:textSize="16sp"
+                            android:textColor="@color/text_secondary" />
 
-                <!-- Today's task card -->
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:background="@drawable/card_background"
-                    android:padding="18dp"
-                    android:layout_marginTop="14dp">
+                        <TextView
+                            android:id="@+id/streakNumberText"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textSize="16sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/vg_dark"
+                            tools:text="7 days" />
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/repost_todays_task"
-                        android:textSize="11sp"
-                        android:textAllCaps="true"
-                        android:letterSpacing="0.05"
-                        android:textColor="@color/text_muted" />
+                    </LinearLayout>
 
-                    <TextView
+                    <!-- Best streak -->
+                    <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="12dp"
-                        android:text="@string/repost_step_1"
-                        android:textSize="13sp"
-                        android:lineSpacingMultiplier="1.3"
-                        android:textColor="@color/text_secondary" />
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:paddingTop="8dp"
+                        android:paddingBottom="8dp">
 
-                    <TextView
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/repost_row_best_streak"
+                            android:textSize="16sp"
+                            android:textColor="@color/text_secondary" />
+
+                        <TextView
+                            android:id="@+id/bestStreakText"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textSize="16sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/vg_dark"
+                            tools:text="11 days" />
+
+                    </LinearLayout>
+
+                    <!-- Total reposts -->
+                    <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:text="@string/repost_step_2"
-                        android:textSize="13sp"
-                        android:lineSpacingMultiplier="1.3"
-                        android:textColor="@color/text_secondary" />
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:paddingTop="8dp"
+                        android:paddingBottom="8dp">
 
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:layout_marginBottom="16dp"
-                        android:text="@string/repost_step_3"
-                        android:textSize="13sp"
-                        android:lineSpacingMultiplier="1.3"
-                        android:textColor="@color/text_secondary" />
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/repost_row_total"
+                            android:textSize="16sp"
+                            android:textColor="@color/text_secondary" />
 
+                        <TextView
+                            android:id="@+id/totalRepostsText"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textSize="16sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/vg_dark"
+                            tools:text="42" />
+
+                    </LinearLayout>
+
+                    <!-- Action button. Red while today is pending,
+                         soft green once done (RepostActivity.renderRepostButton). -->
                     <Button
                         android:id="@+id/repostNowButton"
                         android:layout_width="match_parent"
                         android:layout_height="56dp"
+                        android:layout_marginTop="14dp"
                         android:text="@string/btn_repost_now"
-                        android:textAllCaps="true"
-                        android:letterSpacing="0.02"
-                        android:textSize="12sp"
+                        android:textAllCaps="false"
+                        android:textSize="16sp"
                         android:textStyle="bold"
-                        android:backgroundTint="@color/vg_green"
+                        android:backgroundTint="@color/vg_red"
                         android:textColor="@color/white"
-                        app:cornerRadius="12dp" />
+                        app:icon="@drawable/ic_repost"
+                        app:iconGravity="textStart"
+                        app:iconPadding="10dp"
+                        app:iconSize="22dp"
+                        app:iconTint="@color/white"
+                        app:cornerRadius="28dp" />
 
                 </LinearLayout>
 
-                <!-- Milestones card -->
+                <!-- Today's task guide: visible by default, with a cancel (X)
+                     in the corner. Tapping X hides it and reveals the dashed
+                     "Show today's task guide" button below; tapping that
+                     brings it back. Remembered via RepostPrefs. -->
+                <FrameLayout
+                    android:id="@+id/taskGuideCard"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:background="@drawable/card_background">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="18dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginEnd="28dp"
+                            android:text="@string/repost_todays_task"
+                            android:textSize="11sp"
+                            android:textAllCaps="true"
+                            android:letterSpacing="0.05"
+                            android:textColor="@color/text_muted" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="12dp"
+                            android:text="@string/repost_step_1"
+                            android:textSize="13sp"
+                            android:lineSpacingMultiplier="1.3"
+                            android:textColor="@color/text_secondary" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:text="@string/repost_step_2"
+                            android:textSize="13sp"
+                            android:lineSpacingMultiplier="1.3"
+                            android:textColor="@color/text_secondary" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:text="@string/repost_step_3"
+                            android:textSize="13sp"
+                            android:lineSpacingMultiplier="1.3"
+                            android:textColor="@color/text_secondary" />
+
+                    </LinearLayout>
+
+                    <!-- Cancel (X). 40dp touch target around a 14dp glyph. -->
+                    <ImageView
+                        android:id="@+id/taskGuideClose"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:layout_gravity="top|end"
+                        android:layout_marginTop="6dp"
+                        android:layout_marginEnd="6dp"
+                        android:padding="13dp"
+                        android:src="@drawable/ic_close_small"
+                        app:tint="@color/text_muted"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:contentDescription="@string/repost_hide_guide" />
+
+                </FrameLayout>
+
+                <!-- Shown only after the guide has been hidden -->
+                <TextView
+                    android:id="@+id/taskGuideRestore"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:background="@drawable/repost_guide_toggle_background"
+                    android:gravity="center"
+                    android:paddingTop="14dp"
+                    android:paddingBottom="14dp"
+                    android:text="@string/repost_show_guide"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/text_muted"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:visibility="gone" />
+
+                <!-- Milestones card (unchanged) -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
