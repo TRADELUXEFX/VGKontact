@@ -119,7 +119,7 @@
     </LinearLayout>
 
     <LinearLayout
-        android:id="@+id/navProfileTab"
+        android:id="@+id/navWalletTab"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="1"
@@ -132,18 +132,18 @@
         android:paddingBottom="6dp">
 
         <ImageView
-            android:id="@+id/navProfileIcon"
+            android:id="@+id/navWalletIcon"
             android:layout_width="20dp"
             android:layout_height="20dp"
-            android:src="@drawable/ic_profile"
+            android:src="@drawable/ic_wallet"
             app:tint="@color/text_muted" />
 
         <TextView
-            android:id="@+id/navProfileLabel"
+            android:id="@+id/navWalletLabel"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="3dp"
-            android:text="@string/nav_profile"
+            android:text="@string/nav_wallet"
             android:textSize="10sp"
             android:textStyle="bold"
             android:textColor="@color/text_muted" />
