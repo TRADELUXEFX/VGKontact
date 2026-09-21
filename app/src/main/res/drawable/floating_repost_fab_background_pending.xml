@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Red variant of floating_repost_fab_background.xml, used while
+    today's repost is still pending (RepostPrefs.hasRepostedToday() ==
+    false). Same shape/ripple treatment, just swapped to the red
+    palette so the whole button - not just the small corner dot -
+    reads as "action needed" at a glance. See
+    FloatingRepostHelper.refreshBadge(), which now also swaps this
+    background in and out instead of only toggling the dot.
+-->
+<ripple xmlns:android="http://schemas.android.com/apk/res/android"
+    android:color="@color/vg_red_dark">
+    <item>
+        <shape android:shape="oval">
+            <solid android:color="@color/vg_red" />
+        </shape>
+    </item>
+</ripple>
