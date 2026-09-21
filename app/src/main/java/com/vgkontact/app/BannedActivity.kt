@@ -39,14 +39,10 @@ class BannedActivity : AppCompatActivity() {
         attemptedNumber = intent.getStringExtra(EXTRA_ATTEMPTED_NUMBER)
             ?: UserPrefs.getWhatsapp(this)
 
-        findViewById<TextView>(R.id.bannedNumberText)?.let { tv ->
-            val n = attemptedNumber?.takeIf { it.isNotBlank() }
-            if (n != null) {
-                tv.text = n
-                tv.visibility = View.VISIBLE
-            } else {
-                tv.visibility = View.GONE
-            }
+        val accountNumber = attemptedNumber?.takeIf { it.isNotBlank() }
+        if (accountNumber != null) {
+            findViewById<TextView>(R.id.bannedNumberText)?.text = accountNumber
+            findViewById<View>(R.id.bannedAccountSection)?.visibility = View.VISIBLE
         }
 
         // Show the specific reason when the server has one; otherwise the
@@ -83,12 +79,12 @@ class BannedActivity : AppCompatActivity() {
     private fun applyBanReason(view: TextView?, defaultText: String, code: String?) {
         if (view == null) return
         val line = when (code) {
-            "multiple_accounts" -> "Using more than one account."
-            "deleted_contacts" -> "Deleting the contacts from your phone after getting them."
-            "scam" -> "Scamming or misusing the app."
+            "multiple_accounts" -> "Using more than one account"
+            "deleted_contacts" -> "Deleting the contacts from your phone after getting them"
+            "scam" -> "Scamming or misusing the app"
             else -> null
         }
-        view.text = if (line != null) "•  $line" else defaultText
+        view.text = line ?: defaultText
     }
 
     override fun onResume() {
