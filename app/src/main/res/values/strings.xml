@@ -113,4 +113,16 @@
     <string name="label_friends_registered">Friends registered</string>
     <string name="btn_campaign_interested">I\'m interested</string>
     <string name="menu_grow_your_views">Grow your views</string>
+
+    <!-- Wallet screen -->
+    <string name="wallet_title">Wallet</string>
+    <string name="wallet_subtitle">Earn commission when your referrals buy viewers.</string>
+    <string name="wallet_available_label">Available to withdraw</string>
+    <string name="wallet_withdraw">Withdraw</string>
+    <string name="wallet_min_withdrawal">Minimum withdrawal ₦1,000</string>
+    <string name="wallet_total_earned">Total earned</string>
+    <string name="wallet_withdrawn">Withdrawn</string>
+    <string name="wallet_recent_activity">Recent activity</string>
+    <string name="wallet_empty_title">No activity yet</string>
+    <string name="wallet_empty_body">When your referrals buy viewers, your commission shows up here.</string>
 </resources>
