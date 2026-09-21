@@ -33,13 +33,15 @@ import java.util.Locale
  * counts today's repost immediately (tap = counted, per product
  * decision). Nothing here verifies the user really reposted.
  *
- * LEADERBOARD DATA SOURCE: streaks are stored locally only (see
- * RepostPrefs), so the only person this device can rank is the current
- * user. To keep the tab honest rather than showing invented names,
- * [loadLeaderboard] currently returns just the user's own row and shows
- * a note saying other reposters will appear once syncing is added. It
- * is deliberately isolated in one function so a backend fetch can
- * replace it without touching the rendering code.
+ * DATA: Supabase is the source of truth (see RepostSync and
+ * repost_supabase.sql). RepostPrefs is an on-device copy so the screen
+ * shows something instantly and still works offline. A tap made offline
+ * is flagged "pending" and re-sent on the next sync; the database keeps
+ * one row per user per day, so retrying can never double count.
+ *
+ * The leaderboard shows other people's numbers MASKED by the server
+ * (0803 *** 9087). If the server can't be reached it falls back to just
+ * the user's own row, with a note saying so.
  */
 class RepostActivity : BaseActivity() {
 
@@ -58,6 +60,7 @@ class RepostActivity : BaseActivity() {
     private lateinit var milestoneProgress: ProgressBar
     private lateinit var milestoneRow: LinearLayout
 
+    private lateinit var boardProgress: ProgressBar
     private lateinit var boardListContainer: LinearLayout
     private lateinit var boardNoteText: TextView
 
@@ -95,6 +98,7 @@ class RepostActivity : BaseActivity() {
         milestoneProgress = findViewById(R.id.milestoneProgress)
         milestoneRow = findViewById(R.id.milestoneRow)
 
+        boardProgress = findViewById(R.id.boardProgress)
         boardListContainer = findViewById(R.id.boardListContainer)
         boardNoteText = findViewById(R.id.boardNoteText)
 
@@ -111,8 +115,45 @@ class RepostActivity : BaseActivity() {
         super.onResume()
         // Streak can roll over to a new day while the app sits in the
         // background, so re-render whenever we come back to the screen.
+        // Show the local copy instantly, then refresh from the server.
         renderStreakTab()
-        if (leaderboardPanel.visibility == View.VISIBLE) renderLeaderboard()
+        syncStatsFromServer()
+        if (leaderboardPanel.visibility == View.VISIBLE) loadLeaderboardFromServer()
+    }
+
+    /**
+     * Pulls the user's real numbers from Supabase, saves them into the
+     * local copy (RepostPrefs), and redraws. If the server can't be
+     * reached nothing changes - the screen keeps showing the local copy.
+     */
+    private fun syncStatsFromServer() {
+        // If an earlier tap never reached the server, send it now. Safe to
+        // repeat: the database keeps one row per user per day.
+        if (RepostPrefs.hasPendingUploadToday(this)) {
+            RepostSync.recordRepost(this) { stats ->
+                if (stats != null) {
+                    RepostPrefs.clearPendingUpload(this)
+                    fetchAndApplyStats()
+                }
+            }
+            return
+        }
+        fetchAndApplyStats()
+    }
+
+    private fun fetchAndApplyStats() {
+        RepostSync.fetchMyStats(this) { stats ->
+            if (stats == null) return@fetchMyStats
+            RepostPrefs.saveServerStats(
+                context = this,
+                streak = stats.streak,
+                total = stats.totalReposts,
+                best = stats.bestStreak,
+                todayIfDone = stats.doneToday,
+                recentDates = stats.recentDates
+            )
+            runOnUiThread { if (!isFinishing) renderStreakTab() }
+        }
     }
 
     // ------------------------------------------------------------------
@@ -124,7 +165,10 @@ class RepostActivity : BaseActivity() {
         leaderboardPanel.visibility = if (showBoard) View.VISIBLE else View.GONE
         styleTab(tabMyStreakButton, active = !showBoard)
         styleTab(tabBoardButton, active = showBoard)
-        if (showBoard) renderLeaderboard()
+        if (showBoard) {
+            renderLeaderboard()          // local fallback shows instantly
+            loadLeaderboardFromServer()  // then real data replaces it
+        }
     }
 
     /**
@@ -153,10 +197,32 @@ class RepostActivity : BaseActivity() {
             return
         }
 
-        // Count first, then hand off. Doing it in this order means the
-        // repost is never lost if WhatsApp is slow to open or missing.
+        // Count locally FIRST so the button flips instantly and the
+        // repost is never lost if WhatsApp is slow or the network is down.
         val milestone = RepostPrefs.recordRepostToday(this)
         renderStreakTab()
+
+        // Then tell the server. The database allows one row per user per
+        // day, so a retry or double tap can never double count. If this
+        // call fails (offline), the next syncStatsFromServer() in
+        // onResume reconciles - see the note in RepostPrefs.saveServerStats.
+        RepostPrefs.markPendingUpload(this)
+        RepostSync.recordRepost(this) { stats ->
+            // Failed (offline etc): leave the pending flag set so the
+            // next syncStatsFromServer() retries it.
+            if (stats == null) return@recordRepost
+            RepostPrefs.clearPendingUpload(this)
+            RepostPrefs.saveServerStats(
+                context = this,
+                streak = stats.streak,
+                total = stats.totalReposts,
+                best = stats.bestStreak,
+                todayIfDone = true,
+                recentDates = emptySet()
+            )
+            // record_repost doesn't return the week dots; fetch them.
+            syncStatsFromServer()
+        }
 
         openWhatsAppToAdmin()
 
@@ -361,29 +427,59 @@ class RepostActivity : BaseActivity() {
     // Leaderboard tab
     // ------------------------------------------------------------------
 
+    /** Rows currently shown; replaced when the server answers. */
+    private var boardRows: List<BoardRow> = emptyList()
+
+    /** True once a real server response has been received this session. */
+    private var boardFromServer = false
+
     /**
-     * SINGLE SEAM for leaderboard data. Right now streaks are local
-     * only, so this can only ever return the current user. When repost
-     * counts are synced to a backend, replace the body of this function
-     * (fetch -> map to BoardRow) and set [hasRemoteData] to true;
-     * nothing else in this file needs to change.
+     * Local fallback: just the current user, from the on-device copy.
+     * Shown instantly and whenever the server can't be reached.
      */
-    private fun loadLeaderboard(): List<BoardRow> {
-        val me = BoardRow(
+    private fun localOnlyBoard(): List<BoardRow> = listOf(
+        BoardRow(
             label = getString(R.string.repost_you),
             reposts = RepostPrefs.getTotalReposts(this),
             streak = RepostPrefs.getCurrentStreak(this),
             isMe = true
         )
-        return listOf(me)
-    }
+    )
 
-    /** Flip to true once [loadLeaderboard] returns other users' data. */
-    private val hasRemoteData = false
+    /**
+     * Fetches the real leaderboard from Supabase. The server masks other
+     * people's numbers (0803 *** 9087) and flags the caller's own row, so
+     * no full WhatsApp numbers ever reach this screen.
+     */
+    private fun loadLeaderboardFromServer() {
+        boardProgress.visibility = View.VISIBLE
+        RepostSync.fetchLeaderboard(this) { entries ->
+            runOnUiThread {
+                if (isFinishing) return@runOnUiThread
+                boardProgress.visibility = View.GONE
+                if (entries == null) {
+                    // Couldn't reach the server: keep the local fallback.
+                    boardFromServer = false
+                } else {
+                    boardFromServer = true
+                    boardRows = entries.map {
+                        BoardRow(
+                            label = if (it.isMe) getString(R.string.repost_you) else it.displayNumber,
+                            reposts = it.totalReposts,
+                            streak = it.streak,
+                            isMe = it.isMe
+                        )
+                    }
+                }
+                renderLeaderboard()
+            }
+        }
+    }
 
     private fun renderLeaderboard() {
         boardListContainer.removeAllViews()
-        val rows = loadLeaderboard().sortedByDescending { it.reposts }
+        // Server rows arrive already ranked; the local fallback is one row.
+        val rows = if (boardFromServer) boardRows else localOnlyBoard()
         val density = resources.displayMetrics.density
         val rankBackgrounds = listOf(
             R.drawable.repost_rank_1,
@@ -492,9 +588,13 @@ class RepostActivity : BaseActivity() {
             }
         }
 
-        // Be upfront that this is only the user's own row for now.
-        if (!hasRemoteData) {
-            boardNoteText.text = getString(R.string.repost_board_local_note)
+        // Be upfront when we could not reach the server and are only
+        // showing the user's own row.
+        if (!boardFromServer) {
+            boardNoteText.text = getString(R.string.repost_board_offline_note)
+            boardNoteText.visibility = View.VISIBLE
+        } else if (rows.isEmpty()) {
+            boardNoteText.text = getString(R.string.repost_board_empty_note)
             boardNoteText.visibility = View.VISIBLE
         } else {
             boardNoteText.visibility = View.GONE
