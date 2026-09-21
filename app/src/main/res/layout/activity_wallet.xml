@@ -176,13 +176,50 @@
                 android:paddingTop="20dp"
                 android:paddingBottom="20dp">
 
-                <TextView
-                    android:layout_width="wrap_content"
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Recent activity"
-                    android:textSize="16sp"
-                    android:textStyle="bold"
-                    android:textColor="@color/vg_dark" />
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Recent activity"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/vg_dark" />
+
+                    <LinearLayout
+                        android:id="@+id/walletHistoryButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:background="?attr/selectableItemBackground"
+                        android:padding="4dp">
+
+                        <ImageView
+                            android:layout_width="16dp"
+                            android:layout_height="16dp"
+                            android:src="@drawable/ic_history"
+                            app:tint="@color/vg_green" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="4dp"
+                            android:text="History"
+                            android:textSize="13sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/vg_green" />
+
+                    </LinearLayout>
+
+                </LinearLayout>
 
                 <LinearLayout
                     android:id="@+id/walletActivityList"
