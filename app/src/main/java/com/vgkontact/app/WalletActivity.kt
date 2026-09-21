@@ -1,5 +1,6 @@
 package com.vgkontact.app
 
+import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -52,6 +53,7 @@ class WalletActivity : BaseActivity() {
     private lateinit var activityList: LinearLayout
     private lateinit var emptyState: View
     private lateinit var emptyText: TextView
+    private lateinit var historyButton: View
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -72,6 +74,11 @@ class WalletActivity : BaseActivity() {
         activityList = findViewById(R.id.walletActivityList)
         emptyState = findViewById(R.id.walletEmptyState)
         emptyText = findViewById(R.id.walletEmptyText)
+        historyButton = findViewById(R.id.walletHistoryButton)
+
+        historyButton.setOnClickListener {
+            startActivity(Intent(this, WalletHistoryActivity::class.java))
+        }
 
         loadWallet()
     }
