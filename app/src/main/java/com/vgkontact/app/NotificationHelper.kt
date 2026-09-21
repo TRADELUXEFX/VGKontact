@@ -300,6 +300,39 @@ object NotificationHelper {
         notificationManager.notify(DAILY_REPOST_NOTIFICATION_ID, builder.build())
     }
 
+    private const val INACTIVITY_WARNING_NOTIFICATION_ID = 1009
+
+    fun showInactivityWarningNotification(context: Context) {
+        val notificationManager =
+            context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+        val intent = Intent(context, MainMenuActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            context, 0, intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val message = "You haven't opened the app in 5 days. Open it now so you don't lose your status views."
+        val builder = NotificationCompat.Builder(context, CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setContentTitle("Don't lose your status views")
+            .setContentText(message)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(message))
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setAutoCancel(true)
+            .setContentIntent(pendingIntent)
+
+        notificationManager.notify(INACTIVITY_WARNING_NOTIFICATION_ID, builder.build())
+    }
+
+    fun dismissInactivityWarningNotification(context: Context) {
+        val notificationManager =
+            context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.cancel(INACTIVITY_WARNING_NOTIFICATION_ID)
+    }
+
     private const val REFERRAL_JOINED_NOTIFICATION_ID = 1006
 
     /**
