@@ -36,11 +36,20 @@ object FloatingContactHelper {
      * @param bottomMarginDp extra bottom margin (in dp) to lift the button
      * above screens that have their own floating bottom nav bar, so it
      * doesn't overlap it. Pass 0 for screens without a bottom nav bar.
+     * @param showRepostFab whether to also attach the floating Repost
+     * button (FloatingRepostHelper) directly above this one. True by
+     * default so every screen that already shows the chat button gets
+     * the Repost button too with no per-screen edits; RepostActivity
+     * passes false since the button would just reopen its own screen.
      * @return the FAB view, so callers (e.g. a coach mark tour) can
      * target it directly - or the existing FAB if attach() was already
      * called for this screen.
      */
-    fun attach(activity: Activity, bottomMarginDp: Int = 110): View? {
+    fun attach(
+        activity: Activity,
+        bottomMarginDp: Int = 110,
+        showRepostFab: Boolean = true
+    ): View? {
         val contentRoot = activity.findViewById<ViewGroup>(android.R.id.content) ?: return null
 
         // Avoid adding a second bubble if attach() is somehow called twice
@@ -75,6 +84,11 @@ object FloatingContactHelper {
         fab.setOnClickListener { openWhatsAppContactUs(activity) }
 
         contentRoot.addView(fab, params)
+
+        if (showRepostFab) {
+            FloatingRepostHelper.attach(activity, bottomMarginDp)
+        }
+
         return fab
     }
 
