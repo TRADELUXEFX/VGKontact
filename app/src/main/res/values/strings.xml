@@ -4,6 +4,7 @@
     <string name="nav_upgrade">Get Viewers</string>
     <string name="nav_history">Referrals</string>
     <string name="nav_profile">Profile</string>
+    <string name="nav_wallet">Wallet</string>
     <string name="app_name">VG ADDUP</string>
     <string name="title_onboarding">JOIN VIEWGROW</string>
     <string name="hint_name">e.g. maria_g</string>
@@ -113,4 +114,3 @@
     <string name="btn_campaign_interested">I\'m interested</string>
     <string name="menu_grow_your_views">Grow your views</string>
 </resources>
-
