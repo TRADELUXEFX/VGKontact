@@ -107,6 +107,12 @@
             android:name=".WalletHistoryActivity"
             android:exported="false" />
 
+        <!-- Withdraw request form - opened from WalletActivity's
+             Withdraw button once the balance clears the minimum. -->
+        <activity
+            android:name=".WithdrawActivity"
+            android:exported="false" />
+
         <!-- Repost & Earn screen (streak + leaderboard) - opened from the
              floating Repost button on every screen. -->
         <activity
