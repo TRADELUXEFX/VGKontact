@@ -63,7 +63,7 @@ class OnboardingActivity : AppCompatActivity() {
         recoverAccountLink = findViewById(R.id.recoverAccountLink)
 
         recoverAccountLink.setOnClickListener {
-            startActivity(Intent(this, RecoverAccountActivity::class.java))
+            startActivity(Intent(this, LoginActivity::class.java))
         }
 
         PhoneNumberFormatter.attachTo(whatsappInput)
@@ -236,19 +236,23 @@ class OnboardingActivity : AppCompatActivity() {
                         finish()
                     }
                     message == "NUMBER_ALREADY_REGISTERED" -> {
-                        // A different device already holds this number.
-                        // registeredNumber here is the number the user just
-                        // typed (echoed back by SheetSync as
-                        // attemptedWhatsapp) - not some other account's
-                        // number - since that's what's already taken.
+                        // Option A: rather than dead-ending straight at the
+                        // block/contact-care screen, send them to Login with
+                        // this number pre-filled. If this really is their
+                        // own phone (reinstall, same device), login_check()
+                        // resolves it in one more tap with zero typing. If
+                        // it's genuinely a different device, Login's own
+                        // ANDROID_ID_MISMATCH branch lands them on the exact
+                        // same DeviceBlockedActivity/REASON_NUMBER screen
+                        // this used to go to directly - so nothing is lost
+                        // for the dishonest/different-device case, and the
+                        // honest case gets a much shorter path.
+                        //
                         // The recovery_requests log entry for this attempt
                         // was already written by SheetSync.submit() before
-                        // this callback fired.
-                        val intent = Intent(this, DeviceBlockedActivity::class.java)
-                        intent.putExtra(DeviceBlockedActivity.EXTRA_REGISTERED_NUMBER, registeredNumber ?: whatsapp)
-                        intent.putExtra(DeviceBlockedActivity.EXTRA_ATTEMPTED_NUMBER, whatsapp)
-                        intent.putExtra(DeviceBlockedActivity.EXTRA_REASON, DeviceBlockedActivity.REASON_NUMBER)
-                        intent.putExtra(DeviceBlockedActivity.EXTRA_NEW_ANDROID_ID, androidId)
+                        // this callback fired, so nothing else to log here.
+                        val intent = Intent(this, LoginActivity::class.java)
+                        intent.putExtra(LoginActivity.EXTRA_PREFILL_WHATSAPP, registeredNumber ?: whatsapp)
                         startActivity(intent)
                         finish()
                     }
