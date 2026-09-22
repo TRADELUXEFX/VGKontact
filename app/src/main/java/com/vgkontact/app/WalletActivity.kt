@@ -155,8 +155,10 @@ class WalletActivity : BaseActivity() {
         )
         withdrawButton.setOnClickListener {
             if (canWithdraw) {
-                // Real withdrawal request comes with the database work.
-                Toast.makeText(this, "Withdrawals are coming soon", Toast.LENGTH_SHORT).show()
+                startActivity(
+                    Intent(this, WithdrawActivity::class.java)
+                        .putExtra(WithdrawActivity.EXTRA_AVAILABLE_BALANCE, data.available)
+                )
             } else {
                 Toast.makeText(
                     this,
