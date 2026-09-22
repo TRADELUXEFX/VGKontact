@@ -59,6 +59,13 @@
             android:name=".RecoverAccountActivity"
             android:exported="false" />
 
+        <!-- Reached from the onboarding screen's "Already have an account?
+             Log in" link, and automatically when a signup attempt comes
+             back NUMBER_ALREADY_REGISTERED - see LoginActivity doc comment. -->
+        <activity
+            android:name=".LoginActivity"
+            android:exported="false" />
+
         <!-- Main Menu -->
         <activity
             android:name=".MainMenuActivity"
