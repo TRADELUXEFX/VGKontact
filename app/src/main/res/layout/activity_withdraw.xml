@@ -6,7 +6,7 @@
     WalletSync.requestWithdrawal() (request_withdrawal RPC - backend
     function, not part of this app repo, mirrors redeem_key()'s shape).
 
-    Styling follows activity_recover_account.xml's form conventions
+    Styling follows activity_login.xml's form conventions
     (green header, outlined TextInputLayout fields, single bottom CTA)
     so this reads as the same app rather than a bolted-on screen.
 -->
