@@ -235,10 +235,27 @@ class OnboardingActivity : AppCompatActivity() {
                         startActivity(intent)
                         finish()
                     }
+                    message == "NUMBER_ALREADY_REGISTERED" -> {
+                        // A different device already holds this number.
+                        // registeredNumber here is the number the user just
+                        // typed (echoed back by SheetSync as
+                        // attemptedWhatsapp) - not some other account's
+                        // number - since that's what's already taken.
+                        // The recovery_requests log entry for this attempt
+                        // was already written by SheetSync.submit() before
+                        // this callback fired.
+                        val intent = Intent(this, DeviceBlockedActivity::class.java)
+                        intent.putExtra(DeviceBlockedActivity.EXTRA_REGISTERED_NUMBER, registeredNumber ?: whatsapp)
+                        intent.putExtra(DeviceBlockedActivity.EXTRA_ATTEMPTED_NUMBER, whatsapp)
+                        intent.putExtra(DeviceBlockedActivity.EXTRA_REASON, DeviceBlockedActivity.REASON_NUMBER)
+                        startActivity(intent)
+                        finish()
+                    }
                     registeredNumber != null -> {
                         val intent = Intent(this, DeviceBlockedActivity::class.java)
                         intent.putExtra(DeviceBlockedActivity.EXTRA_REGISTERED_NUMBER, registeredNumber)
                         intent.putExtra(DeviceBlockedActivity.EXTRA_ATTEMPTED_NUMBER, whatsapp)
+                        intent.putExtra(DeviceBlockedActivity.EXTRA_REASON, DeviceBlockedActivity.REASON_DEVICE)
                         startActivity(intent)
                         finish()
                     }
