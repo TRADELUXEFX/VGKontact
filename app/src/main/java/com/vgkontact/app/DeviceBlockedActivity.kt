@@ -1,5 +1,8 @@
 package com.vgkontact.app
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -36,6 +39,7 @@ class DeviceBlockedActivity : AppCompatActivity() {
         const val EXTRA_REGISTERED_NUMBER = "registered_number"
         const val EXTRA_ATTEMPTED_NUMBER = "attempted_number"
         const val EXTRA_REASON = "reason"
+        const val EXTRA_NEW_ANDROID_ID = "new_android_id"
         const val REASON_DEVICE = "DEVICE"
         const val REASON_NUMBER = "NUMBER"
     }
@@ -46,6 +50,7 @@ class DeviceBlockedActivity : AppCompatActivity() {
 
     private var registeredNumber: String? = null
     private var attemptedNumber: String? = null
+    private var newAndroidId: String? = null
     private var reason: String = REASON_DEVICE
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -56,6 +61,7 @@ class DeviceBlockedActivity : AppCompatActivity() {
 
         registeredNumber = intent.getStringExtra(EXTRA_REGISTERED_NUMBER)
         attemptedNumber = intent.getStringExtra(EXTRA_ATTEMPTED_NUMBER)
+        newAndroidId = intent.getStringExtra(EXTRA_NEW_ANDROID_ID)
         reason = intent.getStringExtra(EXTRA_REASON) ?: REASON_DEVICE
 
         findViewById<TextView>(R.id.registeredNumberText).text =
@@ -73,6 +79,21 @@ class DeviceBlockedActivity : AppCompatActivity() {
             findViewById<TextView>(R.id.bodyText).text =
                 "This number is already registered on a different device. Contact customer care to recover it."
             loginButton.visibility = android.view.View.GONE
+
+            // Show this new device's Android ID so the user can pass it to
+            // customer care - either automatically via the Contact Us
+            // WhatsApp message below, or by screenshotting/copying this
+            // card if that message doesn't go through for some reason.
+            // The admin swaps the old android_id on file for this one to
+            // move the account to the new device.
+            val idText = newAndroidId?.takeIf { it.isNotBlank() }
+            if (idText != null) {
+                findViewById<android.view.View>(R.id.newDeviceIdCard).visibility = android.view.View.VISIBLE
+                findViewById<TextView>(R.id.newDeviceIdText).text = idText
+                val copyRow = findViewById<android.view.View>(R.id.newDeviceIdCard)
+                copyRow.setOnClickListener { copyDeviceIdToClipboard(idText) }
+                findViewById<TextView>(R.id.copyDeviceIdText).setOnClickListener { copyDeviceIdToClipboard(idText) }
+            }
         } else {
             loginButton.visibility = android.view.View.VISIBLE
             loginButton.setOnClickListener {
@@ -126,12 +147,27 @@ class DeviceBlockedActivity : AppCompatActivity() {
         }
     }
 
+    private fun copyDeviceIdToClipboard(id: String) {
+        val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        clipboard.setPrimaryClip(ClipData.newPlainText("Device ID", id))
+        Toast.makeText(this, "Device ID copied", Toast.LENGTH_SHORT).show()
+    }
+
     private fun openWhatsAppContactUs() {
         val oldNumber = registeredNumber?.takeIf { it.isNotBlank() } ?: "—"
         val newNumber = attemptedNumber?.takeIf { it.isNotBlank() }
+        val deviceId = newAndroidId?.takeIf { it.isNotBlank() }
 
         val text = if (reason == REASON_NUMBER) {
-            "Hi VG Kontact, I tried to sign up with $oldNumber but it says that number is already registered on another device. I need help recovering it."
+            // Includes this new device's Android ID so the admin can move
+            // the account: they swap the android_id on file (tied to the
+            // old device) for this one, which then passes the same-device
+            // check on the next signup attempt.
+            if (deviceId != null) {
+                "Hi VG Kontact, I tried to sign up with $oldNumber but it says that number is already registered on another device. My new device ID is: $deviceId. I need help recovering it."
+            } else {
+                "Hi VG Kontact, I tried to sign up with $oldNumber but it says that number is already registered on another device. I need help recovering it."
+            }
         } else if (newNumber != null) {
             "Hi VG Kontact, I need to change my number from $oldNumber to $newNumber"
         } else {
