@@ -33,23 +33,14 @@
                 android:paddingStart="20dp"
                 android:paddingEnd="20dp">
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/wallet_title"
-                    android:textSize="22sp"
-                    android:textStyle="bold"
-                    android:textColor="@color/white"
-                    android:fontFamily="@font/poppins" />
-
                 <!-- Balance card -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="18dp"
                     android:orientation="vertical"
                     android:background="@drawable/wallet_balance_card"
-                    android:padding="20dp">
+                    android:padding="20dp"
+                    android:gravity="center_horizontal">
 
                     <TextView
                         android:layout_width="wrap_content"
@@ -76,7 +67,7 @@
                         android:layout_marginTop="4dp"
                         android:textSize="13sp"
                         android:textColor="@color/text_muted"
-                        tools:text="₦750 pending" />
+                        tools:text="Withdrawal request pending review" />
 
                     <!-- Withdraw button -->
                     <LinearLayout
@@ -114,20 +105,23 @@
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:orientation="vertical">
+                            android:layout_marginEnd="6dp"
+                            android:orientation="vertical"
+                            android:background="@drawable/wallet_stat_pill"
+                            android:padding="12dp">
 
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="Total earned"
-                                android:textSize="12sp"
+                                android:textSize="11sp"
                                 android:textColor="@color/text_muted" />
 
                             <TextView
                                 android:id="@+id/walletTotalEarnedText"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:layout_marginTop="2dp"
+                                android:layout_marginTop="4dp"
                                 android:textSize="16sp"
                                 android:textStyle="bold"
                                 android:textColor="@color/vg_dark"
@@ -139,20 +133,23 @@
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:orientation="vertical">
+                            android:layout_marginStart="6dp"
+                            android:orientation="vertical"
+                            android:background="@drawable/wallet_stat_pill"
+                            android:padding="12dp">
 
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="Withdrawn"
-                                android:textSize="12sp"
+                                android:textSize="11sp"
                                 android:textColor="@color/text_muted" />
 
                             <TextView
                                 android:id="@+id/walletWithdrawnText"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:layout_marginTop="2dp"
+                                android:layout_marginTop="4dp"
                                 android:textSize="16sp"
                                 android:textStyle="bold"
                                 android:textColor="@color/vg_dark"
@@ -171,10 +168,12 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:paddingStart="20dp"
-                android:paddingEnd="20dp"
-                android:paddingTop="20dp"
-                android:paddingBottom="20dp">
+                android:layout_marginTop="16dp"
+                android:layout_marginStart="20dp"
+                android:layout_marginEnd="20dp"
+                android:layout_marginBottom="20dp"
+                android:background="@drawable/wallet_balance_card"
+                android:padding="18dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -187,7 +186,7 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:text="Recent activity"
-                        android:textSize="16sp"
+                        android:textSize="15sp"
                         android:textStyle="bold"
                         android:textColor="@color/vg_dark" />
 
@@ -202,16 +201,9 @@
                         android:background="?attr/selectableItemBackground"
                         android:padding="4dp">
 
-                        <ImageView
-                            android:layout_width="16dp"
-                            android:layout_height="16dp"
-                            android:src="@drawable/ic_history"
-                            app:tint="@color/vg_green" />
-
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginStart="4dp"
                             android:text="History"
                             android:textSize="13sp"
                             android:textStyle="bold"
@@ -225,19 +217,17 @@
                     android:id="@+id/walletActivityList"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp"
-                    android:orientation="vertical"
-                    android:background="@drawable/wallet_balance_card" />
+                    android:layout_marginTop="6dp"
+                    android:orientation="vertical" />
 
                 <LinearLayout
                     android:id="@+id/walletEmptyState"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp"
+                    android:layout_marginTop="6dp"
                     android:orientation="vertical"
                     android:gravity="center"
                     android:padding="32dp"
-                    android:background="@drawable/wallet_balance_card"
                     android:visibility="gone">
 
                     <TextView
