@@ -144,22 +144,22 @@ object WalletSync {
 
     /**
      * Calls request_withdrawal(p_whatsapp, p_android_id, p_account_number,
-     * p_bank_name, p_account_name, p_amount) - a backend RPC that:
-     *  1. Re-validates the amount against the caller's real available
-     *     balance server-side (never trust the client's number alone -
-     *     the app's balance display could be stale or tampered with).
-     *  2. Inserts a pending withdrawal record and reserves the amount,
-     *     the same way an "amount": -5000 activity entry would show up
-     *     under get_my_wallet's "activity" once a human approves it.
-     *  3. Returns {"ok": true} on success, or {"ok": false, "message":
-     *     "<reason>"} on a validation failure (below minimum, missing
-     *     bank details, insufficient balance) - so the UI can show the
-     *     server's exact reason rather than a generic error.
-     *
-     * This RPC does not exist yet - it needs to be added to Supabase
-     * alongside get_my_wallet/redeem_key (see wallet_fix.sql). This
-     * client-side call is written to match that shape so it's a drop-in
-     * once the function exists.
+     * p_bank_name, p_account_name) - live in Supabase. No amount param:
+     * every request always covers the caller's entire current `available`
+     * balance, re-read server-side (never trust a client-supplied number).
+     *  1. Ownership check (whatsapp + android_id match a contacts row).
+     *  2. Blocks if the user already has a WITHDRAWAL entry with
+     *     status = PENDING.
+     *  3. Validates bank fields (account number >=10 chars, bank name and
+     *     account name non-empty).
+     *  4. Rejects with "No balance to withdraw" if available <= 0 - this
+     *     is the only balance check; there is no minimum withdrawal.
+     *  5. Inserts one wallet_entries row (kind = WITHDRAWAL, amount =
+     *     -available, status = PENDING). Does NOT touch wallets.available -
+     *     that only happens later via approve_withdrawal.
+     * Returns {"ok": true} on success, or {"ok": false, "message":
+     * "<reason>"} on a validation failure, so the UI can show the
+     * server's exact reason rather than a generic error.
      */
     fun requestWithdrawal(
         context: Context,
