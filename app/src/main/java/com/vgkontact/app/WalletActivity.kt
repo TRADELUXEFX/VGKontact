@@ -33,12 +33,13 @@ class WalletActivity : BaseActivity() {
         val title: String,
         val subtitle: String,
         /** Positive for money in, negative for money out. */
-        val amount: Long
+        val amount: Long,
+        /** "PENDING", "APPROVED", or "REJECTED". */
+        val status: String
     )
 
     private data class WalletData(
         val available: Long,
-        val pending: Long,
         val totalEarned: Long,
         val withdrawn: Long,
         val activity: List<WalletEntry>
@@ -104,7 +105,6 @@ class WalletActivity : BaseActivity() {
                     render(
                         WalletData(
                             available = wallet.available,
-                            pending = wallet.pending,
                             totalEarned = wallet.totalEarned,
                             withdrawn = wallet.withdrawn,
                             activity = wallet.activity.map {
@@ -112,7 +112,8 @@ class WalletActivity : BaseActivity() {
                                     if (it.kind == "WITHDRAWAL") Kind.WITHDRAWAL else Kind.COMMISSION,
                                     it.title,
                                     it.subtitle,
-                                    it.amount
+                                    it.amount,
+                                    it.status
                                 )
                             }
                         )
@@ -141,29 +142,39 @@ class WalletActivity : BaseActivity() {
 
     private fun render(data: WalletData) {
         balanceText.text = naira(data.available)
-        pendingText.text = "${naira(data.pending)} pending"
-        pendingText.setOnClickListener(null)
-        pendingText.isClickable = false
         totalEarnedText.text = naira(data.totalEarned)
         withdrawnText.text = naira(data.withdrawn)
 
-        // Withdraw is only usable once the balance reaches the minimum.
-        val canWithdraw = data.available >= MIN_WITHDRAWAL
+        val hasPendingRequest = data.activity.any {
+            it.kind == Kind.WITHDRAWAL && it.status == "PENDING"
+        }
+
+        if (hasPendingRequest) {
+            pendingText.text = "Withdrawal request pending review"
+        } else {
+            pendingText.text = ""
+        }
+        pendingText.setOnClickListener(null)
+        pendingText.isClickable = false
+
+        // Withdraw is usable once the balance reaches the minimum, and only
+        // while no earlier request is still awaiting approval.
+        val canWithdraw = data.available >= MIN_WITHDRAWAL && !hasPendingRequest
         withdrawButton.setBackgroundResource(
             if (canWithdraw) R.drawable.wallet_withdraw_button
             else R.drawable.wallet_withdraw_button_disabled
         )
         withdrawButton.setOnClickListener {
-            if (canWithdraw) {
-                startActivity(
+            when {
+                hasPendingRequest -> Toast.makeText(
+                    this, "You already have a withdrawal request being reviewed", Toast.LENGTH_SHORT
+                ).show()
+                canWithdraw -> startActivity(
                     Intent(this, WithdrawActivity::class.java)
                         .putExtra(WithdrawActivity.EXTRA_AVAILABLE_BALANCE, data.available)
                 )
-            } else {
-                Toast.makeText(
-                    this,
-                    "Minimum withdrawal is ${naira(MIN_WITHDRAWAL)}",
-                    Toast.LENGTH_SHORT
+                else -> Toast.makeText(
+                    this, "Minimum withdrawal is ${naira(MIN_WITHDRAWAL)}", Toast.LENGTH_SHORT
                 ).show()
             }
         }
@@ -200,7 +211,8 @@ class WalletActivity : BaseActivity() {
                 setBackgroundResource(if (isIn) R.drawable.wallet_chip_in else R.drawable.wallet_chip_out)
                 setColorFilter(if (isIn) green else red)
             }
-            row.findViewById<TextView>(R.id.walletRowTitle).text = entry.title
+            val title = if (entry.status == "REJECTED") "${entry.title} (Rejected)" else entry.title
+            row.findViewById<TextView>(R.id.walletRowTitle).text = title
             row.findViewById<TextView>(R.id.walletRowSubtitle).text = entry.subtitle
             row.findViewById<TextView>(R.id.walletRowAmount).apply {
                 val sign = if (isIn) "+" else "-"
