@@ -45,12 +45,13 @@ object WalletSync {
         val title: String,
         val subtitle: String,
         /** Positive = money in, negative = money out. */
-        val amount: Long
+        val amount: Long,
+        /** "PENDING", "APPROVED", or "REJECTED". Commissions are always "APPROVED". */
+        val status: String
     )
 
     data class Wallet(
         val available: Long,
-        val pending: Long,
         val totalEarned: Long,
         val withdrawn: Long,
         val activity: List<Entry>
@@ -105,7 +106,8 @@ object WalletSync {
                                     kind = e.optString("kind", "COMMISSION"),
                                     title = e.optString("title", ""),
                                     subtitle = e.optString("subtitle", ""),
-                                    amount = e.optLong("amount", 0L)
+                                    amount = e.optLong("amount", 0L),
+                                    status = e.optString("status", "APPROVED")
                                 )
                             )
                         }
@@ -114,7 +116,6 @@ object WalletSync {
                     callback(
                         Wallet(
                             available = o.optLong("available", 0L),
-                            pending = o.optLong("pending", 0L),
                             totalEarned = o.optLong("total_earned", 0L),
                             withdrawn = o.optLong("withdrawn", 0L),
                             activity = entries
@@ -165,7 +166,6 @@ object WalletSync {
         accountNumber: String,
         bankName: String,
         accountName: String,
-        amount: Long,
         callback: (WithdrawResult) -> Unit
     ) {
         val appContext = context.applicationContext
@@ -186,7 +186,6 @@ object WalletSync {
                     .put("p_account_number", accountNumber)
                     .put("p_bank_name", bankName)
                     .put("p_account_name", accountName)
-                    .put("p_amount", amount)
 
                 val request = Request.Builder()
                     .url("$SUPABASE_URL/rest/v1/rpc/request_withdrawal")
