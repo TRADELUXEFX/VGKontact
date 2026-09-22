@@ -58,7 +58,20 @@ class RecoverAccountActivity : AppCompatActivity() {
     }
 
     private fun openWhatsAppContactUs(phone: String) {
-        val text = "Hi VG Kontact, I need help recovering my account. My number is $phone"
+        // Included so the admin can move the account the same way as from
+        // DeviceBlockedActivity: swap the android_id on file for this new
+        // device's id. Read fresh here since this screen can be reached
+        // directly, without going through the onboarding submit flow that
+        // already reads it elsewhere.
+        val androidId = android.provider.Settings.Secure.getString(
+            contentResolver,
+            android.provider.Settings.Secure.ANDROID_ID
+        )
+        val text = if (!androidId.isNullOrBlank()) {
+            "Hi VG Kontact, I need help recovering my account. My number is $phone. My device ID is: $androidId"
+        } else {
+            "Hi VG Kontact, I need help recovering my account. My number is $phone"
+        }
         val message = Uri.encode(text)
         val uri = Uri.parse("https://wa.me/$CONTACT_US_WHATSAPP_NUMBER?text=$message")
         try {
