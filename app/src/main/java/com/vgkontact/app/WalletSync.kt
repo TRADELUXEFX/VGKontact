@@ -56,8 +56,7 @@ object WalletSync {
         val activity: List<Entry>
     )
 
-    fun fetchWallet(context: Context, callback: (Wallet?) -> Unit) {
-        // applicationContext so a slow request can't keep a dead Activity alive
+    fun fetchWallet(context: Context, callback: (Wallet?) -> Unit) {        // applicationContext so a slow request can't keep a dead Activity alive
         val appContext = context.applicationContext
         CoroutineScope(Dispatchers.IO).launch {
             try {
@@ -125,6 +124,102 @@ object WalletSync {
             } catch (e: Exception) {
                 Log.w(TAG, "fetchWallet failed", e)
                 callback(null)
+            }
+        }
+    }
+
+    /**
+     * Result of a withdrawal request. SUCCESS/REJECTED come from a real
+     * server response (the RPC ran and returned an answer); NETWORK_ERROR
+     * means we couldn't reach the server at all, so the caller shouldn't
+     * treat it as "the bank details were wrong" - just "try again".
+     */
+    sealed class WithdrawResult {
+        object Success : WithdrawResult()
+        /** [message] is the server's reason, e.g. "Below minimum withdrawal". */
+        data class Rejected(val message: String) : WithdrawResult()
+        object NetworkError : WithdrawResult()
+    }
+
+    /**
+     * Calls request_withdrawal(p_whatsapp, p_android_id, p_account_number,
+     * p_bank_name, p_account_name, p_amount) - a backend RPC that:
+     *  1. Re-validates the amount against the caller's real available
+     *     balance server-side (never trust the client's number alone -
+     *     the app's balance display could be stale or tampered with).
+     *  2. Inserts a pending withdrawal record and reserves the amount,
+     *     the same way an "amount": -5000 activity entry would show up
+     *     under get_my_wallet's "activity" once a human approves it.
+     *  3. Returns {"ok": true} on success, or {"ok": false, "message":
+     *     "<reason>"} on a validation failure (below minimum, missing
+     *     bank details, insufficient balance) - so the UI can show the
+     *     server's exact reason rather than a generic error.
+     *
+     * This RPC does not exist yet - it needs to be added to Supabase
+     * alongside get_my_wallet/redeem_key (see wallet_fix.sql). This
+     * client-side call is written to match that shape so it's a drop-in
+     * once the function exists.
+     */
+    fun requestWithdrawal(
+        context: Context,
+        accountNumber: String,
+        bankName: String,
+        accountName: String,
+        amount: Long,
+        callback: (WithdrawResult) -> Unit
+    ) {
+        val appContext = context.applicationContext
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val whatsapp = UserPrefs.getWhatsapp(appContext)
+                val androidId = Settings.Secure.getString(
+                    appContext.contentResolver, Settings.Secure.ANDROID_ID
+                ) ?: ""
+                if (whatsapp.isNullOrEmpty() || androidId.isBlank()) {
+                    callback(WithdrawResult.NetworkError)
+                    return@launch
+                }
+
+                val body = JSONObject()
+                    .put("p_whatsapp", whatsapp)
+                    .put("p_android_id", androidId)
+                    .put("p_account_number", accountNumber)
+                    .put("p_bank_name", bankName)
+                    .put("p_account_name", accountName)
+                    .put("p_amount", amount)
+
+                val request = Request.Builder()
+                    .url("$SUPABASE_URL/rest/v1/rpc/request_withdrawal")
+                    .header("apikey", SUPABASE_ANON_KEY)
+                    .header("Authorization", "Bearer $SUPABASE_ANON_KEY")
+                    .header("Content-Type", "application/json")
+                    .post(body.toString().toRequestBody(JSON.toMediaType()))
+                    .build()
+
+                httpClient.newCall(request).execute().use { response ->
+                    val text = response.body?.string().orEmpty()
+                    if (response.code !in 200..299) {
+                        Log.w(TAG, "request_withdrawal failed: HTTP ${response.code} $text")
+                        callback(WithdrawResult.NetworkError)
+                        return@launch
+                    }
+                    // The RPC returns a single JSON object (not wrapped in
+                    // an array), same convention PostgREST uses for a
+                    // scalar/record-returning function called this way.
+                    val o = JSONObject(text)
+                    if (o.optBoolean("ok", false)) {
+                        callback(WithdrawResult.Success)
+                    } else {
+                        callback(
+                            WithdrawResult.Rejected(
+                                o.optString("message", "Couldn't submit withdrawal")
+                            )
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "requestWithdrawal failed", e)
+                callback(WithdrawResult.NetworkError)
             }
         }
     }
