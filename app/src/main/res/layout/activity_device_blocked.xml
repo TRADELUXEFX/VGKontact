@@ -99,6 +99,58 @@
                 android:lineSpacingMultiplier="1.3"
                 android:layout_marginTop="16dp" />
 
+            <!-- Only shown for REASON_NUMBER, so the user can share this
+                 device's ID with customer care (by tapping Contact Us, which
+                 includes it automatically, or by copying/screenshotting it
+                 here as a fallback if that message can't be sent for some
+                 reason). -->
+            <LinearLayout
+                android:id="@+id/newDeviceIdCard"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center_horizontal"
+                android:background="@drawable/card_background"
+                android:padding="20dp"
+                android:layout_marginTop="16dp"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="THIS DEVICE'S ID"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:textAllCaps="true"
+                    android:letterSpacing="0.05"
+                    android:textColor="@color/text_muted"
+                    android:gravity="center"
+                    android:layout_marginBottom="8dp" />
+
+                <TextView
+                    android:id="@+id/newDeviceIdText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="—"
+                    android:textSize="15sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/vg_dark"
+                    android:gravity="center"
+                    android:textIsSelectable="true" />
+
+                <TextView
+                    android:id="@+id/copyDeviceIdText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Tap to copy"
+                    android:textSize="12sp"
+                    android:textColor="@color/vg_green_dark"
+                    android:gravity="center"
+                    android:layout_marginTop="6dp"
+                    android:padding="4dp" />
+
+            </LinearLayout>
+
         </LinearLayout>
 
         <LinearLayout
