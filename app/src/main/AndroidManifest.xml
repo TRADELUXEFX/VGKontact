@@ -53,12 +53,6 @@
             android:name=".DeviceUnverifiedActivity"
             android:exported="false" />
 
-        <!-- Reachable proactively from the dashboard's "Recover Account"
-             button - see RecoverAccountActivity doc comment. -->
-        <activity
-            android:name=".RecoverAccountActivity"
-            android:exported="false" />
-
         <!-- Reached from the onboarding screen's "Already have an account?
              Log in" link, and automatically when a signup attempt comes
              back NUMBER_ALREADY_REGISTERED - see LoginActivity doc comment. -->
