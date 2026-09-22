@@ -155,7 +155,7 @@ class LoginActivity : AppCompatActivity() {
         progressBar.visibility = if (loading) View.VISIBLE else View.GONE
     }
 
-    // Same validation used in OnboardingActivity/RecoverAccountActivity -
+    // Same validation used in OnboardingActivity -
     // kept identical so a number accepted at signup is accepted here too.
     private fun isValidNigerianPhone(phone: String): Boolean {
         if (phone.length != 11) return false
