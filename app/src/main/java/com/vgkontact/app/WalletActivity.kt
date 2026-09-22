@@ -157,9 +157,11 @@ class WalletActivity : BaseActivity() {
         pendingText.setOnClickListener(null)
         pendingText.isClickable = false
 
-        // Withdraw is usable once the balance reaches the minimum, and only
-        // while no earlier request is still awaiting approval.
-        val canWithdraw = data.available >= MIN_WITHDRAWAL && !hasPendingRequest
+        // Withdraw is usable as long as there's a positive balance and no
+        // earlier request is still awaiting approval. request_withdrawal
+        // enforces this server-side too (rejects with "No balance to
+        // withdraw" if available <= 0) - there is no minimum.
+        val canWithdraw = data.available > 0L && !hasPendingRequest
         withdrawButton.setBackgroundResource(
             if (canWithdraw) R.drawable.wallet_withdraw_button
             else R.drawable.wallet_withdraw_button_disabled
@@ -174,7 +176,7 @@ class WalletActivity : BaseActivity() {
                         .putExtra(WithdrawActivity.EXTRA_AVAILABLE_BALANCE, data.available)
                 )
                 else -> Toast.makeText(
-                    this, "Minimum withdrawal is ${naira(MIN_WITHDRAWAL)}", Toast.LENGTH_SHORT
+                    this, "No balance to withdraw", Toast.LENGTH_SHORT
                 ).show()
             }
         }
@@ -226,8 +228,4 @@ class WalletActivity : BaseActivity() {
 
     private fun naira(amount: Long): String =
         "₦" + NumberFormat.getNumberInstance(Locale.US).format(amount)
-
-    companion object {
-        private const val MIN_WITHDRAWAL = 1_000L
-    }
 }
