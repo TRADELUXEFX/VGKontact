@@ -14,23 +14,15 @@ import java.util.Locale
 
 /**
  * Withdraw request form - reached from WalletActivity's Withdraw button.
- * Collects bank account details, validates them client-side, then calls
- * WalletSync.requestWithdrawal() (request_withdrawal RPC).
- *
- * EXTRA_AVAILABLE_BALANCE is required - the caller (WalletActivity)
- * already has the real balance loaded from the server, so this screen
- * doesn't need its own network round trip just to show "X available"
- * and to validate the amount doesn't exceed it. The RPC still
- * re-validates server-side regardless (see WalletSync.requestWithdrawal
- * doc comment) - this client-side check is just so the user gets
- * immediate feedback instead of a round trip for an amount that was
- * obviously too high.
+ * Collects bank account details only; the request always covers the
+ * user's entire available balance (no partial withdrawals). Validates
+ * fields client-side, then calls WalletSync.requestWithdrawal()
+ * (request_withdrawal RPC), which re-validates everything server-side.
  */
 class WithdrawActivity : BaseActivity() {
 
     companion object {
         const val EXTRA_AVAILABLE_BALANCE = "available_balance"
-        private const val MIN_WITHDRAWAL = 1_000L
     }
 
     private lateinit var availableText: TextView
@@ -42,13 +34,10 @@ class WithdrawActivity : BaseActivity() {
     private lateinit var bankNameInput: TextInputEditText
     private lateinit var accountNameLayout: TextInputLayout
     private lateinit var accountNameInput: TextInputEditText
-    private lateinit var amountLayout: TextInputLayout
-    private lateinit var amountInput: TextInputEditText
 
     private lateinit var submitButton: Button
     private lateinit var progressBar: ProgressBar
 
-    private var availableBalance: Long = 0L
     private var submitting = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -57,7 +46,7 @@ class WithdrawActivity : BaseActivity() {
 
         window.statusBarColor = ContextCompat.getColor(this, R.color.vg_green)
 
-        availableBalance = intent.getLongExtra(EXTRA_AVAILABLE_BALANCE, 0L)
+        val availableBalance = intent.getLongExtra(EXTRA_AVAILABLE_BALANCE, 0L)
 
         availableText = findViewById(R.id.withdrawAvailableText)
         minHintText = findViewById(R.id.withdrawMinHintText)
@@ -68,27 +57,16 @@ class WithdrawActivity : BaseActivity() {
         bankNameInput = findViewById(R.id.withdrawBankNameInput)
         accountNameLayout = findViewById(R.id.withdrawAccountNameLayout)
         accountNameInput = findViewById(R.id.withdrawAccountNameInput)
-        amountLayout = findViewById(R.id.withdrawAmountLayout)
-        amountInput = findViewById(R.id.withdrawAmountInput)
 
         submitButton = findViewById(R.id.withdrawSubmitButton)
         progressBar = findViewById(R.id.withdrawProgressBar)
 
         availableText.text = "${naira(availableBalance)} available"
-        minHintText.text = "Minimum withdrawal ${naira(MIN_WITHDRAWAL)}"
+        minHintText.text = "Your full available balance will be withdrawn"
 
-        // Pre-fill with the full available balance so the common case
-        // (withdraw everything) needs no typing - the user can still
-        // edit it down.
-        amountInput.setText(availableBalance.toString())
-
-        // Clear each field's error the moment the user edits it, rather
-        // than leaving a stale error showing after they've already
-        // started fixing it.
         accountNumberInput.clearErrorOnEdit(accountNumberLayout)
         bankNameInput.clearErrorOnEdit(bankNameLayout)
         accountNameInput.clearErrorOnEdit(accountNameLayout)
-        amountInput.clearErrorOnEdit(amountLayout)
 
         submitButton.setOnClickListener { submit() }
     }
@@ -109,7 +87,6 @@ class WithdrawActivity : BaseActivity() {
         val accountNumber = accountNumberInput.text.toString().trim()
         val bankName = bankNameInput.text.toString().trim()
         val accountName = accountNameInput.text.toString().trim()
-        val amountText = amountInput.text.toString().trim()
 
         var hasError = false
 
@@ -126,27 +103,14 @@ class WithdrawActivity : BaseActivity() {
             hasError = true
         }
 
-        val amount = amountText.toLongOrNull()
-        if (amount == null || amount <= 0) {
-            amountLayout.error = "Enter an amount"
-            hasError = true
-        } else if (amount < MIN_WITHDRAWAL) {
-            amountLayout.error = "Minimum withdrawal is ${naira(MIN_WITHDRAWAL)}"
-            hasError = true
-        } else if (amount > availableBalance) {
-            amountLayout.error = "You only have ${naira(availableBalance)} available"
-            hasError = true
-        }
-
-        if (hasError || amount == null) return
+        if (hasError) return
 
         setLoading(true)
         WalletSync.requestWithdrawal(
             this,
             accountNumber = accountNumber,
             bankName = bankName,
-            accountName = accountName,
-            amount = amount
+            accountName = accountName
         ) { result ->
             runOnUiThread {
                 setLoading(false)
