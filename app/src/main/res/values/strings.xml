@@ -18,7 +18,7 @@
     <string name="onboarding_lead">Get Access to</string>
     <string name="onboarding_hook">1000+ Status Viewers</string>
     <string name="onboarding_credit">Powered by VGKontact</string>
-    <string name="onboarding_recover_account">Already have an account? Recover it</string>
+    <string name="onboarding_recover_account">Already have an account? Log in</string>
     <string name="btn_sync_kontact">Claim Free Viewers</string>
     <string name="btn_upgrade_plan">Upgrade Plan</string>
     <string name="btn_save">Save</string>
