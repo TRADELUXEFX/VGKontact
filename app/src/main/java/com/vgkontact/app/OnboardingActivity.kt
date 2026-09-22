@@ -248,6 +248,7 @@ class OnboardingActivity : AppCompatActivity() {
                         intent.putExtra(DeviceBlockedActivity.EXTRA_REGISTERED_NUMBER, registeredNumber ?: whatsapp)
                         intent.putExtra(DeviceBlockedActivity.EXTRA_ATTEMPTED_NUMBER, whatsapp)
                         intent.putExtra(DeviceBlockedActivity.EXTRA_REASON, DeviceBlockedActivity.REASON_NUMBER)
+                        intent.putExtra(DeviceBlockedActivity.EXTRA_NEW_ANDROID_ID, androidId)
                         startActivity(intent)
                         finish()
                     }
