@@ -196,11 +196,15 @@ class WalletActivity : BaseActivity() {
         activityList.visibility = View.VISIBLE
         emptyState.visibility = View.GONE
 
+        // Just a taste of what's new here - the full list lives in
+        // WalletHistoryActivity (via the History link above this list).
+        val preview = entries.take(RECENT_ACTIVITY_PREVIEW_COUNT)
+
         val inflater = LayoutInflater.from(this)
         val green = ContextCompat.getColor(this, R.color.vg_green)
         val red = ContextCompat.getColor(this, R.color.vg_red_dark)
 
-        entries.forEachIndexed { index, entry ->
+        preview.forEachIndexed { index, entry ->
             val row = inflater.inflate(R.layout.item_wallet_activity, activityList, false)
 
             // No divider above the first row.
@@ -228,4 +232,8 @@ class WalletActivity : BaseActivity() {
 
     private fun naira(amount: Long): String =
         "₦" + NumberFormat.getNumberInstance(Locale.US).format(amount)
+
+    companion object {
+        private const val RECENT_ACTIVITY_PREVIEW_COUNT = 2
+    }
 }
