@@ -49,7 +49,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:gravity="top">
+                android:gravity="center_vertical">
 
                 <com.google.android.material.imageview.ShapeableImageView
                     android:id="@+id/profileIcon"
@@ -248,6 +248,7 @@
                     android:layout_weight="1"
                     android:textSize="11sp"
                     android:textColor="@color/white"
+                    android:gravity="center_vertical"
                     tools:text="Referral code: 08108709625" />
 
                 <Button
