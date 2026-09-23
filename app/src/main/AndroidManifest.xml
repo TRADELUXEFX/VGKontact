@@ -63,12 +63,14 @@
         <!-- Main Menu -->
         <activity
             android:name=".MainMenuActivity"
-            android:exported="false" />
+            android:exported="false"
+            android:launchMode="singleTask" />
 
         <!-- History View -->
         <activity
             android:name=".HistoryActivity"
-            android:exported="false" />
+            android:exported="false"
+            android:launchMode="singleTask" />
 
         <!-- Increase Contact Limit - merged screen (Referral rewards +
              Redeem a key tabs). Replaced GrowYourViewsActivity and
@@ -77,7 +79,8 @@
              so their manifest entries were removed. -->
         <activity
             android:name=".IncreaseLimitActivity"
-            android:exported="false" />
+            android:exported="false"
+            android:launchMode="singleTask" />
 
         <!-- Notification Settings -->
         <activity
@@ -100,7 +103,8 @@
              crash with ActivityNotFoundException. -->
         <activity
             android:name=".WalletActivity"
-            android:exported="false" />
+            android:exported="false"
+            android:launchMode="singleTask" />
 
         <!-- Full wallet history - opened from the "History" link next
              to "Recent activity" on WalletActivity. -->
