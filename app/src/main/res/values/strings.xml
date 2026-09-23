@@ -5,7 +5,7 @@
     <string name="nav_history">Referrals</string>
     <string name="nav_profile">Profile</string>
     <string name="nav_wallet">Wallet</string>
-    <string name="app_name">VG ADDUP</string>
+    <string name="app_name">VIEWGROW</string>
     <string name="title_onboarding">JOIN VIEWGROW</string>
     <string name="hint_name">e.g. maria_g</string>
     <string name="hint_whatsapp">e.g. 0812 3456 789</string>
@@ -17,7 +17,7 @@
     <string name="btn_continue">Get Access</string>
     <string name="onboarding_lead">Get Access to</string>
     <string name="onboarding_hook">1000+ Status Viewers</string>
-    <string name="onboarding_credit">Powered by VGKontact</string>
+    <string name="onboarding_credit">Powered by Viewgrow</string>
     <string name="onboarding_recover_account">Already have an account? Log in</string>
     <string name="btn_sync_kontact">Claim Free Viewers</string>
     <string name="btn_upgrade_plan">Upgrade Plan</string>
@@ -54,12 +54,12 @@
     <string name="label_referral_bonus">Contacts gained by referral</string>
     <string name="limit_meter_unknown">Contact limit unavailable right now</string>
     <string name="current_limit_label">Your Current Limit</string>
-    <string name="current_limit_sub">Redeem a key code below to raise your limit, or contact us if you don\'t have one yet.</string>
+    <string name="current_limit_sub">Redeem a key code below to raise your status views, or contact us if you don\'t have one yet.</string>
     <string name="menu_referral_history">Referral History</string>
     <string name="menu_contact_us">Contact Us</string>
     <string name="title_groups">Kontact Groups</string>
     <string name="btn_join_groups">Join Kontact Groups</string>
-    <string name="btn_no_code_contact_us">Purchase Code</string>
+    <string name="btn_no_code_contact_us">Buy Viewers</string>
     <string name="label_youll_pay">You\'ll pay</string>
     <string name="groups_more_available_note">There may be more Kontact groups available. Tap below to join with a key code, or contact us if you don\'t have one yet.</string>
     <string name="title_history">Referral History</string>
@@ -71,14 +71,14 @@
     <!-- Notification settings -->
     <string name="title_notification_settings">Notification Settings</string>
     <string name="notification_frequency_label">Check Frequency</string>
-    <string name="notification_frequency_desc">How often should VG Kontact check for new numbers and notify you?</string>
+    <string name="notification_frequency_desc">How often should Viewgrow check for new numbers and notify you?</string>
     <string name="notification_frequency_range">1 hour \u2013 168 hours (7 days)</string>
 
     <!-- Upgrade Plan -->
     <string name="title_upgrade_plan">Unlock More Kontacts</string>
     <string name="upgrade_plan_coming_soon">Enter a key code to unlock more status viewers.</string>
     <string name="hint_key_code">VGK-XXXX-XXXX</string>
-    <string name="btn_redeem_key">Unlock</string>
+    <string name="btn_redeem_key">Unlock Status Views</string>
     <string name="key_redeem_empty">Please enter a key code</string>
     <string name="key_redeem_invalid">Invalid, expired, or already-used key</string>
     <string name="key_redeem_error">Could not check that key. Check your connection and try again.</string>
@@ -106,7 +106,7 @@
     <string name="subtitle_increase_limit">Redeem a key or refer friends to grow status viewers</string>
     <string name="tab_referral_rewards">By tasks</string>
     <string name="tab_redeem_key">Unlock views</string>
-    <string name="tab_purchase_code">Purchase code</string>
+    <string name="tab_purchase_code">Buy Viewers</string>
     <string name="label_your_status_viewers">Your status viewers</string>
     <string name="btn_share_invite_link">Share invite link</string>
     <string name="label_earn_more_views">Available tasks</string>
@@ -120,7 +120,7 @@
     <string name="wallet_subtitle">Earn commission when your referrals buy viewers.</string>
     <string name="wallet_available_label">Available to withdraw</string>
     <string name="wallet_withdraw">Withdraw</string>
-    <string name="wallet_min_withdrawal">Minimum withdrawal ₦1,000</string>
+    <string name="wallet_min_withdrawal">Minimum withdrawal ₦5,000</string>
     <string name="wallet_total_earned">Total earned</string>
     <string name="wallet_withdrawn">Withdrawn</string>
     <string name="wallet_recent_activity">Recent activity</string>
