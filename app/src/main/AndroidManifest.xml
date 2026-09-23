@@ -1,136 +1,129 @@
-<?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools">
+<resources>
+    <!-- Bottom nav bar labels (bottom_nav_bar.xml / BottomNavHelper) -->
+    <string name="nav_home">Home</string>
+    <string name="nav_upgrade">Get Viewers</string>
+    <string name="nav_history">Referrals</string>
+    <string name="nav_profile">Profile</string>
+    <string name="nav_wallet">Wallet</string>
+    <string name="app_name">VG ADDUP</string>
+    <string name="title_onboarding">JOIN VIEWGROW</string>
+    <string name="hint_name">e.g. maria_g</string>
+    <string name="hint_whatsapp">e.g. 0812 3456 789</string>
+    <string name="hint_referral">Username or number</string>
+    <string name="label_field_username">Username</string>
+    <string name="label_field_whatsapp">WhatsApp number</string>
+    <string name="label_field_referral">Referred by (optional)</string>
+    <string name="btn_pick_contact">Pick from Contacts</string>
+    <string name="btn_continue">Get Access</string>
+    <string name="onboarding_lead">Get Access to</string>
+    <string name="onboarding_hook">1000+ Status Viewers</string>
+    <string name="onboarding_credit">Powered by VGKontact</string>
+    <string name="onboarding_recover_account">Already have an account? Log in</string>
+    <string name="btn_sync_kontact">Claim Free Viewers</string>
+    <string name="btn_upgrade_plan">Upgrade Plan</string>
+    <string name="btn_save">Save</string>
+    <string name="stats_total_label">Total Kontacts Synced</string>
+    <string name="stats_database_total_label">Total Kontacts</string>
+    <string name="stats_available_label">Available to import</string>
+    <string name="stats_no_sync_today">No kontacts synced today</string>
+    <string name="label_synced_today">Synced Today</string>
+    <string name="label_synced_total">Total Synced</string>
+    <string name="error_whatsapp_required">Please enter your WhatsApp number</string>
+    <string name="error_referral_required">Please enter a referral WhatsApp number</string>
+    <string name="error_number_too_short">Enter all 11 digits</string>
+    <string name="error_number_too_long">Number must be 11 digits</string>
+    <string name="sync_failed">Could not save right now. Check your connection and try again.</string>
+    <string name="main_menu_title">Settings</string>
+    <string name="menu_profile">My Profile</string>
+    <string name="menu_kontact_groups">Kontact Groups</string>
+    <string name="menu_increase_contact_limit">Grow WhatsApp Views</string>
+    <string name="menu_share_app">Share App</string>
+    <string name="menu_delete_contacts">Delete My Contacts</string>
+    <string name="menu_resume_syncing">Resume Syncing</string>
+    <string name="dialog_delete_contacts_title">Delete My Contacts?</string>
+    <string name="dialog_delete_contacts_message">This stops new contacts from syncing and removes the numbers VG Kontact added to your phone. You can turn syncing back on anytime.</string>
+    <string name="dialog_cancel">Cancel</string>
+    <string name="dialog_delete">Delete</string>
+    <string name="contact_limit_label">Contact Information</string>
+    <string name="label_free_viewers">Free viewers</string>
+    <string name="label_purchased_viewers">Purchased viewers</string>
+    <string name="label_referred_viewers">Referred viewers</string>
+    <string name="label_free_plan">Contact limit</string>
+    <string name="label_change_sync_frequency">Change</string>
+    <string name="label_unlocked_group">Unlocked group</string>
+    <string name="label_referral_bonus">Contacts gained by referral</string>
+    <string name="limit_meter_unknown">Contact limit unavailable right now</string>
+    <string name="current_limit_label">Your Current Limit</string>
+    <string name="current_limit_sub">Redeem a key code below to raise your limit, or contact us if you don\'t have one yet.</string>
+    <string name="menu_referral_history">Referral History</string>
+    <string name="menu_contact_us">Contact Us</string>
+    <string name="title_groups">Kontact Groups</string>
+    <string name="btn_join_groups">Join Kontact Groups</string>
+    <string name="btn_no_code_contact_us">Purchase Code</string>
+    <string name="label_youll_pay">You\'ll pay</string>
+    <string name="groups_more_available_note">There may be more Kontact groups available. Tap below to join with a key code, or contact us if you don\'t have one yet.</string>
+    <string name="title_history">Referral History</string>
+    <string name="history_column_number">Affiliate Number</string>
+    <string name="history_column_referrals">Referrals</string>
+    <string name="tab_my_referrals">My referrals</string>
+    <string name="tab_leaderboard">Leaderboard</string>
 
-    <!-- Network permissions for Google Sheets / Apps Script synchronization -->
-    <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- Notification settings -->
+    <string name="title_notification_settings">Notification Settings</string>
+    <string name="notification_frequency_label">Check Frequency</string>
+    <string name="notification_frequency_desc">How often should VG Kontact check for new numbers and notify you?</string>
+    <string name="notification_frequency_range">1 hour \u2013 168 hours (7 days)</string>
 
-    <!-- Contact permissions for syncing -->
-    <uses-permission android:name="android.permission.READ_CONTACTS" />
-    <uses-permission android:name="android.permission.WRITE_CONTACTS" />
+    <!-- Upgrade Plan -->
+    <string name="title_upgrade_plan">Unlock More Kontacts</string>
+    <string name="upgrade_plan_coming_soon">Enter a key code to unlock more status viewers.</string>
+    <string name="hint_key_code">VGK-XXXX-XXXX</string>
+    <string name="btn_redeem_key">Unlock</string>
+    <string name="key_redeem_empty">Please enter a key code</string>
+    <string name="key_redeem_invalid">Invalid, expired, or already-used key</string>
+    <string name="key_redeem_error">Could not check that key. Check your connection and try again.</string>
 
-    <!-- Notification permission (Android 13+) -->
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Profile -->
+    <string name="title_profile">My Profile</string>
+    <string name="profile_label_number">Number</string>
+    <string name="profile_label_username">Username</string>
+    <string name="profile_copy_username">Copy username</string>
+    <string name="profile_label_referral">Referred By</string>
+    <string name="profile_label_date_registered">Date Registered</string>
+    <string name="profile_label_sync_status">Sync Status</string>
+    <string name="profile_label_total_kontacts">Total Kontacts Registered</string>
+    <string name="profile_label_verification_status">Verification Status</string>
+    <string name="profile_label_app_version">App Version</string>
+    <string name="profile_label_my_referral_code">My Referral Code</string>
+    <string name="profile_referral_code_hint">Share this so others can enter it when they sign up</string>
+    <string name="get_viewers_referral_code_hint">Share your phone number to others so they can input it as referral on the app</string>
+    <string name="btn_copy">COPY</string>
 
-    <!-- Battery optimization exemption -->
-    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+    <string name="title_grow_your_views">Grow your views</string>
+    <string name="subtitle_grow_your_views">Refer friends, get more status views</string>
 
-    <application
-        android:allowBackup="true"
-        android:fullBackupContent="@xml/backup_rules"
-        android:dataExtractionRules="@xml/data_extraction_rules"
-        android:icon="@drawable/ic_launcher"
-        android:label="@string/app_name"
-        android:supportsRtl="true"
-        android:theme="@style/Theme.VGKontact">
+    <string name="title_increase_limit">Increase Status Viewers</string>
+    <string name="subtitle_increase_limit">Redeem a key or refer friends to grow status viewers</string>
+    <string name="tab_referral_rewards">By tasks</string>
+    <string name="tab_redeem_key">Unlock views</string>
+    <string name="tab_purchase_code">Purchase code</string>
+    <string name="label_your_status_viewers">Your status viewers</string>
+    <string name="btn_share_invite_link">Share invite link</string>
+    <string name="label_earn_more_views">Available tasks</string>
+    <string name="empty_no_active_campaigns">No active campaigns right now — check back soon.</string>
+    <string name="label_friends_registered">Friends registered</string>
+    <string name="btn_campaign_interested">I\'m interested</string>
+    <string name="menu_grow_your_views">Grow your views</string>
 
-        <!-- Main Launcher Activity -->
-        <activity
-            android:name=".OnboardingActivity"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
-
-        <!-- One-time permission priming + loading screen, shown once right
-             after registration, before the dashboard is ever reached -->
-        <activity
-            android:name=".PermissionSetupActivity"
-            android:exported="false" />
-
-        <activity
-            android:name=".DeviceBlockedActivity"
-            android:exported="false" />
-
-        <activity
-            android:name=".BannedActivity"
-            android:exported="false" />
-
-        <activity
-            android:name=".DeviceUnverifiedActivity"
-            android:exported="false" />
-
-        <!-- Reached from the onboarding screen's "Already have an account?
-             Log in" link, and automatically when a signup attempt comes
-             back NUMBER_ALREADY_REGISTERED - see LoginActivity doc comment. -->
-        <activity
-            android:name=".LoginActivity"
-            android:exported="false" />
-
-        <!-- Main Menu -->
-        <activity
-            android:name=".MainMenuActivity"
-            android:exported="false" />
-
-        <!-- History View -->
-        <activity
-            android:name=".HistoryActivity"
-            android:exported="false" />
-
-        <!-- Increase Contact Limit - merged screen (Referral rewards +
-             Redeem a key tabs). Replaced GrowYourViewsActivity and
-             UpgradePlanActivity as the entry point from the dashboard;
-             both had already-deleted .kt files and zero live references,
-             so their manifest entries were removed. -->
-        <activity
-            android:name=".IncreaseLimitActivity"
-            android:exported="false" />
-
-        <!-- Notification Settings -->
-        <activity
-            android:name=".NotificationSettingsActivity"
-            android:exported="false" />
-
-        <!-- Activity feed - opened from the dashboard bell -->
-        <activity
-            android:name=".ActivityLogActivity"
-            android:exported="false" />
-
-        <!-- Profile View -->
-        <activity
-            android:name=".ProfileActivity"
-            android:exported="false" />
-
-        <!-- Wallet - referral commission balance, withdraw and recent
-             activity. Reached from the Wallet bottom-nav tab. It was
-             missing from the manifest before, which made tapping the tab
-             crash with ActivityNotFoundException. -->
-        <activity
-            android:name=".WalletActivity"
-            android:exported="false" />
-
-        <!-- Full wallet history - opened from the "History" link next
-             to "Recent activity" on WalletActivity. -->
-        <activity
-            android:name=".WalletHistoryActivity"
-            android:exported="false" />
-
-        <!-- Withdraw request form - opened from WalletActivity's
-             Withdraw button once the balance clears the minimum. -->
-        <activity
-            android:name=".WithdrawActivity"
-            android:exported="false" />
-
-        <!-- Repost & Earn screen (streak + leaderboard) - opened from the
-             floating Repost button on every screen. -->
-        <activity
-            android:name=".RepostActivity"
-            android:exported="false" />
-
-        <!-- Invisible trampoline launched by the daily repost
-             notification - computes today's date live at tap time,
-             then hands off to WhatsApp and closes itself. Transparent
-             theme so it never visibly flashes a blank screen. -->
-        <activity
-            android:name=".RepostRedirectActivity"
-            android:exported="false"
-            android:theme="@android:style/Theme.Translucent.NoTitleBar"
-            android:excludeFromRecents="true"
-            android:noHistory="true" />
-
-    </application>
-
-</manifest>
+    <!-- Wallet screen -->
+    <string name="wallet_title">Wallet</string>
+    <string name="wallet_subtitle">Earn commission when your referrals buy viewers.</string>
+    <string name="wallet_available_label">Available to withdraw</string>
+    <string name="wallet_withdraw">Withdraw</string>
+    <string name="wallet_min_withdrawal">Minimum withdrawal ₦1,000</string>
+    <string name="wallet_total_earned">Total earned</string>
+    <string name="wallet_withdrawn">Withdrawn</string>
+    <string name="wallet_recent_activity">Recent activity</string>
+    <string name="wallet_empty_title">No activity yet</string>
+    <string name="wallet_empty_body">When your referrals buy viewers, your commission shows up here.</string>
+</resources>
