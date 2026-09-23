@@ -58,6 +58,58 @@
             android:textAlignment="center"
             android:fontFamily="@font/poppins" />
 
+        <!-- ============ TAB SWITCHER (segmented control) ============
+             Same header_tab_track_background pattern as HistoryActivity's
+             tabMyReferralsButton/tabLeaderboardButton - splits the single
+             stacked keyPanel below into two separate panels (purchasePanel /
+             unlockPanel) shown one at a time, per request. -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:background="@drawable/header_tab_track_background"
+            android:padding="4dp"
+            android:layout_marginTop="16dp">
+
+            <Button
+                android:id="@+id/tabPurchaseButton"
+                android:layout_width="0dp"
+                android:layout_height="44dp"
+                android:layout_weight="1"
+                android:text="@string/tab_purchase_code"
+                android:textAllCaps="false"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:backgroundTint="@android:color/transparent"
+                android:textColor="@color/white"
+                app:cornerRadius="12dp"
+                app:elevation="0dp"
+                app:rippleColor="@color/vg_green_tint"
+                android:stateListAnimator="@null"
+                android:insetTop="0dp"
+                android:insetBottom="0dp" />
+
+            <Button
+                android:id="@+id/tabUnlockButton"
+                android:layout_width="0dp"
+                android:layout_height="44dp"
+                android:layout_weight="1"
+                android:layout_marginStart="4dp"
+                android:text="@string/tab_redeem_key"
+                android:textAllCaps="false"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:backgroundTint="@android:color/transparent"
+                android:textColor="@color/white"
+                app:cornerRadius="12dp"
+                app:elevation="0dp"
+                app:rippleColor="@color/vg_green_tint"
+                android:stateListAnimator="@null"
+                android:insetTop="0dp"
+                android:insetBottom="0dp" />
+
+        </LinearLayout>
+
     </LinearLayout>
 
     <ScrollView
@@ -76,12 +128,12 @@
             android:paddingTop="20dp"
             android:paddingBottom="28dp">
 
-            <!-- ============ REDEEM A KEY PANEL ============
-                 Now the only panel on this screen - the former
-                 "By tasks" / referral rewards panel and its tab
-                 switcher have been removed entirely per request. -->
+            <!-- ============ PURCHASE PANEL ============
+                 Contact amount picker + "Purchase Code" (WhatsApp) button.
+                 Content unchanged from the former single keyPanel - only
+                 split out into its own toggleable panel. -->
             <LinearLayout
-                android:id="@+id/keyPanel"
+                android:id="@+id/purchasePanel"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
@@ -210,7 +262,6 @@
                     android:id="@+id/noCodeContactUsButton"
                     android:layout_width="match_parent"
                     android:layout_height="56dp"
-                    android:layout_marginBottom="20dp"
                     android:text="@string/btn_no_code_contact_us"
                     android:textAllCaps="true"
                     android:letterSpacing="0.02"
@@ -218,6 +269,19 @@
                     android:textColor="@color/white"
                     android:textStyle="bold"
                     app:cornerRadius="16dp" />
+
+            </LinearLayout>
+
+            <!-- ============ UNLOCK PANEL ============
+                 Key code input + "Unlock" button. Content unchanged from
+                 the former single keyPanel - only split out into its own
+                 toggleable panel. -->
+            <LinearLayout
+                android:id="@+id/unlockPanel"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
 
                 <LinearLayout
                     android:layout_width="match_parent"
