@@ -106,6 +106,7 @@
     <string name="subtitle_increase_limit">Redeem a key or refer friends to grow status viewers</string>
     <string name="tab_referral_rewards">By tasks</string>
     <string name="tab_redeem_key">Unlock views</string>
+    <string name="tab_purchase_code">Purchase code</string>
     <string name="label_your_status_viewers">Your status viewers</string>
     <string name="btn_share_invite_link">Share invite link</string>
     <string name="label_earn_more_views">Available tasks</string>
@@ -113,6 +114,25 @@
     <string name="label_friends_registered">Friends registered</string>
     <string name="btn_campaign_interested">I\'m interested</string>
     <string name="menu_grow_your_views">Grow your views</string>
+
+    <!-- Repost & Earn -->
+    <string name="title_repost">Repost &amp; Earn</string>
+    <string name="repost_subtitle">Repost today\'s post to WhatsApp status and grow your streak</string>
+    <string name="tab_my_streak">My streak</string>
+    <string name="repost_row_today">Today</string>
+    <string name="repost_row_current_streak">Current streak</string>
+    <string name="repost_row_best_streak">Best streak</string>
+    <string name="repost_row_total">Total reposts</string>
+    <string name="repost_todays_task">Today\'s task</string>
+    <string name="repost_step_1">1. Tap the button below to open WhatsApp with today\'s message ready.</string>
+    <string name="repost_step_2">2. Post it to your WhatsApp status.</string>
+    <string name="repost_step_3">3. That\'s it — your repost is counted the moment you tap.</string>
+    <string name="btn_repost_now">Repost Now</string>
+    <string name="repost_show_guide">Show guide</string>
+    <string name="repost_hide_guide">Hide guide</string>
+    <string name="repost_milestones">Milestones</string>
+    <string name="repost_col_rank_number">Rank</string>
+    <string name="repost_col_reposts">Reposts</string>
 
     <!-- Wallet screen -->
     <string name="wallet_title">Wallet</string>
