@@ -8,6 +8,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
+import android.view.View
 import android.widget.Button
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -23,6 +24,7 @@ class ProfileActivity : BaseActivity() {
     private lateinit var profileUsernameCopyIcon: LinearLayout
     private lateinit var profileNumberText: TextView
     private lateinit var profileReferralNameText: TextView
+    private lateinit var loadingOverlay: View
     private lateinit var profileReferralNumberBadge: TextView
     private lateinit var profileDateRegisteredText: TextView
 
@@ -57,6 +59,7 @@ class ProfileActivity : BaseActivity() {
         profileUsernameCopyIcon = findViewById(R.id.profileUsernameCopyIcon)
         profileNumberText = findViewById(R.id.profileNumberText)
         profileReferralNameText = findViewById(R.id.profileReferralNameText)
+        loadingOverlay = findViewById(R.id.loadingOverlay)
         profileReferralNumberBadge = findViewById(R.id.profileReferralNumberBadge)
         profileDateRegisteredText = findViewById(R.id.profileDateRegisteredText)
 
@@ -103,32 +106,37 @@ class ProfileActivity : BaseActivity() {
         // whenever there's nothing meaningful to show in it - no referral
         // at all, or the name lookup hasn't resolved yet - rather than
         // showing an empty or half-loaded pill.
-        profileReferralNameText.text = "..."
-        profileReferralNumberBadge.visibility = android.view.View.GONE
+        // The white loading screen covers the whole profile until the
+        // "Referred By" name is known, so the user never sees it filling
+        // in after the screen has already opened. It is lifted from ONE
+        // place (finishReferralLoad) reached by every outcome below -
+        // no referral, name found, name lookup failed, or the request
+        // itself failing - so it can never get stuck on white.
+        profileReferralNameText.text = ""
+        profileReferralNumberBadge.visibility = View.GONE
+        loadingOverlay.visibility = View.VISIBLE
         SheetSync.fetchMyProfile(this) { referral, error ->
             runOnUiThread {
+                if (isFinishing || isDestroyed) return@runOnUiThread
                 if (referral.isNullOrEmpty()) {
                     profileReferralNameText.text = "None"
+                    finishReferralLoad()
                 } else {
-                    // Keep showing the "..." loading placeholder while the
-                    // name lookup is in flight, instead of flashing the raw
-                    // phone number first and then swapping it for the name
-                    // a moment later - that flash read as a glitch even
-                    // though both values were genuinely correct in sequence.
                     SheetSync.fetchNameForWhatsapp(referral) { name ->
                         runOnUiThread {
+                            if (isFinishing || isDestroyed) return@runOnUiThread
                             if (!name.isNullOrBlank()) {
                                 profileReferralNameText.text = name
                                 profileReferralNumberBadge.text = referral
-                                profileReferralNumberBadge.visibility = android.view.View.VISIBLE
+                                profileReferralNumberBadge.visibility = View.VISIBLE
                             } else {
                                 // Name lookup genuinely failed/returned nothing -
-                                // fall back to the bare number so the field never
-                                // gets stuck on "..." forever. Badge stays hidden
-                                // here since showing the same number twice (once
-                                // as the name, once in the badge) would be redundant.
+                                // fall back to the bare number. Badge stays hidden
+                                // since showing the same number twice would be
+                                // redundant.
                                 profileReferralNameText.text = referral
                             }
+                            finishReferralLoad()
                         }
                     }
                 }
@@ -157,6 +165,11 @@ class ProfileActivity : BaseActivity() {
         profileContactUsButton.setOnClickListener {
             openWhatsAppContactUs()
         }
+    }
+
+    /** Lifts the white loading screen once the "Referred By" row is filled in. */
+    private fun finishReferralLoad() {
+        loadingOverlay.visibility = View.GONE
     }
 
     override fun onResume() {
