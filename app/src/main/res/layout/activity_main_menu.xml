@@ -60,7 +60,7 @@
                         android:layout_width="56dp"
                         android:layout_height="56dp"
                         android:padding="12dp"
-                        android:src="@drawable/ic_profile"
+                        android:src="@drawable/ic_profile_person"
                         app:tint="@color/vg_green"
                         android:background="@drawable/avatar_circle_background"
                         android:scaleType="fitCenter"
