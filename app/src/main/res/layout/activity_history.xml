@@ -132,14 +132,6 @@
 
     </LinearLayout>
 
-    <!-- Loading indicator, shown while fetching -->
-    <ProgressBar
-        android:id="@+id/progressBar"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center"
-        android:layout_marginTop="24dp"
-        android:visibility="gone" />
 
     <!-- Empty / error state -->
     <TextView
@@ -318,18 +310,6 @@
                     android:layout_height="wrap_content"
                     android:orientation="vertical" />
 
-                <!-- Loading indicator for the My referrals list only. Kept
-                     separate from the top-level progressBar (which the
-                     leaderboard uses) so each tab shows its own spinner
-                     right where its content will appear. -->
-                <ProgressBar
-                    android:id="@+id/myReferralsProgressBar"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="center_horizontal"
-                    android:layout_marginTop="24dp"
-                    android:layout_marginBottom="24dp"
-                    android:visibility="gone" />
 
                 <!-- Shown when this user has made no referrals yet. -->
                 <TextView
@@ -472,5 +452,7 @@
 </LinearLayout>
 
     <include layout="@layout/bottom_nav_bar" />
+
+    <include layout="@layout/view_loading_overlay" />
 
 </FrameLayout>
