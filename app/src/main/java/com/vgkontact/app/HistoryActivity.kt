@@ -67,6 +67,11 @@ class HistoryActivity : BaseActivity() {
     private lateinit var myReferralsPagerScroll: HorizontalScrollView
     private lateinit var myReferralsPagerContainer: LinearLayout
     private lateinit var myReferralsBreadcrumb: LinearLayout
+    private lateinit var myReferralsProgressBar: ProgressBar
+    // Bumped on every My referrals fetch so a slow, superseded response
+    // (e.g. user drilled in/out or switched tabs quickly) can't overwrite
+    // the list for the request that's actually current.
+    private var myReferralsRequestId = 0
     private lateinit var breadcrumbBackButton: ImageView
     private lateinit var breadcrumbPathText: TextView
 
@@ -120,6 +125,7 @@ class HistoryActivity : BaseActivity() {
         myReferralsPagerScroll = findViewById(R.id.myReferralsPagerScroll)
         myReferralsPagerContainer = findViewById(R.id.myReferralsPagerContainer)
         myReferralsBreadcrumb = findViewById(R.id.myReferralsBreadcrumb)
+        myReferralsProgressBar = findViewById(R.id.myReferralsProgressBar)
         breadcrumbBackButton = findViewById(R.id.breadcrumbBackButton)
         breadcrumbPathText = findViewById(R.id.breadcrumbPathText)
 
@@ -216,18 +222,37 @@ class HistoryActivity : BaseActivity() {
         // can't remain visible on screen from a previous drill-in level
         // while this reload is in flight.
         myReferralsBreadcrumb.visibility = View.GONE
+        // Show a spinner while the request is in flight, same as the
+        // leaderboard does - otherwise the panel just sits blank until
+        // the network call returns.
+        myReferralsProgressBar.visibility = View.VISIBLE
+        val requestId = ++myReferralsRequestId
 
-        // Root level only: this user's own direct referrals. Drilling
-        // into someone else's downline goes through loadReferralsForStack()
-        // instead, which shares the rendering/search/pager code below but
-        // never re-enters this function or touches myReferralsLoaded.
-        SheetSync.fetchMyReferrals(this) { list, error ->
+        // Root level only: this user's own direct referrals. This uses
+        // fetchReferralsFor() (a single request) rather than
+        // fetchMyReferrals(), because fetchMyReferrals also runs a second
+        // sequential request for 2nd-level referrals that this screen
+        // immediately discards - drilling into someone's downline is
+        // handled by loadReferralsForStack() instead.
+        val myWhatsapp = UserPrefs.getWhatsapp(this)
+        if (myWhatsapp.isNullOrEmpty()) {
+            myReferralsProgressBar.visibility = View.GONE
+            myReferralsLoaded = true
+            myReferrals = emptyList()
+            myReferralsTotalText.text = "0"
+            myReferralsEmptyText.visibility = View.VISIBLE
+            myReferralsEmptyText.text = "No referrals yet."
+            return
+        }
+
+        SheetSync.fetchReferralsFor(myWhatsapp) { list, error ->
             runOnUiThread {
+                // A newer load (or drill-in) has started since this one -
+                // let that one own the UI.
+                if (requestId != myReferralsRequestId) return@runOnUiThread
+                myReferralsProgressBar.visibility = View.GONE
                 if (list != null) {
                     myReferralsLoaded = true
-                    // Root list only shows direct referrals now - the old
-                    // flat direct+2nd-level merge is gone, since 2nd level
-                    // is reached by drilling into a direct referral instead.
                     myReferrals = list.filter { it.level == 1 }
                     myReferralsTotalText.text = myReferrals.size.toString()
                     myReferralsSearchQuery = ""
@@ -266,9 +291,13 @@ class HistoryActivity : BaseActivity() {
         myReferralsNoResultsText.visibility = View.GONE
         myReferralsPagerScroll.visibility = View.GONE
         updateBreadcrumb()
+        myReferralsProgressBar.visibility = View.VISIBLE
+        val requestId = ++myReferralsRequestId
 
         SheetSync.fetchReferralsFor(target.whatsapp) { list, error ->
             runOnUiThread {
+                if (requestId != myReferralsRequestId) return@runOnUiThread
+                myReferralsProgressBar.visibility = View.GONE
                 if (list != null) {
                     myReferrals = list
                     myReferralsTotalText.text = myReferrals.size.toString()
