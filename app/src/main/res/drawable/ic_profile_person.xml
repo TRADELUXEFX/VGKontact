@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Solid person glyph (head + shoulders) drawn to fill most of its
-    viewport, so inside the white avatar disc it reads big and clear.
-    The old ic_profile.xml is a ring-with-person that leaves lots of
-    empty margin, which made the avatar look small and faint.
+    Solid person glyph (head + shoulders), scaled down and centered
+    within its 24x24 viewport so it has real internal margin - it no
+    longer touches the edge of the circle it's placed in, regardless
+    of the outer view's padding.
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
@@ -12,8 +12,9 @@
     android:viewportHeight="24">
     <path
         android:fillColor="#FF000000"
-        android:pathData="M12,2.5a5,5 0,1 1,0 10a5,5 0,1 1,0 -10z" />
+        android:pathData="M12,5a3.5,3.5 0,1 1,0 7a3.5,3.5 0,1 1,0 -7z" />
     <path
         android:fillColor="#FF000000"
-        android:pathData="M3,21.5c0,-4.4 4.03,-7.5 9,-7.5s9,3.1 9,7.5c0,0.55 -0.45,1 -1,1L4,22.5c-0.55,0 -1,-0.45 -1,-1z" />
+        android:pathData="M6,19c0,-3.31 2.69,-5.5 6,-5.5s6,2.19 6,5.5c0,0.55 -0.45,1 -1,1L7,20c-0.55,0 -1,-0.45 -1,-1z" />
 </vector>
+
