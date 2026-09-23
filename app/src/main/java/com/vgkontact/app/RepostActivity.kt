@@ -65,7 +65,7 @@ class RepostActivity : BaseActivity() {
     private lateinit var milestoneProgress: ProgressBar
     private lateinit var milestoneRow: LinearLayout
 
-    private lateinit var boardProgress: ProgressBar
+    private lateinit var loadingOverlay: View
     private lateinit var boardListContainer: LinearLayout
     private lateinit var boardPagerScroll: View
     private lateinit var boardPagerContainer: LinearLayout
@@ -80,6 +80,21 @@ class RepostActivity : BaseActivity() {
         val streak: Int,
         val isMe: Boolean
     )
+
+    // Number of server loads currently in flight. My streak and the
+    // leaderboard share one full-screen overlay, so it only hides once
+    // EVERY pending load has finished.
+    private var pendingLoads = 0
+
+    private fun beginLoading() {
+        pendingLoads++
+        loadingOverlay.visibility = View.VISIBLE
+    }
+
+    private fun endLoading() {
+        pendingLoads = (pendingLoads - 1).coerceAtLeast(0)
+        if (pendingLoads == 0) loadingOverlay.visibility = View.GONE
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -110,7 +125,7 @@ class RepostActivity : BaseActivity() {
         milestoneProgress = findViewById(R.id.milestoneProgress)
         milestoneRow = findViewById(R.id.milestoneRow)
 
-        boardProgress = findViewById(R.id.boardProgress)
+        loadingOverlay = findViewById(R.id.loadingOverlay)
         boardListContainer = findViewById(R.id.boardListContainer)
         boardPagerScroll = findViewById(R.id.boardPagerScroll)
         boardPagerContainer = findViewById(R.id.boardPagerContainer)
@@ -144,6 +159,9 @@ class RepostActivity : BaseActivity() {
      * reached nothing changes - the screen keeps showing the local copy.
      */
     private fun syncStatsFromServer() {
+        // No loading screen here: the streak tab paints instantly from the
+        // on-device copy and quietly updates when the server answers.
+
         // If an earlier tap never reached the server, send it now. Safe to
         // repeat: the database keeps one row per user per day.
         if (RepostPrefs.hasPendingUploadToday(this)) {
@@ -183,8 +201,12 @@ class RepostActivity : BaseActivity() {
         styleTab(tabMyStreakButton, active = !showBoard)
         styleTab(tabBoardButton, active = showBoard)
         if (showBoard) {
-            renderLeaderboard()          // local fallback shows instantly
-            loadLeaderboardFromServer()  // then real data replaces it
+            // Every time the tab is opened: clear the old rows and show the
+            // white loading screen until the real leaderboard is ready.
+            // No local fallback is painted underneath it, so the user never
+            // sees the one-row "You" list flash before the real one.
+            boardListContainer.removeAllViews()
+            loadLeaderboardFromServer(showOverlay = true)
         }
     }
 
@@ -455,12 +477,14 @@ class RepostActivity : BaseActivity() {
      * people's numbers (0803 *** 9087) and flags the caller's own row, so
      * no full WhatsApp numbers ever reach this screen.
      */
-    private fun loadLeaderboardFromServer() {
-        boardProgress.visibility = View.VISIBLE
+    private fun loadLeaderboardFromServer(showOverlay: Boolean = false) {
+        if (showOverlay) beginLoading()
         RepostSync.fetchLeaderboard(this) { entries ->
             runOnUiThread {
-                if (isFinishing) return@runOnUiThread
-                boardProgress.visibility = View.GONE
+                if (isFinishing) {
+                    if (showOverlay) endLoading()
+                    return@runOnUiThread
+                }
                 if (entries == null) {
                     // Couldn't reach the server: keep the local fallback.
                     boardFromServer = false
@@ -477,6 +501,7 @@ class RepostActivity : BaseActivity() {
                     }
                 }
                 renderLeaderboard()
+                if (showOverlay) endLoading()
             }
         }
     }
