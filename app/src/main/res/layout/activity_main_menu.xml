@@ -42,7 +42,17 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical">
+        android:orientation="vertical"
+        android:clipChildren="false"
+        android:clipToPadding="false">
+
+        <!-- clipChildren/clipToPadding both false: statsCard below
+             overlaps the header above it via a negative top margin.
+             LinearLayout clips children to their own layout bounds by
+             default, which would silently cut off exactly that
+             overlap - the card would render flush against the header
+             instead of floating over it, with no error to show for
+             it. -->
 
         <!-- ================= HEADER (gradient hero) ================= -->
         <LinearLayout
@@ -355,21 +365,29 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
+            android:clipChildren="false"
+            android:clipToPadding="false"
             android:paddingStart="16dp"
             android:paddingEnd="16dp"
             android:paddingBottom="8dp">
 
-            <!-- Sync stats card - now a floating card overlapping the
-                 header gradient (negative top margin), Material
-                 "elevated card" look. Same 3-way visibility swap as
-                 before: statsProgressBar shown while loading, then
-                 swapped for statsContent - see
+            <!-- Sync stats card - a floating card overlapping the header
+                 gradient, Material "elevated card" look. The header
+                 above ends with 46dp of bottom padding specifically so
+                 there is real green space for this card to pull up
+                 into: -70dp here rises past that 46dp and about 24dp
+                 further into the gradient itself, which is what
+                 actually produces the overlap (a margin that only
+                 cancels the header's own padding would just leave the
+                 card flush against it, not floating over it). Same
+                 3-way visibility swap as before: statsProgressBar shown
+                 while loading, then swapped for statsContent - see
                  MainMenuActivity.loadStats(). -->
             <LinearLayout
                 android:id="@+id/statsCard"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="-42dp"
+                android:layout_marginTop="-70dp"
                 android:orientation="vertical"
                 android:background="@drawable/card_background"
                 android:elevation="10dp"
@@ -444,9 +462,9 @@
                             android:layout_marginEnd="8dp"
                             android:orientation="vertical"
                             android:gravity="center"
-                            android:background="@drawable/stats_card_background"
-                            android:paddingTop="12dp"
-                            android:paddingBottom="12dp">
+                            android:background="@drawable/viewer_tile_background"
+                            android:paddingTop="10dp"
+                            android:paddingBottom="10dp">
 
                             <View
                                 android:layout_width="6dp"
@@ -501,9 +519,9 @@
                             android:layout_marginEnd="8dp"
                             android:orientation="vertical"
                             android:gravity="center"
-                            android:background="@drawable/stats_card_background"
-                            android:paddingTop="12dp"
-                            android:paddingBottom="12dp">
+                            android:background="@drawable/viewer_tile_background"
+                            android:paddingTop="10dp"
+                            android:paddingBottom="10dp">
 
                             <View
                                 android:layout_width="6dp"
@@ -557,9 +575,9 @@
                             android:layout_weight="1"
                             android:orientation="vertical"
                             android:gravity="center"
-                            android:background="@drawable/stats_card_background"
-                            android:paddingTop="12dp"
-                            android:paddingBottom="12dp">
+                            android:background="@drawable/viewer_tile_background"
+                            android:paddingTop="10dp"
+                            android:paddingBottom="10dp">
 
                             <View
                                 android:layout_width="6dp"
