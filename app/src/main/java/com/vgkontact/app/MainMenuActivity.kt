@@ -335,6 +335,10 @@ class MainMenuActivity : BaseActivity() {
         // Covers coming back from another screen (or a fresh app open)
         // after the pause state changed, so the label never goes stale.
         renderSyncPauseButton()
+        // Refresh the floating repost badge so it flips red->green immediately
+        // when returning from RepostActivity after a completed repost, instead
+        // of staying stale until the app is relaunched.
+        FloatingRepostHelper.refreshBadge(this)
     }
 
     override fun onDestroy() {
