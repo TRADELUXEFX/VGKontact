@@ -5,6 +5,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import java.text.NumberFormat
@@ -24,6 +25,7 @@ class WalletHistoryActivity : BaseActivity() {
     private lateinit var listContainer: LinearLayout
     private lateinit var emptyText: TextView
     private lateinit var backButton: ImageView
+    private lateinit var progress: ProgressBar
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -34,6 +36,7 @@ class WalletHistoryActivity : BaseActivity() {
         listContainer = findViewById(R.id.walletHistoryListContainer)
         emptyText = findViewById(R.id.walletHistoryEmptyText)
         backButton = findViewById(R.id.walletHistoryBackButton)
+        progress = findViewById(R.id.walletHistoryProgress)
 
         backButton.setOnClickListener { finish() }
 
@@ -45,10 +48,14 @@ class WalletHistoryActivity : BaseActivity() {
     private fun loadHistory() {
         if (loading) return
         loading = true
+        progress.visibility = View.VISIBLE
+        emptyText.visibility = View.GONE
+        listContainer.removeAllViews()
         WalletSync.fetchWallet(this) { wallet ->
             runOnUiThread {
                 loading = false
                 if (isFinishing || isDestroyed) return@runOnUiThread
+                progress.visibility = View.GONE
                 if (wallet == null) {
                     emptyText.text = "Couldn't load history. Tap to retry"
                     emptyText.visibility = View.VISIBLE
