@@ -421,8 +421,17 @@
                          referredViewersCountText), just laid out as
                          side-by-side tiles instead of stacked rows.
                          MainMenuActivity.loadViewersBlock() writes to
-                         these ids with no changes needed. -->
+                         these ids with no changes needed.
+
+                         Id kept as limitBlock (unrelated to its old
+                         "CONTACT LIMIT" label/meter, both long gone) -
+                         MainMenuActivity.showDashboardTourIfNeeded()
+                         targets it directly so the coach-mark highlight
+                         covers just this tile row, not the whole
+                         statsCard (which also wraps syncKontactButton
+                         beneath it). -->
                     <LinearLayout
+                        android:id="@+id/limitBlock"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="horizontal">
