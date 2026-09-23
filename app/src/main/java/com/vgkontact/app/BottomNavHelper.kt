@@ -98,9 +98,9 @@ object BottomNavHelper {
             intent.putExtra(key, value)
         }
         activity.startActivity(intent)
-
-        if (target == Tab.HOME) {
-            activity.finish()
-        }
+        // Tabs are singleTask (see AndroidManifest), so this reuses the
+        // existing tab screen instead of destroying and rebuilding it.
+        // Instant switch, like a normal bottom-nav bar.
+        activity.overridePendingTransition(0, 0)
     }
 }
