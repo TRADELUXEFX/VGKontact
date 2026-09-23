@@ -132,6 +132,14 @@
 
     </LinearLayout>
 
+    <!-- Loading indicator, shown while fetching -->
+    <ProgressBar
+        android:id="@+id/progressBar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:layout_marginTop="24dp"
+        android:visibility="gone" />
 
     <!-- Empty / error state -->
     <TextView
@@ -275,13 +283,14 @@
                         android:paddingStart="12dp"
                         android:paddingEnd="12dp"
                         android:paddingTop="5dp"
-                        android:paddingBottom="5dp">
+                        android:paddingBottom="5dp"
+                        android:visibility="invisible">
 
                         <TextView
                             android:id="@+id/myReferralsTotalText"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="0"
+                            android:text=""
                             android:textSize="12sp"
                             android:textStyle="bold"
                             android:textColor="@color/vg_green_dark" />
