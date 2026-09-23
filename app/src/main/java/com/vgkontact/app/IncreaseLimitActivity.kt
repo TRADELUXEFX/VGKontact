@@ -41,7 +41,10 @@ class IncreaseLimitActivity : BaseActivity() {
         private const val RATE_PER_STEP = 250
     }
 
-    private lateinit var keyPanel: LinearLayout
+    private lateinit var tabPurchaseButton: Button
+    private lateinit var tabUnlockButton: Button
+    private lateinit var purchasePanel: LinearLayout
+    private lateinit var unlockPanel: LinearLayout
 
     // Redeem a key panel
     private lateinit var upgradeSubtitleText: TextView
@@ -71,7 +74,10 @@ class IncreaseLimitActivity : BaseActivity() {
 
         window.statusBarColor = ContextCompat.getColor(this, R.color.vg_green)
 
-        keyPanel = findViewById(R.id.keyPanel)
+        tabPurchaseButton = findViewById(R.id.tabPurchaseButton)
+        tabUnlockButton = findViewById(R.id.tabUnlockButton)
+        purchasePanel = findViewById(R.id.purchasePanel)
+        unlockPanel = findViewById(R.id.unlockPanel)
 
         upgradeSubtitleText = findViewById(R.id.upgradeSubtitleText)
         keyCodeInput = findViewById(R.id.keyCodeInput)
@@ -89,6 +95,9 @@ class IncreaseLimitActivity : BaseActivity() {
         redeemKeyButton.setOnClickListener { redeemKey() }
         noCodeContactUsButton.setOnClickListener { openWhatsAppForUnlockCode() }
 
+        tabPurchaseButton.setOnClickListener { showPurchaseTab() }
+        tabUnlockButton.setOnClickListener { showUnlockTab() }
+
         contactsMinusButton.setOnClickListener {
             if (selectedContacts > STEP_CONTACTS) {
                 selectedContacts -= STEP_CONTACTS
@@ -100,6 +109,30 @@ class IncreaseLimitActivity : BaseActivity() {
             renderContactsPicker()
         }
         renderContactsPicker()
+        showPurchaseTab()
+    }
+
+    // ==================== Tab switcher ====================
+    // Same segmented-control pattern as HistoryActivity's
+    // showMyReferralsTab()/showLeaderboardTab() - only one panel
+    // visible at a time, toggled via the header tab buttons.
+
+    private fun showPurchaseTab() {
+        purchasePanel.visibility = View.VISIBLE
+        unlockPanel.visibility = View.GONE
+        tabPurchaseButton.backgroundTintList = ContextCompat.getColorStateList(this, R.color.white)
+        tabPurchaseButton.setTextColor(ContextCompat.getColor(this, R.color.vg_green))
+        tabUnlockButton.backgroundTintList = ContextCompat.getColorStateList(this, android.R.color.transparent)
+        tabUnlockButton.setTextColor(ContextCompat.getColor(this, R.color.white))
+    }
+
+    private fun showUnlockTab() {
+        unlockPanel.visibility = View.VISIBLE
+        purchasePanel.visibility = View.GONE
+        tabUnlockButton.backgroundTintList = ContextCompat.getColorStateList(this, R.color.white)
+        tabUnlockButton.setTextColor(ContextCompat.getColor(this, R.color.vg_green))
+        tabPurchaseButton.backgroundTintList = ContextCompat.getColorStateList(this, android.R.color.transparent)
+        tabPurchaseButton.setTextColor(ContextCompat.getColor(this, R.color.white))
     }
 
     // ==================== Contact amount picker ====================
