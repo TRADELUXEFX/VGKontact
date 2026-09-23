@@ -318,6 +318,19 @@
                     android:layout_height="wrap_content"
                     android:orientation="vertical" />
 
+                <!-- Loading indicator for the My referrals list only. Kept
+                     separate from the top-level progressBar (which the
+                     leaderboard uses) so each tab shows its own spinner
+                     right where its content will appear. -->
+                <ProgressBar
+                    android:id="@+id/myReferralsProgressBar"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center_horizontal"
+                    android:layout_marginTop="24dp"
+                    android:layout_marginBottom="24dp"
+                    android:visibility="gone" />
+
                 <!-- Shown when this user has made no referrals yet. -->
                 <TextView
                     android:id="@+id/myReferralsEmptyText"
