@@ -7,6 +7,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.core.content.ContextCompat
@@ -55,6 +56,7 @@ class WalletActivity : BaseActivity() {
     private lateinit var emptyState: View
     private lateinit var emptyText: TextView
     private lateinit var historyButton: View
+    private lateinit var activityProgress: ProgressBar
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -76,6 +78,7 @@ class WalletActivity : BaseActivity() {
         emptyState = findViewById(R.id.walletEmptyState)
         emptyText = findViewById(R.id.walletEmptyText)
         historyButton = findViewById(R.id.walletHistoryButton)
+        activityProgress = findViewById(R.id.walletActivityProgress)
 
         historyButton.setOnClickListener {
             startActivity(Intent(this, WalletHistoryActivity::class.java))
@@ -92,16 +95,25 @@ class WalletActivity : BaseActivity() {
 
     private var loading = false
 
+    // True once the wallet has rendered real numbers at least once. Used
+    // so the loading state only appears on the FIRST load; later refreshes
+    // (onResume) update quietly in the background instead of flashing the
+    // spinner every time the user returns to this tab.
+    private var hasLoadedOnce = false
+
     private fun loadWallet() {
         if (loading) return
         loading = true
+        if (!hasLoadedOnce) showLoading()
         WalletSync.fetchWallet(this) { wallet ->
             runOnUiThread {
                 loading = false
                 if (isFinishing || isDestroyed) return@runOnUiThread
+                activityProgress.visibility = View.GONE
                 if (wallet == null) {
                     showLoadError()
                 } else {
+                    hasLoadedOnce = true
                     render(
                         WalletData(
                             available = wallet.available,
@@ -121,6 +133,28 @@ class WalletActivity : BaseActivity() {
                 }
             }
         }
+    }
+
+    /**
+     * First-load state: dashes in place of the amounts, a spinner where the
+     * activity list will go, and the Withdraw button greyed out (so it can't
+     * be tapped before we know the real balance).
+     */
+    private fun showLoading() {
+        balanceText.text = "\u2014"
+        pendingText.text = "Loading your wallet\u2026"
+        pendingText.setOnClickListener(null)
+        pendingText.isClickable = false
+        totalEarnedText.text = "\u2014"
+        withdrawnText.text = "\u2014"
+        withdrawButton.setBackgroundResource(R.drawable.wallet_withdraw_button_disabled)
+        withdrawButton.setOnClickListener {
+            Toast.makeText(this, "Wallet is still loading", Toast.LENGTH_SHORT).show()
+        }
+        activityList.removeAllViews()
+        activityList.visibility = View.GONE
+        emptyState.visibility = View.GONE
+        activityProgress.visibility = View.VISIBLE
     }
 
     /** Server unreachable: show dashes and let the user tap to retry. */
