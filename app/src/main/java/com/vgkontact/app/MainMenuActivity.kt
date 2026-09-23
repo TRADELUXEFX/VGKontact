@@ -13,6 +13,7 @@ import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewGroup
 import android.widget.Button
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -1083,9 +1084,41 @@ class MainMenuActivity : BaseActivity() {
         hardUpdateBlockMessage.text =
             "Version ${info.latestVersionName} or newer is required to keep using VGKontact. Please update to continue."
         hardUpdateBlockOverlay.visibility = View.VISIBLE
+        hardUpdateBlockOverlay.bringToFront()
         val openUpdatePage = { openUpdateUrlOrShowFallback() }
         hardUpdateBlockOverlay.setOnClickListener { openUpdatePage() }
         hardUpdateBlockAction.setOnClickListener { openUpdatePage() }
+
+        // The bottom nav bar lives inside this activity's own layout, so
+        // bringToFront() above is enough to cover it - but its tap
+        // listeners (wired unconditionally in BottomNavHelper.setup())
+        // would still fire underneath, letting the user navigate away.
+        // Disabling the whole bar blocks that.
+        findViewById<View>(R.id.bottomNavBar)?.let { nav ->
+            nav.isEnabled = false
+            disableAllChildren(nav)
+        }
+
+        // The chat and repost FABs are added directly to
+        // android.R.id.content by FloatingContactHelper/FloatingRepostHelper,
+        // which puts them ABOVE this entire activity layout (including this
+        // overlay) regardless of z-order here, so they must be hidden
+        // explicitly rather than relying on bringToFront().
+        val contentRoot = findViewById<ViewGroup>(android.R.id.content)
+        contentRoot?.findViewWithTag<View>("floating_contact_fab")?.visibility = View.GONE
+        contentRoot?.findViewWithTag<View>("floating_repost_fab")?.visibility = View.GONE
+        contentRoot?.findViewWithTag<View>("floating_repost_badge")?.visibility = View.GONE
+    }
+
+    /** Recursively disables a view and all its children so no descendant's
+     * click listener can fire while it's meant to be blocked. */
+    private fun disableAllChildren(view: View) {
+        view.isEnabled = false
+        if (view is ViewGroup) {
+            for (i in 0 until view.childCount) {
+                disableAllChildren(view.getChildAt(i))
+            }
+        }
     }
 
     /**
