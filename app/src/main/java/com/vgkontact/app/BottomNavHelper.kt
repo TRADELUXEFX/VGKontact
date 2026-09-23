@@ -99,8 +99,18 @@ object BottomNavHelper {
         }
         activity.startActivity(intent)
 
+        // Each tab is its own Activity, so without this Android plays its
+        // default abrupt window transition (or none at all) when switching
+        // tabs - that's the "not smooth" jump between menu items. A short
+        // crossfade instead makes tab switches feel like one continuous
+        // screen rather than separate windows popping in/out.
+        @Suppress("DEPRECATION")
+        activity.overridePendingTransition(R.anim.nav_tab_fade_in, R.anim.nav_tab_fade_out)
+
         if (target == Tab.HOME) {
             activity.finish()
+            @Suppress("DEPRECATION")
+            activity.overridePendingTransition(R.anim.nav_tab_fade_in, R.anim.nav_tab_fade_out)
         }
     }
 }
