@@ -58,6 +58,7 @@ class HistoryActivity : BaseActivity() {
     private lateinit var recentReferralsHeaderRow: LinearLayout
 
     private lateinit var myReferralsTotalText: TextView
+    private lateinit var headerTotalPill: View
     private lateinit var myReferralsSearchInput: EditText
     private lateinit var myReferralsListContainer: LinearLayout
     private lateinit var myReferralsEmptyText: TextView
@@ -66,6 +67,10 @@ class HistoryActivity : BaseActivity() {
     private lateinit var myReferralsPagerContainer: LinearLayout
     private lateinit var myReferralsBreadcrumb: LinearLayout
     private lateinit var loadingOverlay: View
+    // Set while the code itself clears the My referrals search box. Without
+    // it, setText("") fires the TextWatcher, which would start its own
+    // render + invite-counts request on top of the one being loaded.
+    private var suppressReferralSearch = false
     // Number of loads currently in flight. Both tabs share one full-screen
     // overlay, so it only hides once EVERY pending load has finished -
     // otherwise switching tabs mid-load could hide it while the other
@@ -129,6 +134,7 @@ class HistoryActivity : BaseActivity() {
         leaderboardPanel = findViewById(R.id.leaderboardPanel)
 
         myReferralsTotalText = findViewById(R.id.myReferralsTotalText)
+        headerTotalPill = findViewById(R.id.headerTotalPill)
         recentReferralsHeaderRow = findViewById(R.id.recentReferralsHeaderRow)
         myReferralsSearchInput = findViewById(R.id.myReferralsSearchInput)
         myReferralsListContainer = findViewById(R.id.myReferralsListContainer)
@@ -161,6 +167,7 @@ class HistoryActivity : BaseActivity() {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
             override fun afterTextChanged(s: Editable?) {
+                if (suppressReferralSearch) return
                 myReferralsSearchQuery = s?.toString()?.trim() ?: ""
                 applyMyReferralsSearch()
             }
@@ -225,6 +232,28 @@ class HistoryActivity : BaseActivity() {
         }
     }
 
+    /** Clears the search box from code without triggering a search. */
+    private fun clearReferralSearchBox() {
+        suppressReferralSearch = true
+        myReferralsSearchInput.setText("")
+        suppressReferralSearch = false
+    }
+
+    /**
+     * Sets the "Total Referrals" number and reveals its pill. The pill
+     * stays hidden until a real count exists, so a placeholder "0" can
+     * never flash on screen before the server answers.
+     */
+    private fun showReferralTotal(count: Int) {
+        myReferralsTotalText.text = count.toString()
+        headerTotalPill.visibility = View.VISIBLE
+    }
+
+    /** Hides the pill again (new load in flight, or the load failed). */
+    private fun hideReferralTotal() {
+        headerTotalPill.visibility = View.INVISIBLE
+    }
+
     private fun loadMyReferrals() {
         myReferralsListContainer.removeAllViews()
         myReferralsEmptyText.visibility = View.GONE
@@ -238,6 +267,7 @@ class HistoryActivity : BaseActivity() {
         // leaderboard does - otherwise the panel just sits blank until
         // the network call returns.
         beginLoading()
+        hideReferralTotal()
         val requestId = ++myReferralsRequestId
 
         // Root level only: this user's own direct referrals. This uses
@@ -251,7 +281,7 @@ class HistoryActivity : BaseActivity() {
             endLoading()
             myReferralsLoaded = true
             myReferrals = emptyList()
-            myReferralsTotalText.text = "0"
+            showReferralTotal(0)
             myReferralsEmptyText.visibility = View.VISIBLE
             myReferralsEmptyText.text = "No referrals yet."
             return
@@ -261,21 +291,31 @@ class HistoryActivity : BaseActivity() {
             runOnUiThread {
                 // A newer load (or drill-in) has started since this one -
                 // let that one own the UI.
-                endLoading()
-                if (requestId != myReferralsRequestId) return@runOnUiThread
+                if (requestId != myReferralsRequestId) {
+                    // Superseded by a newer load - that one owns the overlay
+                    // now, but this request's slot in the counter must still
+                    // be released.
+                    endLoading()
+                    return@runOnUiThread
+                }
                 if (list != null) {
                     myReferralsLoaded = true
                     myReferrals = list.filter { it.level == 1 }
-                    myReferralsTotalText.text = myReferrals.size.toString()
                     myReferralsSearchQuery = ""
-                    myReferralsSearchInput.setText("")
+                    clearReferralSearchBox()
                     if (myReferrals.isEmpty()) {
+                        showReferralTotal(0)
                         myReferralsEmptyText.visibility = View.VISIBLE
                         myReferralsEmptyText.text = "No referrals yet."
+                        endLoading()
                         return@runOnUiThread
                     }
-                    applyMyReferralsSearch()
+                    // Keep the white screen up through the invite-counts
+                    // step too. The total pill and the rows are revealed
+                    // together, once both are ready.
+                    applyMyReferralsSearch(holdOverlay = true)
                 } else {
+                    endLoading()
                     myReferralsEmptyText.visibility = View.VISIBLE
                     val message = if (error == "NO_INTERNET") {
                         "No internet connection. Check your connection and try again."
@@ -304,6 +344,7 @@ class HistoryActivity : BaseActivity() {
         myReferralsPagerScroll.visibility = View.GONE
         updateBreadcrumb()
         beginLoading()
+        hideReferralTotal()
         val requestId = ++myReferralsRequestId
 
         SheetSync.fetchReferralsFor(target.whatsapp) { list, error ->
@@ -312,9 +353,9 @@ class HistoryActivity : BaseActivity() {
                 if (requestId != myReferralsRequestId) return@runOnUiThread
                 if (list != null) {
                     myReferrals = list
-                    myReferralsTotalText.text = myReferrals.size.toString()
+                    showReferralTotal(myReferrals.size)
                     myReferralsSearchQuery = ""
-                    myReferralsSearchInput.setText("")
+                    clearReferralSearchBox()
                     if (myReferrals.isEmpty()) {
                         myReferralsEmptyText.visibility = View.VISIBLE
                         myReferralsEmptyText.text = "${target.label} has no referrals yet."
@@ -387,7 +428,7 @@ class HistoryActivity : BaseActivity() {
      * the WhatsApp number, same approach as [applySearch]), resets to
      * page 0, and re-renders the list and pager.
      */
-    private fun applyMyReferralsSearch() {
+    private fun applyMyReferralsSearch(holdOverlay: Boolean = false) {
         myReferralsCurrentPage = 0
 
         filteredMyReferrals = if (myReferralsSearchQuery.isEmpty()) {
@@ -401,6 +442,7 @@ class HistoryActivity : BaseActivity() {
             myReferralsPagerScroll.visibility = View.GONE
             myReferralsNoResultsText.visibility = View.VISIBLE
             myReferralsNoResultsText.text = "No referrals match \u201c$myReferralsSearchQuery\u201d"
+            if (holdOverlay) revealReferralsScreen()
             return
         }
 
@@ -413,10 +455,11 @@ class HistoryActivity : BaseActivity() {
             // finish loading. That two-pass render made rows visibly
             // change out from under the user right after the screen
             // opened.
-            loadCountsForCurrentPage()
+            loadCountsForCurrentPage(holdOverlay)
         } else {
             renderMyReferralsPage()
             renderMyReferralsPager()
+            if (holdOverlay) revealReferralsScreen()
         }
     }
 
@@ -426,12 +469,13 @@ class HistoryActivity : BaseActivity() {
      * page once they arrive, so counts appear without slowing down the
      * initial row render.
      */
-    private fun loadCountsForCurrentPage() {
+    private fun loadCountsForCurrentPage(holdOverlay: Boolean = false) {
         val start = myReferralsCurrentPage * ENTRIES_PER_PAGE
         val end = minOf(start + ENTRIES_PER_PAGE, filteredMyReferrals.size)
         if (start >= filteredMyReferrals.size) {
             renderMyReferralsPage()
             renderMyReferralsPager()
+            if (holdOverlay) revealReferralsScreen()
             return
         }
         val pageNumbers = filteredMyReferrals.subList(start, end).map { it.whatsapp }
@@ -446,8 +490,20 @@ class HistoryActivity : BaseActivity() {
                 myReferralsCounts = counts ?: emptyMap()
                 renderMyReferralsPage()
                 renderMyReferralsPager()
+                if (holdOverlay) revealReferralsScreen()
             }
         }
+    }
+
+    /**
+     * Called once the rows AND their invite counts are both drawn.
+     * Reveals the total pill and drops the white loading screen in the
+     * same moment, so the total, the phone numbers and the counts all
+     * appear together instead of trickling in one after another.
+     */
+    private fun revealReferralsScreen() {
+        showReferralTotal(myReferrals.size)
+        endLoading()
     }
 
     /**
