@@ -53,9 +53,9 @@
 
                 <com.google.android.material.imageview.ShapeableImageView
                     android:id="@+id/profileIcon"
-                    android:layout_width="60dp"
-                    android:layout_height="60dp"
-                    android:padding="16dp"
+                    android:layout_width="56dp"
+                    android:layout_height="56dp"
+                    android:padding="14dp"
                     android:src="@drawable/ic_profile_person"
                     app:tint="@color/vg_green"
                     android:background="@color/white"
