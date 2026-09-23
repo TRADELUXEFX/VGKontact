@@ -150,111 +150,122 @@
                     android:gravity="center"
                     android:layout_marginBottom="20dp" />
 
-                <!-- ============ CONTACT AMOUNT PICKER ============
-                     Lets the user pick how many contacts they want before
-                     buying a code. Backed by a fixed rate (₦250 per 250
-                     contacts - see STEP_CONTACTS/RATE_PER_STEP in
-                     IncreaseLimitActivity.kt) - the stepper only ever
-                     moves in 250-contact increments so the total price
-                     always lines up with a whole number of purchasable
-                     units, without exposing that "unit" concept in the
-                     UI copy itself. -->
+                <!-- ============ PACKAGE PLAN CARDS ============
+                     Replaces the old +/- contact-amount stepper with three
+                     fixed packages (250 / 750 / 1000 status viewers), shown
+                     as tappable cards - same selected/default tile pattern
+                     used in NotificationSettingsActivity (freq_tile_*).
+                     Tapping a card sets the selected package; the price
+                     shown per card and the WhatsApp message below both
+                     follow PACKAGES in IncreaseLimitActivity.kt. -->
                 <LinearLayout
+                    android:id="@+id/packageCard250"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:background="@drawable/card_background"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:background="@drawable/freq_tile_default_background"
                     android:padding="14dp"
-                    android:layout_marginBottom="16dp">
+                    android:layout_marginBottom="10dp"
+                    android:clickable="true"
+                    android:focusable="true">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="250 status viewers"
+                        android:textSize="15sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/vg_dark" />
+
+                    <TextView
+                        android:id="@+id/packagePrice250"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/vg_green_dark"
+                        tools:text="₦10,000" />
+
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/packageCard500"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:background="@drawable/freq_tile_default_background"
+                    android:padding="14dp"
+                    android:layout_marginBottom="10dp"
+                    android:clickable="true"
+                    android:focusable="true">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="500 status viewers"
+                        android:textSize="15sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/vg_dark" />
+
+                    <TextView
+                        android:id="@+id/packagePrice500"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/vg_green_dark"
+                        tools:text="₦20,000" />
+
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/packageCard1000"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:background="@drawable/freq_tile_selected_background"
+                    android:padding="14dp"
+                    android:layout_marginBottom="16dp"
+                    android:clickable="true"
+                    android:focusable="true">
 
                     <LinearLayout
-                        android:layout_width="match_parent"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical">
-
-                        <Button
-                            android:id="@+id/contactsMinusButton"
-                            android:layout_width="34dp"
-                            android:layout_height="34dp"
-                            android:minWidth="0dp"
-                            android:minHeight="0dp"
-                            android:insetTop="0dp"
-                            android:insetBottom="0dp"
-                            android:padding="0dp"
-                            android:text="–"
-                            android:textSize="18sp"
-                            android:textStyle="bold"
-                            android:textColor="@color/vg_green_dark"
-                            android:backgroundTint="@color/vg_green_tint"
-                            app:cornerRadius="17dp"
-                            app:elevation="0dp"
-                            android:stateListAnimator="@null" />
-
-                        <LinearLayout
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:orientation="vertical"
-                            android:gravity="center">
-
-                            <TextView
-                                android:id="@+id/contactsAmountText"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:textSize="18sp"
-                                android:textStyle="bold"
-                                android:textColor="@color/vg_dark"
-                                tools:text="250 contacts" />
-
-                        </LinearLayout>
-
-                        <Button
-                            android:id="@+id/contactsPlusButton"
-                            android:layout_width="34dp"
-                            android:layout_height="34dp"
-                            android:minWidth="0dp"
-                            android:minHeight="0dp"
-                            android:insetTop="0dp"
-                            android:insetBottom="0dp"
-                            android:padding="0dp"
-                            android:text="+"
-                            android:textSize="18sp"
-                            android:textStyle="bold"
-                            android:textColor="@color/vg_green_dark"
-                            android:backgroundTint="@color/vg_green_tint"
-                            app:cornerRadius="17dp"
-                            app:elevation="0dp"
-                            android:stateListAnimator="@null" />
-
-                    </LinearLayout>
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:layout_marginTop="12dp"
-                        android:paddingTop="12dp"
-                        android:background="@drawable/limit_breakdown_divider">
+                        android:layout_weight="1"
+                        android:orientation="vertical">
 
                         <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="@string/label_youll_pay"
-                            android:textSize="12.5sp"
-                            android:textColor="@color/text_muted" />
-
-                        <TextView
-                            android:id="@+id/contactsTotalPriceText"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
+                            android:text="1000 status viewers"
                             android:textSize="15sp"
                             android:textStyle="bold"
-                            android:textColor="@color/vg_green_dark"
-                            tools:text="₦250" />
+                            android:textColor="@color/vg_dark" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:text="Best value per viewer"
+                            android:textSize="12sp"
+                            android:textColor="@color/text_muted" />
 
                     </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/packagePrice1000"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/vg_green_dark"
+                        tools:text="₦40,000" />
 
                 </LinearLayout>
 
