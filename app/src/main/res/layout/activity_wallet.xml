@@ -224,6 +224,17 @@
 
                 </LinearLayout>
 
+                <!-- Shown only while the wallet is loading for the first
+                     time, in place of the activity rows. -->
+                <ProgressBar
+                    android:id="@+id/walletActivityProgress"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center_horizontal"
+                    android:layout_marginTop="24dp"
+                    android:layout_marginBottom="24dp"
+                    android:visibility="gone" />
+
                 <LinearLayout
                     android:id="@+id/walletActivityList"
                     android:layout_width="match_parent"
