@@ -93,26 +93,14 @@ object BottomNavHelper {
         if (current == target) return
 
         val intent = Intent(activity, destination)
-        intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
         for ((key, value) in extras) {
             intent.putExtra(key, value)
         }
         activity.startActivity(intent)
 
-        // Tab switches use a fade-through (old screen fades out, new one
-        // fades in with a slight scale-up) - deliberately different from
-        // the slide used for drill-down screens (theme default, see
-        // Animation.VGKontact.Window), so "switching sections" and "going
-        // deeper" feel distinct. Called explicitly, and again after
-        // finish() for Home, since finish() otherwise plays the theme's
-        // slide-out instead.
-        @Suppress("DEPRECATION")
-        activity.overridePendingTransition(R.anim.nav_tab_fade_in, R.anim.nav_tab_fade_out)
-
         if (target == Tab.HOME) {
             activity.finish()
-            @Suppress("DEPRECATION")
-            activity.overridePendingTransition(R.anim.nav_tab_fade_in, R.anim.nav_tab_fade_out)
         }
     }
 }
