@@ -13,6 +13,8 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import android.widget.EditText
+import java.text.NumberFormat
+import java.util.Locale
 
 /**
  * Increase Contact Limit - key code redemption screen. Used to also
@@ -34,12 +36,15 @@ class IncreaseLimitActivity : BaseActivity() {
         const val TAB_KEY = "key"
         const val TAB_REFERRAL = "referral"
 
-        // Selling rate for the contact amount picker: ₦250 per 250
-        // contacts. Both sides move together so the picker only ever
-        // lands on amounts we actually sell.
-        private const val STEP_CONTACTS = 250
-        private const val RATE_PER_STEP = 250
+        // Selling packages for the "Buy Viewers" screen.
+        private val PACKAGES = listOf(
+            Package(viewers = 250, price = 10000),
+            Package(viewers = 500, price = 20000),
+            Package(viewers = 1000, price = 40000)
+        )
     }
+
+    private data class Package(val viewers: Int, val price: Int)
 
     private lateinit var tabPurchaseButton: Button
     private lateinit var tabUnlockButton: Button
@@ -53,16 +58,17 @@ class IncreaseLimitActivity : BaseActivity() {
     private lateinit var noCodeContactUsButton: Button
     private lateinit var redeemProgressBar: ProgressBar
 
-    // Contact amount picker - lets the user pick how many contacts they
-    // want before purchasing a code. STEP_CONTACTS/RATE_PER_STEP define
-    // the fixed selling rate (₦250 per 250 contacts); the stepper only
-    // moves in whole steps so the total always lines up with a purchasable
-    // amount, without exposing that "unit" framing in the UI copy.
-    private lateinit var contactsMinusButton: Button
-    private lateinit var contactsPlusButton: Button
-    private lateinit var contactsAmountText: TextView
-    private lateinit var contactsTotalPriceText: TextView
-    private var selectedContacts: Int = STEP_CONTACTS
+    // Package plan cards - three fixed packages (see PACKAGES above),
+    // shown as tappable cards instead of a +/- stepper. Tapping a card
+    // sets selectedPackageIndex and re-renders all three so exactly one
+    // shows the "selected" tile background.
+    private lateinit var packageCard250: LinearLayout
+    private lateinit var packageCard500: LinearLayout
+    private lateinit var packageCard1000: LinearLayout
+    private lateinit var packagePrice250: TextView
+    private lateinit var packagePrice500: TextView
+    private lateinit var packagePrice1000: TextView
+    private var selectedPackageIndex: Int = 2 // 1000 (best value) is the default pick
 
     private val CONTACT_US_WHATSAPP_NUMBER = "09110321143"
 
@@ -85,10 +91,12 @@ class IncreaseLimitActivity : BaseActivity() {
         noCodeContactUsButton = findViewById(R.id.noCodeContactUsButton)
         redeemProgressBar = findViewById(R.id.redeemProgressBar)
 
-        contactsMinusButton = findViewById(R.id.contactsMinusButton)
-        contactsPlusButton = findViewById(R.id.contactsPlusButton)
-        contactsAmountText = findViewById(R.id.contactsAmountText)
-        contactsTotalPriceText = findViewById(R.id.contactsTotalPriceText)
+        packageCard250 = findViewById(R.id.packageCard250)
+        packageCard500 = findViewById(R.id.packageCard500)
+        packageCard1000 = findViewById(R.id.packageCard1000)
+        packagePrice250 = findViewById(R.id.packagePrice250)
+        packagePrice500 = findViewById(R.id.packagePrice500)
+        packagePrice1000 = findViewById(R.id.packagePrice1000)
 
         upgradeSubtitleText.text = getString(R.string.upgrade_plan_coming_soon)
 
@@ -98,17 +106,10 @@ class IncreaseLimitActivity : BaseActivity() {
         tabPurchaseButton.setOnClickListener { showPurchaseTab() }
         tabUnlockButton.setOnClickListener { showUnlockTab() }
 
-        contactsMinusButton.setOnClickListener {
-            if (selectedContacts > STEP_CONTACTS) {
-                selectedContacts -= STEP_CONTACTS
-                renderContactsPicker()
-            }
-        }
-        contactsPlusButton.setOnClickListener {
-            selectedContacts += STEP_CONTACTS
-            renderContactsPicker()
-        }
-        renderContactsPicker()
+        packageCard250.setOnClickListener { selectPackage(0) }
+        packageCard500.setOnClickListener { selectPackage(1) }
+        packageCard1000.setOnClickListener { selectPackage(2) }
+        renderPackagePicker()
         showPurchaseTab()
     }
 
@@ -135,14 +136,25 @@ class IncreaseLimitActivity : BaseActivity() {
         tabPurchaseButton.setTextColor(ContextCompat.getColor(this, R.color.white))
     }
 
-    // ==================== Contact amount picker ====================
+    // ==================== Package plan cards ====================
 
-    private fun renderContactsPicker() {
-        contactsAmountText.text = "$selectedContacts contacts"
-        val total = (selectedContacts / STEP_CONTACTS) * RATE_PER_STEP
-        contactsTotalPriceText.text = "₦$total"
-        contactsMinusButton.isEnabled = selectedContacts > STEP_CONTACTS
-        contactsMinusButton.alpha = if (contactsMinusButton.isEnabled) 1f else 0.4f
+    private fun selectPackage(index: Int) {
+        selectedPackageIndex = index
+        renderPackagePicker()
+    }
+
+    private fun renderPackagePicker() {
+        val cards = listOf(packageCard250, packageCard500, packageCard1000)
+        val prices = listOf(packagePrice250, packagePrice500, packagePrice1000)
+        cards.forEachIndexed { index, card ->
+            card.setBackgroundResource(
+                if (index == selectedPackageIndex) R.drawable.freq_tile_selected_background
+                else R.drawable.freq_tile_default_background
+            )
+        }
+        prices.forEachIndexed { index, priceText ->
+            priceText.text = "₦" + NumberFormat.getNumberInstance(Locale.US).format(PACKAGES[index].price)
+        }
     }
 
     // ==================== Redeem a key ====================
@@ -189,8 +201,9 @@ class IncreaseLimitActivity : BaseActivity() {
     }
 
     private fun openWhatsAppForUnlockCode() {
-        val total = (selectedContacts / STEP_CONTACTS) * RATE_PER_STEP
-        val messageText = "Hi VG Kontact, I'd like to purchase a code for $selectedContacts contacts (₦$total)."
+        val selected = PACKAGES[selectedPackageIndex]
+        val formattedPrice = NumberFormat.getNumberInstance(Locale.US).format(selected.price)
+        val messageText = "Hi VG Kontact, I'd like to purchase a code for ${selected.viewers} status viewers (₦$formattedPrice)."
         val message = Uri.encode(messageText)
         val uri = Uri.parse("https://wa.me/$CONTACT_US_WHATSAPP_NUMBER?text=$message")
         try {
