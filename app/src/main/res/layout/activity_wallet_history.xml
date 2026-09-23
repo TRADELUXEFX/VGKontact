@@ -58,6 +58,15 @@
         android:fontFamily="@font/poppins"
         android:visibility="gone" />
 
+    <!-- Loading indicator, shown while the history is being fetched -->
+    <ProgressBar
+        android:id="@+id/walletHistoryProgress"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="60dp"
+        android:visibility="gone" />
+
     <ScrollView
         android:id="@+id/walletHistoryScroll"
         android:layout_width="match_parent"
