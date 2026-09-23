@@ -51,19 +51,24 @@
                 android:orientation="horizontal"
                 android:gravity="center_vertical">
 
-                <com.google.android.material.imageview.ShapeableImageView
-                    android:id="@+id/profileIcon"
+                <FrameLayout
                     android:layout_width="56dp"
-                    android:layout_height="56dp"
-                    android:padding="14dp"
-                    android:src="@drawable/ic_profile_person"
-                    app:tint="@color/vg_green"
-                    android:background="@color/white"
-                    android:scaleType="fitCenter"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:foreground="?android:attr/selectableItemBackgroundBorderless"
-                    app:shapeAppearanceOverlay="@style/CircleImageShape" />
+                    android:layout_height="56dp">
+
+                    <ImageView
+                        android:id="@+id/profileIcon"
+                        android:layout_width="56dp"
+                        android:layout_height="56dp"
+                        android:padding="12dp"
+                        android:src="@drawable/ic_profile_person"
+                        app:tint="@color/vg_green"
+                        android:background="@drawable/avatar_circle_background"
+                        android:scaleType="fitCenter"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:foreground="?android:attr/selectableItemBackgroundBorderless" />
+
+                </FrameLayout>
 
                 <LinearLayout
                     android:layout_width="0dp"
