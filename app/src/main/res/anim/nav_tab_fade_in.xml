@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Used together with nav_tab_fade_out for smooth bottom-nav tab
+    switches (see BottomNavHelper.navigateTo). Each destination is a
+    separate Activity, so Android's default is an abrupt jump-cut with
+    no animation - this crossfades the incoming screen in while the
+    outgoing one fades out, instead of sliding (a slide would look like
+    "going forward/back" through a stack, which is wrong for switching
+    between sibling tabs).
+-->
+<alpha xmlns:android="http://schemas.android.com/apk/res/android"
+    android:fromAlpha="0.0"
+    android:toAlpha="1.0"
+    android:duration="150"
+    android:interpolator="@android:interpolator/fast_out_slow_in" />
