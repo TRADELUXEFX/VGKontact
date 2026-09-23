@@ -10,7 +10,6 @@
              sub-screens, Repost button) and the matching reverse on back.
              The four bottom-nav tabs override this per-call with a
              fade-through (see BottomNavHelper.navigateTo). -->
-        <item name="android:windowAnimationStyle">@style/Animation.VGKontact.Window</item>
 
         <!-- Force Light Backgrounds and Text -->
         <item name="android:windowBackground">#FFFFFF</item>
@@ -69,13 +68,4 @@
         <item name="cornerSize">50%</item>
     </style>
 
-    <!-- Default for all Activity transitions: slide+fade forward, reverse
-         on back. Bottom-nav tab switches don't use this - they call
-         overridePendingTransition with the fade-through pair instead. -->
-    <style name="Animation.VGKontact.Window" parent="@android:style/Animation.Activity">
-        <item name="android:activityOpenEnterAnimation">@anim/nav_slide_in_right</item>
-        <item name="android:activityOpenExitAnimation">@anim/nav_slide_out_left</item>
-        <item name="android:activityCloseEnterAnimation">@anim/nav_slide_in_left</item>
-        <item name="android:activityCloseExitAnimation">@anim/nav_slide_out_right</item>
-    </style>
 </resources>
