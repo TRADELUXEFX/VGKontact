@@ -726,10 +726,19 @@ class MainMenuActivity : BaseActivity() {
         }
     }
 
+    // True once the stats card has been painted with real data at least
+    // once. After that, refreshes (onResume, post-sync) update the numbers
+    // in place instead of blanking the card behind a spinner - blanking it
+    // on every resume made the whole menu look like it restarted whenever
+    // a dialog, popup, permission prompt or sub-screen returned to it.
+    private var statsShownOnce = false
+
     private fun loadStats() {
         statsCard.visibility = View.VISIBLE
-        statsProgressBar.visibility = View.VISIBLE
-        statsContent.visibility = View.GONE
+        if (!statsShownOnce) {
+            statsProgressBar.visibility = View.VISIBLE
+            statsContent.visibility = View.GONE
+        }
 
         val todayCount = UserPrefs.getTodaySyncedCount(this)
         statsTodayText.text = if (todayCount > 0) {
@@ -745,6 +754,7 @@ class MainMenuActivity : BaseActivity() {
             runOnUiThread {
                 statsProgressBar.visibility = View.GONE
                 statsContent.visibility = View.VISIBLE
+                statsShownOnce = true
                 if (stats != null) {
                     updateLimitMeter(stats.syncedToPhone, stats.contactLimit, stats.baseLimit, stats.bonusLimit)
                 }
