@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Full-screen white loading overlay with a centered spinner.
+    Include as the LAST child of a FrameLayout root so it covers the
+    whole screen (including the bottom nav bar) until data is ready.
+    Toggle its visibility from code via R.id.loadingOverlay.
+
+    clickable + focusable so taps don't fall through to the views
+    underneath while loading.
+-->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/loadingOverlay"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/white"
+    android:clickable="true"
+    android:focusable="true"
+    android:elevation="20dp"
+    android:visibility="gone">
+
+    <ProgressBar
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:indeterminateTint="@color/vg_green" />
+
+</FrameLayout>
