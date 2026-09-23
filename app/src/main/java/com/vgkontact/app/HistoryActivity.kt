@@ -12,7 +12,6 @@ import android.widget.EditText
 import android.widget.HorizontalScrollView
 import android.widget.ImageView
 import android.widget.LinearLayout
-import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -45,7 +44,6 @@ import java.util.concurrent.TimeUnit
  */
 class HistoryActivity : BaseActivity() {
 
-    private lateinit var progressBar: ProgressBar
     private lateinit var emptyText: TextView
     private lateinit var noResultsText: TextView
     private lateinit var historySearchInput: EditText
@@ -67,7 +65,22 @@ class HistoryActivity : BaseActivity() {
     private lateinit var myReferralsPagerScroll: HorizontalScrollView
     private lateinit var myReferralsPagerContainer: LinearLayout
     private lateinit var myReferralsBreadcrumb: LinearLayout
-    private lateinit var myReferralsProgressBar: ProgressBar
+    private lateinit var loadingOverlay: View
+    // Number of loads currently in flight. Both tabs share one full-screen
+    // overlay, so it only hides once EVERY pending load has finished -
+    // otherwise switching tabs mid-load could hide it while the other
+    // tab's data is still on its way.
+    private var pendingLoads = 0
+
+    private fun beginLoading() {
+        pendingLoads++
+        loadingOverlay.visibility = View.VISIBLE
+    }
+
+    private fun endLoading() {
+        pendingLoads = (pendingLoads - 1).coerceAtLeast(0)
+        if (pendingLoads == 0) loadingOverlay.visibility = View.GONE
+    }
     // Bumped on every My referrals fetch so a slow, superseded response
     // (e.g. user drilled in/out or switched tabs quickly) can't overwrite
     // the list for the request that's actually current.
@@ -103,7 +116,6 @@ class HistoryActivity : BaseActivity() {
 
         window.statusBarColor = ContextCompat.getColor(this, R.color.vg_green)
 
-        progressBar = findViewById(R.id.progressBar)
         emptyText = findViewById(R.id.emptyText)
         noResultsText = findViewById(R.id.noResultsText)
         historySearchInput = findViewById(R.id.historySearchInput)
@@ -125,7 +137,7 @@ class HistoryActivity : BaseActivity() {
         myReferralsPagerScroll = findViewById(R.id.myReferralsPagerScroll)
         myReferralsPagerContainer = findViewById(R.id.myReferralsPagerContainer)
         myReferralsBreadcrumb = findViewById(R.id.myReferralsBreadcrumb)
-        myReferralsProgressBar = findViewById(R.id.myReferralsProgressBar)
+        loadingOverlay = findViewById(R.id.loadingOverlay)
         breadcrumbBackButton = findViewById(R.id.breadcrumbBackButton)
         breadcrumbPathText = findViewById(R.id.breadcrumbPathText)
 
@@ -225,7 +237,7 @@ class HistoryActivity : BaseActivity() {
         // Show a spinner while the request is in flight, same as the
         // leaderboard does - otherwise the panel just sits blank until
         // the network call returns.
-        myReferralsProgressBar.visibility = View.VISIBLE
+        beginLoading()
         val requestId = ++myReferralsRequestId
 
         // Root level only: this user's own direct referrals. This uses
@@ -236,7 +248,7 @@ class HistoryActivity : BaseActivity() {
         // handled by loadReferralsForStack() instead.
         val myWhatsapp = UserPrefs.getWhatsapp(this)
         if (myWhatsapp.isNullOrEmpty()) {
-            myReferralsProgressBar.visibility = View.GONE
+            endLoading()
             myReferralsLoaded = true
             myReferrals = emptyList()
             myReferralsTotalText.text = "0"
@@ -249,8 +261,8 @@ class HistoryActivity : BaseActivity() {
             runOnUiThread {
                 // A newer load (or drill-in) has started since this one -
                 // let that one own the UI.
+                endLoading()
                 if (requestId != myReferralsRequestId) return@runOnUiThread
-                myReferralsProgressBar.visibility = View.GONE
                 if (list != null) {
                     myReferralsLoaded = true
                     myReferrals = list.filter { it.level == 1 }
@@ -291,13 +303,13 @@ class HistoryActivity : BaseActivity() {
         myReferralsNoResultsText.visibility = View.GONE
         myReferralsPagerScroll.visibility = View.GONE
         updateBreadcrumb()
-        myReferralsProgressBar.visibility = View.VISIBLE
+        beginLoading()
         val requestId = ++myReferralsRequestId
 
         SheetSync.fetchReferralsFor(target.whatsapp) { list, error ->
             runOnUiThread {
+                endLoading()
                 if (requestId != myReferralsRequestId) return@runOnUiThread
-                myReferralsProgressBar.visibility = View.GONE
                 if (list != null) {
                     myReferrals = list
                     myReferralsTotalText.text = myReferrals.size.toString()
@@ -768,14 +780,14 @@ class HistoryActivity : BaseActivity() {
     }
 
     private fun loadReferralLeaderboard() {
-        progressBar.visibility = View.VISIBLE
+        beginLoading()
         emptyText.visibility = View.GONE
         dayListContainer.removeAllViews()
         historyPagerScroll.visibility = View.GONE
 
         SheetSync.fetchReferralLeaderboard(this) { list, error ->
             runOnUiThread {
-                progressBar.visibility = View.GONE
+                endLoading()
                 if (list != null) {
                     leaderboardLoaded = true
                     if (list.isEmpty()) {
