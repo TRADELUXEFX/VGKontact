@@ -7,7 +7,6 @@ import android.view.LayoutInflater
 import android.view.View
 import android.widget.ImageView
 import android.widget.LinearLayout
-import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.core.content.ContextCompat
@@ -56,7 +55,7 @@ class WalletActivity : BaseActivity() {
     private lateinit var emptyState: View
     private lateinit var emptyText: TextView
     private lateinit var historyButton: View
-    private lateinit var activityProgress: ProgressBar
+    private lateinit var loadingOverlay: View
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -78,7 +77,7 @@ class WalletActivity : BaseActivity() {
         emptyState = findViewById(R.id.walletEmptyState)
         emptyText = findViewById(R.id.walletEmptyText)
         historyButton = findViewById(R.id.walletHistoryButton)
-        activityProgress = findViewById(R.id.walletActivityProgress)
+        loadingOverlay = findViewById(R.id.loadingOverlay)
 
         historyButton.setOnClickListener {
             startActivity(Intent(this, WalletHistoryActivity::class.java))
@@ -109,7 +108,7 @@ class WalletActivity : BaseActivity() {
             runOnUiThread {
                 loading = false
                 if (isFinishing || isDestroyed) return@runOnUiThread
-                activityProgress.visibility = View.GONE
+                loadingOverlay.visibility = View.GONE
                 if (wallet == null) {
                     showLoadError()
                 } else {
@@ -136,25 +135,12 @@ class WalletActivity : BaseActivity() {
     }
 
     /**
-     * First-load state: dashes in place of the amounts, a spinner where the
-     * activity list will go, and the Withdraw button greyed out (so it can't
-     * be tapped before we know the real balance).
+     * First-load state: a full-screen white overlay with a spinner covers
+     * the whole screen (so no placeholder numbers or half-drawn rows are
+     * ever visible) until the wallet response arrives.
      */
     private fun showLoading() {
-        balanceText.text = "\u2014"
-        pendingText.text = "Loading your wallet\u2026"
-        pendingText.setOnClickListener(null)
-        pendingText.isClickable = false
-        totalEarnedText.text = "\u2014"
-        withdrawnText.text = "\u2014"
-        withdrawButton.setBackgroundResource(R.drawable.wallet_withdraw_button_disabled)
-        withdrawButton.setOnClickListener {
-            Toast.makeText(this, "Wallet is still loading", Toast.LENGTH_SHORT).show()
-        }
-        activityList.removeAllViews()
-        activityList.visibility = View.GONE
-        emptyState.visibility = View.GONE
-        activityProgress.visibility = View.VISIBLE
+        loadingOverlay.visibility = View.VISIBLE
     }
 
     /** Server unreachable: show dashes and let the user tap to retry. */
