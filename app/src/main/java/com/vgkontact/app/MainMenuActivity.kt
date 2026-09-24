@@ -732,6 +732,11 @@ class MainMenuActivity : BaseActivity() {
     // on every resume made the whole menu look like it restarted whenever
     // a dialog, popup, permission prompt or sub-screen returned to it.
     private var statsShownOnce = false
+    // Time of the last stats/viewers fetch. Returning to the menu within
+    // STATS_CACHE_MS reuses what's already on screen instead of re-calling
+    // the server. A sync or pull-to-refresh can reset it to 0 to force a reload.
+    private var lastStatsLoadAt = 0L
+    private val STATS_CACHE_MS = 60_000L
 
     private fun loadStats() {
         statsCard.visibility = View.VISIBLE
@@ -747,6 +752,14 @@ class MainMenuActivity : BaseActivity() {
         } else {
             getString(R.string.stats_no_sync_today)
         }
+
+        // Recent enough: keep what's on screen, skip the 4 server calls.
+        // Only reused once a first load has actually filled the screen.
+        val now = System.currentTimeMillis()
+        if (statsShownOnce && now - lastStatsLoadAt < STATS_CACHE_MS) {
+            return
+        }
+        lastStatsLoadAt = now
 
         // SINGLE call - fetchImportStats has everything we need for the
         // headless limit-reached/almost-full notification logic.
@@ -784,6 +797,24 @@ class MainMenuActivity : BaseActivity() {
      * last-known value, same failure behavior as before.
      */
     private fun loadViewersBlock() {
+        // One round trip for all three rows. If it fails for any reason,
+        // fall back to the original three separate calls (unchanged below).
+        SheetSync.fetchDashboard(this) { dash ->
+            if (dash == null) {
+                runOnUiThread { loadViewersBlockSeparately() }
+                return@fetchDashboard
+            }
+            runOnUiThread {
+                freeViewersCurrentText.text = dash.free.current.toString()
+                freeViewersMaxText.text = "/${dash.free.max}"
+                purchasedViewersCurrentText.text = dash.purchased.current.toString()
+                purchasedViewersMaxText.text = "/${dash.purchased.max}"
+                referredViewersCountText.text = dash.referred.toString()
+            }
+        }
+    }
+
+    private fun loadViewersBlockSeparately() {
         var freeResult: SheetSync.ViewerCount? = null
         var purchasedResult: SheetSync.ViewerCount? = null
         var referredResult: Long? = null
@@ -920,6 +951,7 @@ class MainMenuActivity : BaseActivity() {
                     ActivityLog.add(this, ActivityLog.Type.CONTACT_SYNCED, "Synced $submitted new $label")
                     renderNotificationDot()
                 }
+                lastStatsLoadAt = 0L  // data just changed - force a fresh load
                 loadStats()
             }
         }
@@ -1000,6 +1032,7 @@ class MainMenuActivity : BaseActivity() {
                     val contactLabel = if (submitted == 1) "contact" else "contacts"
                     ActivityLog.add(this, ActivityLog.Type.CONTACT_SYNCED, "Synced $submitted new $contactLabel")
                     renderNotificationDot()
+                    lastStatsLoadAt = 0L  // data just changed - force a fresh load
                     loadStats()
                 }
                 // submitted == 0 -> nothing new, stay quiet, no toast.
@@ -1216,6 +1249,7 @@ class MainMenuActivity : BaseActivity() {
                     // Permission was just granted, so the stats we last loaded (with
                     // permission denied) are stale/generic. Refresh them before syncing
                     // so the dashboard reflects the real on-device numbers right away.
+                    lastStatsLoadAt = 0L  // data just changed - force a fresh load
                     loadStats()
                     refreshPermissionHealth()
                     startSync()
