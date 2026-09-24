@@ -35,7 +35,6 @@ data class MyReferral(val whatsapp: String, val createdAt: String, val level: In
 data class ImportStats(
     val totalInDatabase: Int,
     val syncedToPhone: Int,
-    val availableToImport: Int,
     val joinedGroupCount: Int = -1,
     val joinedGroupIds: List<Long> = emptyList(),
     val contactLimit: Long = -1L,
@@ -870,8 +869,8 @@ object SheetSync {
      * contacts (unlike addUplineContact's deliberately unmarked
      * "[name] Upline" contacts above) - these are ordinary discoverable
      * contacts, not a special case that needs hiding from
-     * removeStaleVgkContacts/getDevicePhoneNumbers, so there's no reason
-     * to opt them out of that existing cleanup/dedupe machinery.
+     * removeStaleVgkContacts, so there's no reason to opt them out of
+     * that existing cleanup/dedupe machinery.
      *
      * Safe to call repeatedly (every login, every background check) -
      * gated by UserPrefs.getSyncedNumbers the same way the normal
@@ -1335,15 +1334,15 @@ object SheetSync {
      * Both contacts are labeled plain "[Name] Upline" - deliberately
      * WITHOUT the "VGK" marker or a numeric suffix that every other
      * app-created contact carries (see buildContactOps/
-     * getDevicePhoneNumbers/removeStaleVgkContacts above), so they read
-     * as normal, clean contact names instead of exposing internal
-     * bookkeeping. This is a deliberate trade-off: because they have no
-     * "VGK" marker, these contacts are invisible to every VGK-pattern-
-     * based function in this file - reconcileFromExistingContacts/
-     * getDevicePhoneNumbers won't find them, and removeStaleVgkContacts
-     * can't accidentally delete them either (they were never in that
-     * cleanup's target set to begin with, per that function's own
-     * comments, so this doesn't newly expose them to anything).
+     * removeStaleVgkContacts above), so they read as normal, clean
+     * contact names instead of exposing internal bookkeeping. This is a
+     * deliberate trade-off: because they have no "VGK" marker, these
+     * contacts are invisible to every VGK-pattern-based function in this
+     * file - reconcileFromExistingContacts won't find them, and
+     * removeStaleVgkContacts can't accidentally delete them either (they
+     * were never in that cleanup's target set to begin with, per that
+     * function's own comments, so this doesn't newly expose them to
+     * anything).
      * Duplicate-prevention for these contacts instead relies entirely
      * on UserPrefs.getSyncedNumbers/addSyncedNumbers below, keyed by
      * phone number rather than by scanning contact names - a separate,
@@ -1780,11 +1779,6 @@ object SheetSync {
             // rows come from get_dashboard, which never looked at the phone.
             val syncedToPhone = totalInDatabase
 
-            // Kept so the ImportStats shape is unchanged for any caller.
-            // Always 0 now, since every group member counts as accounted
-            // for; nothing in the app reads it.
-            val availableToImport = 0
-
             val groupsSplit = fetchMyGroupsSplit(context)
             val joinedGroupIds = groupsSplit?.let { (home, extra) ->
                 (listOfNotNull(home) + extra).sorted()
@@ -1813,7 +1807,7 @@ object SheetSync {
             }
             val contactLimit = if (baseLimit < 0L || bonusLimit < 0L) -1L else baseLimit + bonusLimit
 
-            callback(ImportStats(totalInDatabase, syncedToPhone, availableToImport, joinedGroupCount, joinedGroupIds, contactLimit, baseLimit, bonusLimit))
+            callback(ImportStats(totalInDatabase, syncedToPhone, joinedGroupCount, joinedGroupIds, contactLimit, baseLimit, bonusLimit))
         }
     }
 
@@ -1960,42 +1954,6 @@ object SheetSync {
             // A failed lookup must never block syncing - fall back to the
             // old behavior (no guard) rather than adding nothing.
             Log.w("SheetSync", "getUserOwnPhoneNumbers failed", e)
-        }
-        return numbers
-    }
-
-    /**
-     * Phone numbers belonging ONLY to contacts this app itself created (i.e. named
-     * "<username> VGK<number>", e.g. "John VGK1").
-     */
-    private fun getDevicePhoneNumbers(context: Context): Set<String> {
-        val numbers = HashSet<String>()
-        val pattern = Regex("VGK\\d+$")
-
-        // Pushing the "%VGK%" filter into the query's selection args
-        // means the Contacts provider only returns matching rows, instead
-        // of every contact on the device being pulled into the app and
-        // filtered here one by one.
-        val cursor = context.contentResolver.query(
-            ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
-            arrayOf(
-                ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME_PRIMARY,
-                ContactsContract.CommonDataKinds.Phone.NUMBER
-            ),
-            "${ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME_PRIMARY} LIKE ?",
-            arrayOf("%VGK%"),
-            null
-        )
-        cursor?.use {
-            val nameIndex = it.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME_PRIMARY)
-            val numIndex = it.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)
-            while (it.moveToNext()) {
-                val name = it.getString(nameIndex)?.trim() ?: continue
-                if (!pattern.containsMatchIn(name)) continue
-
-                val num = it.getString(numIndex)
-                if (!num.isNullOrEmpty()) numbers.add(num)
-            }
         }
         return numbers
     }
