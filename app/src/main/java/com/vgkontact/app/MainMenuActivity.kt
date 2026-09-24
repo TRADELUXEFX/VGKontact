@@ -787,6 +787,19 @@ class MainMenuActivity : BaseActivity() {
         }
         lastStatsLoadAt = now
 
+        // Fresh result from the setup loading screen? Use it instead of
+        // repeating the same server calls. Only the first open after setup
+        // has one; it is consumed here and expires after 60 seconds.
+        val handedOff = SheetSync.takeHandedOffStats()
+        if (handedOff != null) {
+            statsProgressBar.visibility = View.GONE
+            statsContent.visibility = View.VISIBLE
+            statsShownOnce = true
+            updateLimitMeter(handedOff.syncedToPhone, handedOff.contactLimit, handedOff.baseLimit, handedOff.bonusLimit)
+            loadViewersBlock()
+            return
+        }
+
         // SINGLE call - fetchImportStats has everything we need for the
         // headless limit-reached/almost-full notification logic.
         SheetSync.fetchImportStats(this) { stats ->
