@@ -1007,26 +1007,15 @@ class MainMenuActivity : BaseActivity() {
         }
         if (isSyncing) return
 
-        // Cheap check first: ask the server for just a count of contacts
-        // across this user's groups, instead of downloading the full list
-        // on every single resume. Only run the real sync if that count has
-        // actually changed since last time - otherwise there's nothing new
-        // to pull in, so skip the expensive fetch + contacts write entirely.
-        SheetSync.fetchGroupContactCount(this) { serverCount ->
-            if (serverCount == null) {
-                // Couldn't reach the server for the cheap check - fall back
-                // to just not syncing this time rather than guessing. The
-                // next resume, or a manual Sync tap, will try again.
-                return@fetchGroupContactCount
-            }
-            val lastKnown = UserPrefs.getLastKnownGroupCount(this)
-            if (serverCount == lastKnown) {
-                // Nothing new - skip the full sync.
-                return@fetchGroupContactCount
-            }
-            UserPrefs.setLastKnownGroupCount(this, serverCount)
-            runAutoSync()
-        }
+        // Always run the real sync - no cheap count check beforehand. The
+        // full sync (importAllContactsFromSheet) makes the phone match the
+        // server's current list exactly, so a count-based shortcut here
+        // could only ever skip work; it could never make the result more
+        // correct. Removed because it was a source of bugs: a same-count
+        // swap (one contact removed, a different one added) went unnoticed
+        // since the total didn't change, and a failed real sync had no way
+        // to signal "try again" back into the count it compares against.
+        runAutoSync()
     }
 
     private fun runAutoSync() {
