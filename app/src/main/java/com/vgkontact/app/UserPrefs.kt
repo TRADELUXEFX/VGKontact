@@ -272,13 +272,12 @@ object UserPrefs {
     private const val KEY_LAST_LIMIT_ZONE_NOTIFIED = "last_limit_zone_notified"
 
     /**
-     * Remembers which contact-limit zone ("none", "warning" at 80%+, or
-     * "danger" at 100%) the user was last notified about, so the proactive
-     * limit warning/reached notification only fires once per crossing -
-     * not on every single sync while already in that zone. Resets back to
-     * "none" naturally once the user unlocks more contacts and the
-     * percentage drops back under 80%, so a future re-crossing notifies
-     * again.
+     * Remembers which contact-limit zone ("none", "warning" at 70%+ of the
+     * FREE group's cap, or "danger" when that group is full) the user was
+     * last notified about, so the warning/reached notification only fires
+     * once per crossing - not on every single sync while already in that
+     * zone. Follows the group back down to "none" once the user unlocks
+     * more room, so a future re-crossing notifies again.
      */
     fun getLastLimitZoneNotified(context: Context): String {
         return getPrefs(context).getString(KEY_LAST_LIMIT_ZONE_NOTIFIED, "none") ?: "none"
