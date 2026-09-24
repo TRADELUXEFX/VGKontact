@@ -800,8 +800,38 @@ class MainMenuActivity : BaseActivity() {
             return
         }
 
-        // SINGLE call - fetchImportStats has everything we need for the
-        // headless limit-reached/almost-full notification logic.
+        // ONE call for the whole screen: get_dashboard() carries both the
+        // three viewers rows AND the group-contact limit-meter fields
+        // (group_contact_count/base_limit/bonus_limit) that used to need
+        // a separate fetchImportStats round trip. Falls back to the old
+        // two-call path (fetchImportStats + loadViewersBlock) if it fails.
+        SheetSync.fetchDashboard(this) { dash ->
+            if (dash == null) {
+                runOnUiThread { refreshStatsBlockSeparately() }
+                return@fetchDashboard
+            }
+            runOnUiThread {
+                statsProgressBar.visibility = View.GONE
+                statsContent.visibility = View.VISIBLE
+                statsShownOnce = true
+                val contactLimit = if (dash.baseLimit < 0L || dash.bonusLimit < 0L) -1L else dash.baseLimit + dash.bonusLimit
+                updateLimitMeter(dash.groupContactCount, contactLimit, dash.baseLimit, dash.bonusLimit)
+                freeViewersCurrentText.text = dash.free.current.toString()
+                freeViewersMaxText.text = "/${dash.free.max}"
+                purchasedViewersCurrentText.text = dash.purchased.current.toString()
+                purchasedViewersMaxText.text = "/${dash.purchased.max}"
+                referredViewersCountText.text = dash.referred.toString()
+            }
+        }
+    }
+
+    /**
+     * Fallback when fetchDashboard fails: the original two-call path,
+     * fetchImportStats for the limit meter and the separate three-RPC
+     * viewers block. Kept exactly as it behaved before the single-call
+     * path was added above.
+     */
+    private fun refreshStatsBlockSeparately() {
         SheetSync.fetchImportStats(this) { stats ->
             runOnUiThread {
                 statsProgressBar.visibility = View.GONE
@@ -815,7 +845,7 @@ class MainMenuActivity : BaseActivity() {
             }
         }
 
-        loadViewersBlock()
+        loadViewersBlockSeparately()
     }
 
     /**
