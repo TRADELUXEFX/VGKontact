@@ -1,232 +1,102 @@
 package com.vgkontact.app
 
 import android.content.Context
-import android.provider.Settings
-import android.util.Log
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.RequestBody.Companion.toRequestBody
-import org.json.JSONArray
-import org.json.JSONObject
+import androidx.work.CoroutineWorker
+import androidx.work.WorkerParameters
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
 import java.util.concurrent.TimeUnit
 
-/**
- * Supabase call for the Wallet screen. Own file (like RepostSync) so
- * SheetSync.kt stays untouched.
- *
- * Calls get_my_wallet(p_whatsapp, p_android_id) - see wallet_fix.sql.
- *
- * The callback fires on a background thread and receives null on ANY
- * failure (offline, server error, not the owner). Screens must hop to
- * the UI thread before touching views.
- */
-object WalletSync {
+class SheetCheckWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
 
-    private const val TAG = "WalletSync"
-    private const val JSON = "application/json; charset=utf-8"
-
-    private val SUPABASE_URL = BuildConfig.SUPABASE_URL
-    private val SUPABASE_ANON_KEY = BuildConfig.SUPABASE_ANON_KEY
-
-    private val httpClient: OkHttpClient by lazy {
-        OkHttpClient.Builder()
-            .connectTimeout(15, TimeUnit.SECONDS)
-            .readTimeout(15, TimeUnit.SECONDS)
-            .build()
-    }
-
-    data class Entry(
-        /** "COMMISSION" or "WITHDRAWAL" */
-        val kind: String,
-        val title: String,
-        val subtitle: String,
-        /** Positive = money in, negative = money out. */
-        val amount: Long,
-        /** "PENDING", "APPROVED", or "REJECTED". Commissions are always "APPROVED". */
-        val status: String
-    )
-
-    data class Wallet(
-        val available: Long,
-        val totalEarned: Long,
-        val withdrawn: Long,
-        val activity: List<Entry>
-    )
-
-    fun fetchWallet(context: Context, callback: (Wallet?) -> Unit) {        // applicationContext so a slow request can't keep a dead Activity alive
-        val appContext = context.applicationContext
-        CoroutineScope(Dispatchers.IO).launch {
-            try {
-                val whatsapp = UserPrefs.getWhatsapp(appContext)
-                val androidId = Settings.Secure.getString(
-                    appContext.contentResolver, Settings.Secure.ANDROID_ID
-                ) ?: ""
-                if (whatsapp.isNullOrEmpty() || androidId.isBlank()) {
-                    callback(null)
-                    return@launch
-                }
-
-                val body = JSONObject()
-                    .put("p_whatsapp", whatsapp)
-                    .put("p_android_id", androidId)
-
-                val request = Request.Builder()
-                    .url("$SUPABASE_URL/rest/v1/rpc/get_my_wallet")
-                    .header("apikey", SUPABASE_ANON_KEY)
-                    .header("Authorization", "Bearer $SUPABASE_ANON_KEY")
-                    .header("Content-Type", "application/json")
-                    .post(body.toString().toRequestBody(JSON.toMediaType()))
-                    .build()
-
-                httpClient.newCall(request).execute().use { response ->
-                    val text = response.body?.string().orEmpty()
-                    if (response.code !in 200..299) {
-                        Log.w(TAG, "get_my_wallet failed: HTTP ${response.code} $text")
-                        callback(null)
-                        return@launch
-                    }
-                    val arr = JSONArray(text)
-                    if (arr.length() == 0) {
-                        callback(null)
-                        return@launch
-                    }
-                    val o = arr.getJSONObject(0)
-
-                    val entries = ArrayList<Entry>()
-                    val actArr = o.optJSONArray("activity")
-                    if (actArr != null) {
-                        for (i in 0 until actArr.length()) {
-                            val e = actArr.getJSONObject(i)
-                            entries.add(
-                                Entry(
-                                    kind = e.optString("kind", "COMMISSION"),
-                                    title = e.optString("title", ""),
-                                    subtitle = e.optString("subtitle", ""),
-                                    amount = e.optLong("amount", 0L),
-                                    status = e.optString("status", "APPROVED")
-                                )
-                            )
-                        }
-                    }
-
-                    callback(
-                        Wallet(
-                            available = o.optLong("available", 0L),
-                            totalEarned = o.optLong("total_earned", 0L),
-                            withdrawn = o.optLong("withdrawn", 0L),
-                            activity = entries
-                        )
-                    )
-                }
-            } catch (e: Exception) {
-                Log.w(TAG, "fetchWallet failed", e)
-                callback(null)
+    override suspend fun doWork(): Result {
+        return try {
+            // Check permission health on every background run - this is the
+            // one place that can catch a silently-revoked permission (e.g.
+            // an OEM battery manager turning off background activity) even
+            // if the user hasn't opened the app to see the dashboard's
+            // warning banner. Only notify when something is actually wrong,
+            // so this stays silent on every normal healthy run.
+            val status = PermissionHealth.check(applicationContext)
+            if (status.severity != PermissionHealth.Severity.NONE) {
+                NotificationHelper.showPermissionWarningNotification(applicationContext, status.message())
             }
+
+            if (!status.contactsGranted) {
+                // Can't sync at all without this - no point attempting the
+                // import, the warning notification above already told the
+                // user why.
+                return Result.success()
+            }
+
+            if (UserPrefs.isBanned(applicationContext)) {
+                // Banned: nothing to sync, and no "new numbers" notification.
+                return Result.success()
+            }
+
+            if (UserPrefs.isSyncPaused(applicationContext)) {
+                // User tapped "Delete My Contacts" - checked locally, so
+                // this blocks syncing instantly and even offline, without
+                // depending on any server round-trip to take effect.
+                return Result.success()
+            }
+
+            val (submitted, failed, errorDetail) = SheetSync.importAllContactsFromSheetSuspend(applicationContext)
+
+            if (errorDetail == "NO_INTERNET") {
+                // Phone was offline when the scheduled sync ran. Tell the
+                // user how to fix it; the next scheduled run tries again.
+                NotificationHelper.showSyncFailedNotification(applicationContext, noInternet = true)
+            } else if (errorDetail == "BANNED") {
+                // Banned users are handled elsewhere - no failure notice.
+            } else if (submitted == 0 && failed > 0) {
+                // Reached (or tried to reach) the server but nothing could
+                // be synced at all.
+                NotificationHelper.showSyncFailedNotification(applicationContext, noInternet = false)
+            } else {
+                // Sync worked (even if it found nothing new) - clear any
+                // earlier "didn't run" notice so it doesn't linger.
+                NotificationHelper.dismissSyncFailedNotification(applicationContext)
+            }
+
+            if (submitted > 0) {
+                NotificationHelper.showNewNumbersAvailableNotification(applicationContext, submitted)
+            }
+            Result.success()
+        } catch (e: Exception) {
+            Result.retry()
         }
     }
 
-    /**
-     * Result of a withdrawal request. SUCCESS/REJECTED come from a real
-     * server response (the RPC ran and returned an answer); NETWORK_ERROR
-     * means we couldn't reach the server at all, so the caller shouldn't
-     * treat it as "the bank details were wrong" - just "try again".
-     */
-    sealed class WithdrawResult {
-        object Success : WithdrawResult()
-        /** [message] is the server's reason, e.g. "Below minimum withdrawal". */
-        data class Rejected(val message: String) : WithdrawResult()
-        object NetworkError : WithdrawResult()
-        /**
-         * The server was reached but answered with an error (HTTP 4xx/5xx).
-         * The connection is fine, so the UI must NOT say "no internet" -
-         * and the request may or may not have been saved, so the user
-         * should check their wallet before trying again.
-         */
-        object ServerError : WithdrawResult()
-    }
+    companion object {
+        private const val WORK_NAME = "vgkontact_sheet_check"
 
-    /**
-     * Calls request_withdrawal(p_whatsapp, p_android_id, p_account_number,
-     * p_bank_name, p_account_name) - live in Supabase. No amount param:
-     * every request always covers the caller's entire current `available`
-     * balance, re-read server-side (never trust a client-supplied number).
-     *  1. Ownership check (whatsapp + android_id match a contacts row).
-     *  2. Blocks if the user already has a WITHDRAWAL entry with
-     *     status = PENDING.
-     *  3. Validates bank fields (account number >=10 chars, bank name and
-     *     account name non-empty).
-     *  4. Rejects with "No balance to withdraw" if available <= 0 - this
-     *     is the only balance check; there is no minimum withdrawal.
-     *  5. Inserts one wallet_entries row (kind = WITHDRAWAL, amount =
-     *     -available, status = PENDING). Does NOT touch wallets.available -
-     *     that only happens later via approve_withdrawal.
-     * Returns {"ok": true} on success, or {"ok": false, "message":
-     * "<reason>"} on a validation failure, so the UI can show the
-     * server's exact reason rather than a generic error.
-     */
-    fun requestWithdrawal(
-        context: Context,
-        accountNumber: String,
-        bankName: String,
-        accountName: String,
-        callback: (WithdrawResult) -> Unit
-    ) {
-        val appContext = context.applicationContext
-        CoroutineScope(Dispatchers.IO).launch {
-            try {
-                val whatsapp = UserPrefs.getWhatsapp(appContext)
-                val androidId = Settings.Secure.getString(
-                    appContext.contentResolver, Settings.Secure.ANDROID_ID
-                ) ?: ""
-                if (whatsapp.isNullOrEmpty() || androidId.isBlank()) {
-                    callback(WithdrawResult.NetworkError)
-                    return@launch
-                }
+        // hours defaults to 24 but can be overridden by the user in Notification Settings.
+        //
+        // keepExisting = true is for the app-launch call: if a schedule is
+        // already registered it is left alone, so its countdown is NOT
+        // restarted every time the app opens (restarting it on each launch
+        // meant a user who opens the app daily could push the background
+        // sync back forever and never get one). If nothing is registered yet
+        // it is created as normal.
+        //
+        // keepExisting = false (the default) is for when the user picks a new
+        // interval: the old schedule is replaced so the new interval applies.
+        fun schedule(
+            context: Context,
+            hours: Int = UserPrefs.getNotificationFrequencyHours(context),
+            keepExisting: Boolean = false
+        ) {
+            val safeHours = hours.coerceAtLeast(1)
+            val request = PeriodicWorkRequestBuilder<SheetCheckWorker>(safeHours.toLong(), TimeUnit.HOURS)
+                .build()
 
-                val body = JSONObject()
-                    .put("p_whatsapp", whatsapp)
-                    .put("p_android_id", androidId)
-                    .put("p_account_number", accountNumber)
-                    .put("p_bank_name", bankName)
-                    .put("p_account_name", accountName)
-
-                val request = Request.Builder()
-                    .url("$SUPABASE_URL/rest/v1/rpc/request_withdrawal")
-                    .header("apikey", SUPABASE_ANON_KEY)
-                    .header("Authorization", "Bearer $SUPABASE_ANON_KEY")
-                    .header("Content-Type", "application/json")
-                    .post(body.toString().toRequestBody(JSON.toMediaType()))
-                    .build()
-
-                httpClient.newCall(request).execute().use { response ->
-                    val text = response.body?.string().orEmpty()
-                    if (response.code !in 200..299) {
-                        Log.w(TAG, "request_withdrawal failed: HTTP ${response.code} $text")
-                        callback(WithdrawResult.ServerError)
-                        return@launch
-                    }
-                    // The RPC returns a single JSON object (not wrapped in
-                    // an array), same convention PostgREST uses for a
-                    // scalar/record-returning function called this way.
-                    val o = JSONObject(text)
-                    if (o.optBoolean("ok", false)) {
-                        callback(WithdrawResult.Success)
-                    } else {
-                        callback(
-                            WithdrawResult.Rejected(
-                                o.optString("message", "Couldn't submit withdrawal")
-                            )
-                        )
-                    }
-                }
-            } catch (e: Exception) {
-                Log.w(TAG, "requestWithdrawal failed", e)
-                callback(WithdrawResult.NetworkError)
-            }
+            WorkManager.getInstance(context).enqueueUniquePeriodicWork(
+                WORK_NAME,
+                if (keepExisting) ExistingPeriodicWorkPolicy.KEEP else ExistingPeriodicWorkPolicy.REPLACE,
+                request
+            )
         }
     }
 }
