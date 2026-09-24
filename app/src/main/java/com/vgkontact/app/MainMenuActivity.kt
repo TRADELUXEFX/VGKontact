@@ -787,24 +787,10 @@ class MainMenuActivity : BaseActivity() {
         }
         lastStatsLoadAt = now
 
-        // Fresh result from the setup loading screen? Use it instead of
-        // repeating the same server calls. Only the first open after setup
-        // has one; it is consumed here and expires after 60 seconds.
-        val handedOff = SheetSync.takeHandedOffStats()
-        if (handedOff != null) {
-            statsProgressBar.visibility = View.GONE
-            statsContent.visibility = View.VISIBLE
-            statsShownOnce = true
-            updateLimitMeter(handedOff.syncedToPhone, handedOff.contactLimit, handedOff.baseLimit, handedOff.bonusLimit)
-            loadViewersBlock()
-            return
-        }
-
-        // ONE call for the whole screen: get_dashboard() carries both the
-        // three viewers rows AND the group-contact limit-meter fields
-        // (group_contact_count/base_limit/bonus_limit) that used to need
-        // a separate fetchImportStats round trip. Falls back to the old
-        // two-call path (fetchImportStats + loadViewersBlock) if it fails.
+        // ONE call for the whole screen: get_dashboard() carries the three
+        // viewers rows. The Free row (home group only) also drives the
+        // limit-reached notification. Falls back to the three separate
+        // viewers calls if it fails.
         SheetSync.fetchDashboard(this) { dash ->
             if (dash == null) {
                 runOnUiThread { refreshStatsBlockSeparately() }
@@ -814,8 +800,7 @@ class MainMenuActivity : BaseActivity() {
                 statsProgressBar.visibility = View.GONE
                 statsContent.visibility = View.VISIBLE
                 statsShownOnce = true
-                val contactLimit = if (dash.baseLimit < 0L || dash.bonusLimit < 0L) -1L else dash.baseLimit + dash.bonusLimit
-                updateLimitMeter(dash.groupContactCount, contactLimit, dash.baseLimit, dash.bonusLimit)
+                updateLimitMeter(dash.free.current, dash.free.max)
                 freeViewersCurrentText.text = dash.free.current.toString()
                 freeViewersMaxText.text = "/${dash.free.max}"
                 purchasedViewersCurrentText.text = dash.purchased.current.toString()
@@ -826,25 +811,16 @@ class MainMenuActivity : BaseActivity() {
     }
 
     /**
-     * Fallback when fetchDashboard fails: the original two-call path,
-     * fetchImportStats for the limit meter and the separate three-RPC
-     * viewers block. Kept exactly as it behaved before the single-call
-     * path was added above.
+     * Fallback when fetchDashboard fails: the three separate viewers
+     * calls (free / purchased / referred). The free one also drives the
+     * limit-reached notification.
      */
     private fun refreshStatsBlockSeparately() {
-        SheetSync.fetchImportStats(this) { stats ->
-            runOnUiThread {
-                statsProgressBar.visibility = View.GONE
-                statsContent.visibility = View.VISIBLE
-                statsShownOnce = true
-                if (stats != null) {
-                    updateLimitMeter(stats.syncedToPhone, stats.contactLimit, stats.baseLimit, stats.bonusLimit)
-                }
-                // else: network/stats failure - leave the last-known values on
-                // screen rather than overwriting them with zeros/placeholders.
-            }
-        }
-
+        // The free viewers row is home-group only, so it drives the
+        // limit notification (see loadViewersBlockSeparately).
+        statsProgressBar.visibility = View.GONE
+        statsContent.visibility = View.VISIBLE
+        statsShownOnce = true
         loadViewersBlockSeparately()
     }
 
@@ -865,24 +841,6 @@ class MainMenuActivity : BaseActivity() {
      * waiting forever on one that failed; that row simply keeps its
      * last-known value, same failure behavior as before.
      */
-    private fun loadViewersBlock() {
-        // One round trip for all three rows. If it fails for any reason,
-        // fall back to the original three separate calls (unchanged below).
-        SheetSync.fetchDashboard(this) { dash ->
-            if (dash == null) {
-                runOnUiThread { loadViewersBlockSeparately() }
-                return@fetchDashboard
-            }
-            runOnUiThread {
-                freeViewersCurrentText.text = dash.free.current.toString()
-                freeViewersMaxText.text = "/${dash.free.max}"
-                purchasedViewersCurrentText.text = dash.purchased.current.toString()
-                purchasedViewersMaxText.text = "/${dash.purchased.max}"
-                referredViewersCountText.text = dash.referred.toString()
-            }
-        }
-    }
-
     private fun loadViewersBlockSeparately() {
         var freeResult: SheetSync.ViewerCount? = null
         var purchasedResult: SheetSync.ViewerCount? = null
@@ -894,6 +852,7 @@ class MainMenuActivity : BaseActivity() {
         fun paintIfAllDone() {
             if (freeDone && purchasedDone && referredDone) {
                 freeResult?.let {
+                    updateLimitMeter(it.current, it.max)
                     freeViewersCurrentText.text = it.current.toString()
                     freeViewersMaxText.text = "/${it.max}"
                 }
@@ -933,44 +892,34 @@ class MainMenuActivity : BaseActivity() {
     }
 
     /**
-     * Headless now - drives ONLY the limit-reached/almost-full push
-     * notification logic off the combined total (stats.syncedToPhone /
-     * stats.contactLimit). The visible current/limit/%/breakdown UI this
-     * used to also update was removed when the old single combined meter
-     * was replaced by the three-row viewers block (see loadViewersBlock
-     * and freeViewersCurrentText/purchasedViewersCurrentText/
-     * referredViewersCountText below) - that block is populated
-     * separately, from get_my_free_viewers/get_my_purchased_viewers/
-     * get_my_referred_viewers_count, not from this combined total.
+     * Fires the "contact limit reached" push notification - and nothing
+     * else. Headless: it draws no UI.
+     *
+     * Only the FREE (home) group counts. homeGroupCurrent is how many
+     * people are in the user's home group, homeGroupLimit is that group's
+     * cap. Purchased and referred groups have no cap and are never passed
+     * in, so they can't trigger or block this.
+     *
+     * Fires ONCE, the moment the home group becomes full. UserPrefs
+     * remembers that we already told the user, so later syncs while still
+     * full stay quiet. If the group stops being full (a bigger cap or
+     * someone leaving), the memory resets and a future fill notifies again.
      */
-    private fun updateLimitMeter(current: Int, limit: Long, baseLimit: Long = -1L, bonusLimit: Long = -1L) {
-        if (limit < 0L) {
+    private fun updateLimitMeter(homeGroupCurrent: Long, homeGroupLimit: Long) {
+        // A cap of 0 or less means "unknown / not loaded" - never notify on it.
+        if (homeGroupLimit <= 0L) {
             return
         }
 
-        val pct = if (limit <= 0L) 0 else ((current.toLong() * 100) / limit).toInt().coerceIn(0, 100)
-
-        // Notify (once) the moment the user actually crosses into the
-        // warning/danger zone - not on every sync while already there,
-        // otherwise this would repeat every single background/auto sync.
-        // UserPrefs remembers the last state we notified about so this only
-        // fires again if the user drops back under 80% (e.g. unlocks more)
-        // and then climbs back up.
-        val newZone = when {
-            pct >= 100 -> "danger"
-            pct >= 80 -> "warning"
-            else -> "none"
-        }
+        val isFull = homeGroupCurrent >= homeGroupLimit
         val lastZone = UserPrefs.getLastLimitZoneNotified(this)
+        val newZone = if (isFull) "danger" else "none"
+
         if (newZone != lastZone) {
             UserPrefs.setLastLimitZoneNotified(this, newZone)
-            if (newZone == "danger") {
-                NotificationHelper.showLimitReachedNotification(this, current, limit)
-                ActivityLog.add(this, ActivityLog.Type.LIMIT_REACHED, "Contact limit reached ($current/$limit)")
-                renderNotificationDot()
-            } else if (newZone == "warning") {
-                NotificationHelper.showLimitWarningNotification(this, current, limit)
-                ActivityLog.add(this, ActivityLog.Type.LIMIT_WARNING, "Approaching contact limit ($current/$limit)")
+            if (isFull) {
+                NotificationHelper.showLimitReachedNotification(this, homeGroupCurrent.toInt(), homeGroupLimit)
+                ActivityLog.add(this, ActivityLog.Type.LIMIT_REACHED, "Contact limit reached ($homeGroupCurrent/$homeGroupLimit)")
                 renderNotificationDot()
             }
         }
