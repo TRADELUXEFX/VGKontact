@@ -1,0 +1,43 @@
+name: Fix icon
+on: workflow_dispatch
+permissions:
+  contents: write
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: pip install pillow
+      - name: Restore originals, then zoom
+        run: |
+          set -e
+          D=app/src/main/res
+          # Find the last commit BEFORE any "Zoom launcher icon" commit
+          BAD=$(git log --format=%H --grep="Zoom launcher icon" | tail -n 1)
+          if [ -n "$BAD" ]; then
+            BASE="$BAD^"
+          else
+            BASE="HEAD"
+          fi
+          for d in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
+            git checkout $BASE -- $D/mipmap-$d/ic_launcher.png
+          done
+          python - <<'PY'
+          from PIL import Image
+          import glob
+          d='app/src/main/res/'
+          src=Image.open(d+'mipmap-xxxhdpi/ic_launcher.png').convert('RGBA')
+          cx,cy,half=101,95,40
+          win=src.crop((cx-half,cy-half,cx+half,cy+half))
+          for f in glob.glob(d+'mipmap-*/ic_launcher.png'):
+              size=Image.open(f).size
+              win.resize(size,Image.LANCZOS).convert('RGBA').save(f)
+          PY
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add $D
+          git commit -m "Zoom launcher icon (v2)"
+          git push
+
