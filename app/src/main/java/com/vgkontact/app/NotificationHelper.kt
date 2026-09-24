@@ -150,7 +150,41 @@ object NotificationHelper {
         notificationManager.notify(PERMISSION_WARNING_NOTIFICATION_ID, builder.build())
     }
 
+    private const val LIMIT_WARNING_NOTIFICATION_ID = 1004
     private const val LIMIT_REACHED_NOTIFICATION_ID = 1005
+
+    /**
+     * Fired once when the user's FREE (home) group reaches 70% of its cap -
+     * a heads-up before it is actually full, so they can unlock more
+     * before new kontacts stop being able to add.
+     */
+    fun showLimitWarningNotification(context: Context, current: Int, limit: Long) {
+        val notificationManager =
+            context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+        val intent = Intent(context, MainMenuActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            context, 0, intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val remaining = (limit - current).coerceAtLeast(0L)
+        val label = if (remaining == 1L) "spot" else "spots"
+        val message = "Only $remaining $label left ($current/$limit) - unlock more before you run out"
+
+        val builder = NotificationCompat.Builder(context, CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setContentTitle("Almost at your contact limit")
+            .setContentText(message)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(message))
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setAutoCancel(true)
+            .setContentIntent(pendingIntent)
+
+        notificationManager.notify(LIMIT_WARNING_NOTIFICATION_ID, builder.build())
+    }
 
     /**
      * Fired once when the user's FREE (home) group becomes full - new
