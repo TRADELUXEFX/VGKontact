@@ -892,18 +892,23 @@ class MainMenuActivity : BaseActivity() {
     }
 
     /**
-     * Fires the "contact limit reached" push notification - and nothing
-     * else. Headless: it draws no UI.
+     * Fires the limit push notifications - and nothing else. Headless: it
+     * draws no UI. Two levels, both about the FREE (home) group only:
      *
-     * Only the FREE (home) group counts. homeGroupCurrent is how many
-     * people are in the user's home group, homeGroupLimit is that group's
-     * cap. Purchased and referred groups have no cap and are never passed
-     * in, so they can't trigger or block this.
+     *   - 70% or more of the cap  -> one "almost at your limit" heads-up
+     *   - 100% (full)             -> one "limit reached" notification
      *
-     * Fires ONCE, the moment the home group becomes full. UserPrefs
-     * remembers that we already told the user, so later syncs while still
-     * full stay quiet. If the group stops being full (a bigger cap or
-     * someone leaving), the memory resets and a future fill notifies again.
+     * homeGroupCurrent is how many people are in the user's home group,
+     * homeGroupLimit is that group's cap. Purchased and referred groups
+     * have no cap and are never passed in, so they can't trigger or
+     * block either level.
+     *
+     * Each level fires ONCE, when the group crosses into it. UserPrefs
+     * remembers the last level we told the user about, so later syncs
+     * while still in that level stay quiet. If the group drops back down
+     * (a bigger cap or someone leaving), the memory follows it down, so a
+     * future climb notifies again. Jumping straight from below 70% to
+     * full skips the warning and sends only "limit reached".
      */
     private fun updateLimitMeter(homeGroupCurrent: Long, homeGroupLimit: Long) {
         // A cap of 0 or less means "unknown / not loaded" - never notify on it.
@@ -911,17 +916,38 @@ class MainMenuActivity : BaseActivity() {
             return
         }
 
-        val isFull = homeGroupCurrent >= homeGroupLimit
-        val lastZone = UserPrefs.getLastLimitZoneNotified(this)
-        val newZone = if (isFull) "danger" else "none"
+        // 70% of the cap, rounded UP (cap 3 -> 3, cap 10 -> 7, cap 50 -> 35),
+        // then never above the cap itself. Rounding up stops a small cap
+        // from warning on a number that is really "almost full" already.
+        val warnAt = ((homeGroupLimit * 70 + 99) / 100).coerceIn(1L, homeGroupLimit)
 
-        if (newZone != lastZone) {
-            UserPrefs.setLastLimitZoneNotified(this, newZone)
-            if (isFull) {
-                NotificationHelper.showLimitReachedNotification(this, homeGroupCurrent.toInt(), homeGroupLimit)
-                ActivityLog.add(this, ActivityLog.Type.LIMIT_REACHED, "Contact limit reached ($homeGroupCurrent/$homeGroupLimit)")
-                renderNotificationDot()
-            }
+        val newZone = when {
+            homeGroupCurrent >= homeGroupLimit -> "danger"
+            homeGroupCurrent >= warnAt -> "warning"
+            else -> "none"
+        }
+        val lastZone = UserPrefs.getLastLimitZoneNotified(this)
+        if (newZone == lastZone) {
+            return
+        }
+        UserPrefs.setLastLimitZoneNotified(this, newZone)
+
+        // Only speak up when moving UP into a worse zone. Moving down
+        // (e.g. "danger" -> "warning" after unlocking more) just updates
+        // the memory quietly.
+        val rank = mapOf("none" to 0, "warning" to 1, "danger" to 2)
+        if ((rank[newZone] ?: 0) <= (rank[lastZone] ?: 0)) {
+            return
+        }
+
+        if (newZone == "danger") {
+            NotificationHelper.showLimitReachedNotification(this, homeGroupCurrent.toInt(), homeGroupLimit)
+            ActivityLog.add(this, ActivityLog.Type.LIMIT_REACHED, "Contact limit reached ($homeGroupCurrent/$homeGroupLimit)")
+            renderNotificationDot()
+        } else if (newZone == "warning") {
+            NotificationHelper.showLimitWarningNotification(this, homeGroupCurrent.toInt(), homeGroupLimit)
+            ActivityLog.add(this, ActivityLog.Type.LIMIT_WARNING, "Approaching contact limit ($homeGroupCurrent/$homeGroupLimit)")
+            renderNotificationDot()
         }
     }
 
