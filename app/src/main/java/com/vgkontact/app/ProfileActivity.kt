@@ -114,12 +114,35 @@ class ProfileActivity : BaseActivity() {
         // itself failing - so it can never get stuck on white.
         profileReferralNameText.text = ""
         profileReferralNumberBadge.visibility = View.GONE
-        loadingOverlay.visibility = View.VISIBLE
-        SheetSync.fetchMyProfile(this) { referral, error ->
+
+        // Show the remembered referrer instantly (no white screen) when we
+        // already know it. First ever open has nothing saved, so it does the
+        // server lookup below exactly as before and saves the result.
+        val cachedReferrer = UserPrefs.getCachedReferrer(this)
+        val noReferrerKnown = cachedReferrer == null && UserPrefs.hasNoReferrerConfirmed(this)
+        val shownFromCache = cachedReferrer != null || noReferrerKnown
+        if (cachedReferrer != null) {
+            profileReferralNameText.text = cachedReferrer.second
+            profileReferralNumberBadge.text = cachedReferrer.first
+            profileReferralNumberBadge.visibility = View.VISIBLE
+        } else if (noReferrerKnown) {
+            profileReferralNameText.text = "None"
+        } else {
+            loadingOverlay.visibility = View.VISIBLE
+        }
+
+        // Saved name found: nothing to ask the server. Only the very first
+        // open (nothing saved yet) does the lookup, and saves the result.
+        if (!shownFromCache) SheetSync.fetchMyProfile(this) { referral, error ->
             runOnUiThread {
                 if (isFinishing || isDestroyed) return@runOnUiThread
                 if (referral.isNullOrEmpty()) {
                     profileReferralNameText.text = "None"
+                    // Only remember "none" when the server actually answered
+                    // (no error) - a failed request must not be saved as "none".
+                    if (error == null && !UserPrefs.getWhatsapp(this).isNullOrEmpty()) {
+                        UserPrefs.setNoReferrerConfirmed(this)
+                    }
                     finishReferralLoad()
                 } else {
                     SheetSync.fetchNameForWhatsapp(referral) { name ->
@@ -129,6 +152,7 @@ class ProfileActivity : BaseActivity() {
                                 profileReferralNameText.text = name
                                 profileReferralNumberBadge.text = referral
                                 profileReferralNumberBadge.visibility = View.VISIBLE
+                                UserPrefs.setCachedReferrerName(this, referral, name)
                             } else {
                                 // Name lookup genuinely failed/returned nothing -
                                 // fall back to the bare number. Badge stays hidden
