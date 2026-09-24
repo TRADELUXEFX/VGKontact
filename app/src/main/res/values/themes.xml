@@ -16,11 +16,6 @@
         <item name="android:textColorPrimary">#000000</item>
         <item name="android:textColorSecondary">#555555</item>
 
-        <!-- Android 12+ system splash: plain white background so the logo
-             is not shrunk inside a squircle on black -->
-        <item name="android:windowSplashScreenBackground">#FFFFFF</item>
-        <item name="android:windowSplashScreenIconBackgroundColor">#FFFFFF</item>
-
         <!-- Disable Force Dark Mode Engine -->
         <item name="android:forceDarkAllowed">false</item>
 
