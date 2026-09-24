@@ -305,6 +305,25 @@ object UserPrefs {
         getPrefs(context).edit().putBoolean(KEY_SYNC_PAUSED, paused).apply()
     }
 
+    private const val KEY_SEEN_OEM_AUTOSTART_PROMPT = "seen_oem_autostart_prompt"
+
+    /**
+     * True once the user has been sent to their OEM's autostart/
+     * background-lock settings screen at least once (see
+     * PermissionHealth.openOemAutostartSettings). There's no stock
+     * Android API to read the actual toggle back, so this is a
+     * "have they been prompted" flag, not a live reading of the real
+     * setting - it just stops PermissionHealth.Status from surfacing the
+     * same advisory forever after they've already been sent there once.
+     */
+    fun hasSeenOemAutostartPrompt(context: Context): Boolean {
+        return getPrefs(context).getBoolean(KEY_SEEN_OEM_AUTOSTART_PROMPT, false)
+    }
+
+    fun setSeenOemAutostartPrompt(context: Context, seen: Boolean) {
+        getPrefs(context).edit().putBoolean(KEY_SEEN_OEM_AUTOSTART_PROMPT, seen).apply()
+    }
+
     private const val KEY_IS_BANNED = "is_banned"
     private const val KEY_BAN_REASON = "ban_reason"
 
