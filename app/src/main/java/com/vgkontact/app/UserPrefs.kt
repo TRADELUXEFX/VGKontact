@@ -68,6 +68,39 @@ object UserPrefs {
         return getPrefs(context).getString(KEY_NAME, null)
     }
 
+    // Referrer's display name, remembered so the Profile screen can show it
+    // instantly instead of waiting on two chained server calls every open.
+    // Stored together with the referral number it belongs to, so it is only
+    // reused while the referral is still the same.
+    private const val KEY_REFERRER_NAME = "referrer_name"
+    private const val KEY_REFERRER_NAME_FOR = "referrer_name_for"
+
+    private const val KEY_REFERRER_NONE = "referrer_none"
+
+    /** Returns (referral number, name) last saved, or null if nothing saved yet. */
+    fun getCachedReferrer(context: Context): Pair<String, String>? {
+        val prefs = getPrefs(context)
+        val forNumber = prefs.getString(KEY_REFERRER_NAME_FOR, null)
+        val name = prefs.getString(KEY_REFERRER_NAME, null)
+        return if (!forNumber.isNullOrEmpty() && !name.isNullOrBlank()) Pair(forNumber, name) else null
+    }
+
+    /** True once we've confirmed with the server that this user has no referrer. */
+    fun hasNoReferrerConfirmed(context: Context): Boolean {
+        return getPrefs(context).getBoolean(KEY_REFERRER_NONE, false)
+    }
+
+    fun setNoReferrerConfirmed(context: Context) {
+        getPrefs(context).edit().putBoolean(KEY_REFERRER_NONE, true).apply()
+    }
+
+    fun setCachedReferrerName(context: Context, referral: String, name: String) {
+        getPrefs(context).edit()
+            .putString(KEY_REFERRER_NAME_FOR, referral)
+            .putString(KEY_REFERRER_NAME, name)
+            .apply()
+    }
+
     fun getDateRegistered(context: Context): String? {
         return getPrefs(context).getString(KEY_DATE_REGISTERED, null)
     }
