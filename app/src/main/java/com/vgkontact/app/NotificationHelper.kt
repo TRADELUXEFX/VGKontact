@@ -162,9 +162,8 @@ object NotificationHelper {
         val notificationManager =
             context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
-        val intent = Intent(context, IncreaseLimitActivity::class.java).apply {
+        val intent = Intent(context, MainMenuActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-            putExtra(IncreaseLimitActivity.EXTRA_INITIAL_TAB, IncreaseLimitActivity.TAB_REFERRAL)
         }
         val pendingIntent = PendingIntent.getActivity(
             context, 0, intent,
@@ -173,7 +172,7 @@ object NotificationHelper {
 
         val remaining = (limit - current).coerceAtLeast(0L)
         val label = if (remaining == 1L) "spot" else "spots"
-        val message = "Only $remaining $label left ($current/$limit) - tap to buy more or get viewers"
+        val message = "Only $remaining $label left ($current/$limit) - unlock more before you run out"
 
         val builder = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification)
@@ -196,16 +195,15 @@ object NotificationHelper {
         val notificationManager =
             context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
-        val intent = Intent(context, IncreaseLimitActivity::class.java).apply {
+        val intent = Intent(context, MainMenuActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-            putExtra(IncreaseLimitActivity.EXTRA_INITIAL_TAB, IncreaseLimitActivity.TAB_REFERRAL)
         }
         val pendingIntent = PendingIntent.getActivity(
             context, 0, intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val message = "You've reached your contact limit ($current/$limit) - tap to buy more or get viewers"
+        val message = "You've reached your contact limit ($current/$limit) - unlock more to keep adding kontacts"
 
         val builder = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification)
@@ -333,6 +331,55 @@ object NotificationHelper {
         val notificationManager =
             context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         notificationManager.cancel(INACTIVITY_WARNING_NOTIFICATION_ID)
+    }
+
+    private const val SYNC_FAILED_NOTIFICATION_ID = 1010
+
+    /**
+     * Shown when the automatic background sync could not run or finish.
+     * Tapping it opens the app, where the user can turn on data and press
+     * Sync. [noInternet] picks the wording: true when the phone was offline,
+     * false when the server or saving contacts failed for another reason.
+     * Uses its own id so it never overwrites the normal sync notifications,
+     * and the same id every time so repeated failures show ONE notification
+     * instead of piling up.
+     */
+    fun showSyncFailedNotification(context: Context, noInternet: Boolean) {
+        val notificationManager =
+            context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+        val intent = Intent(context, MainMenuActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            context,
+            0,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val message = if (noInternet) {
+            "Couldn't sync your Kontacts - turn on data or Wi-Fi, then open the app and tap Sync Kontact"
+        } else {
+            "Couldn't sync your Kontacts - open the app and tap Sync Kontact to try again"
+        }
+
+        val builder = NotificationCompat.Builder(context, CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setContentTitle("Kontact sync didn't run")
+            .setContentText(message)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(message))
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setAutoCancel(true)
+            .setContentIntent(pendingIntent)
+
+        notificationManager.notify(SYNC_FAILED_NOTIFICATION_ID, builder.build())
+    }
+
+    fun dismissSyncFailedNotification(context: Context) {
+        val notificationManager =
+            context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.cancel(SYNC_FAILED_NOTIFICATION_ID)
     }
 
     private const val REFERRAL_JOINED_NOTIFICATION_ID = 1006
