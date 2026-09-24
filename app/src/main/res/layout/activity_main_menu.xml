@@ -435,15 +435,6 @@
 
                     </LinearLayout>
 
-                    <!-- ===== Contact Limit meter =====
-                         Replaces the old "total in database / available to
-                         import" two-tile row. current = syncedToPhone,
-                         limit = contactLimit (sum of joined groups' real
-                         caps on Supabase - see ImportStats.contactLimit).
-                         Bar color + width are set entirely in Kotlin
-                         (updateLimitMeter in MainMenuActivity), same
-                         green -> amber -> red threshold behavior as the
-                         approved HTML preview. -->
                     <!-- ===== Viewers block (replaces old combined limit
                          meter) =====
                          Three separate rows instead of one combined
@@ -454,12 +445,11 @@
                              (get_my_referred_viewers_count)
                          Kept the limitBlock id on the outer container so the
                          existing show/hide logic in MainMenuActivity (the
-                         stats-card progress swap) still resolves it. The old
-                         limit-reached/almost-full PUSH NOTIFICATION logic in
-                         updateLimitMeter() is intentionally kept and still
-                         runs headlessly off stats.syncedToPhone/contactLimit -
-                         only the visible current/limit/%/breakdown UI was
-                         removed, since this block replaces it. -->
+                         stats-card progress swap) still resolves it. The
+                         limit-reached PUSH NOTIFICATION in updateLimitMeter()
+                         runs headlessly off the Free viewers row (home group
+                         count vs home group cap) - purchased and referred
+                         never affect it. -->
                     <LinearLayout
                         android:id="@+id/limitBlock"
                         android:layout_width="match_parent"
