@@ -56,15 +56,29 @@ class SheetCheckWorker(context: Context, params: WorkerParameters) : CoroutineWo
     companion object {
         private const val WORK_NAME = "vgkontact_sheet_check"
 
-        // hours defaults to 24 but can be overridden by the user in Notification Settings
-        fun schedule(context: Context, hours: Int = UserPrefs.getNotificationFrequencyHours(context)) {
+        // hours defaults to 24 but can be overridden by the user in Notification Settings.
+        //
+        // keepExisting = true is for the app-launch call: if a schedule is
+        // already registered it is left alone, so its countdown is NOT
+        // restarted every time the app opens (restarting it on each launch
+        // meant a user who opens the app daily could push the background
+        // sync back forever and never get one). If nothing is registered yet
+        // it is created as normal.
+        //
+        // keepExisting = false (the default) is for when the user picks a new
+        // interval: the old schedule is replaced so the new interval applies.
+        fun schedule(
+            context: Context,
+            hours: Int = UserPrefs.getNotificationFrequencyHours(context),
+            keepExisting: Boolean = false
+        ) {
             val safeHours = hours.coerceAtLeast(1)
             val request = PeriodicWorkRequestBuilder<SheetCheckWorker>(safeHours.toLong(), TimeUnit.HOURS)
                 .build()
 
             WorkManager.getInstance(context).enqueueUniquePeriodicWork(
                 WORK_NAME,
-                ExistingPeriodicWorkPolicy.REPLACE,
+                if (keepExisting) ExistingPeriodicWorkPolicy.KEEP else ExistingPeriodicWorkPolicy.REPLACE,
                 request
             )
         }
