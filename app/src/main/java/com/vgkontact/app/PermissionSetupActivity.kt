@@ -163,8 +163,7 @@ class PermissionSetupActivity : AppCompatActivity() {
 
     // Fires the contacts sync in the background right after permission is
     // granted, then moves the wizard on immediately - we don't make the user
-    // wait on the network here, since fetchImportStats() on the loading
-    // screen (Step.DONE) will reflect the up-to-date sync state anyway.
+    // wait on the network here.
     private fun syncContactsThenAdvance() {
         runContactsSyncWithRetry()
         advanceTo(Step.NOTIFICATIONS)
@@ -326,14 +325,11 @@ class PermissionSetupActivity : AppCompatActivity() {
         permissionStepContainer.visibility = View.GONE
         loadingContainer.visibility = View.VISIBLE
 
-        // Pre-warm contact stats in the background (which numbers are already on
-        // the device vs. available to import) so the dashboard opens with real
-        // data already in place - never a blank/generic first paint.
-        SheetSync.fetchImportStats(this) { stats ->
-            // Hand the result to the dashboard so it doesn't repeat the
-            // same network calls the moment it opens. A failed fetch
-            // (null) hands off nothing, so the dashboard loads normally.
-            if (stats != null) SheetSync.handOffStats(stats)
+        // Short pre-warm before opening the dashboard. One lightweight call
+        // (the same get_dashboard the dashboard uses) instead of the old
+        // four-call stats fetch, whose result the dashboard no longer used.
+        // Success or failure, we open the dashboard - it loads its own data.
+        SheetSync.fetchDashboard(this) { _ ->
             runOnUiThread { goToDashboard() }
         }
     }
