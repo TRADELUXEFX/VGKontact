@@ -90,7 +90,7 @@ class WithdrawActivity : BaseActivity() {
 
         var hasError = false
 
-        if (accountNumber.length < 10) {
+        if (accountNumber.length != 10 || !accountNumber.all { it in '0'..'9' }) {
             accountNumberLayout.error = "Enter a valid account number"
             hasError = true
         }
@@ -130,6 +130,16 @@ class WithdrawActivity : BaseActivity() {
                         Toast.makeText(
                             this,
                             "No internet connection. Check your connection and try again.",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                    is WalletSync.WithdrawResult.ServerError -> {
+                        // The connection worked but the server errored. The
+                        // request may have been saved, so send the user to
+                        // check the wallet instead of blindly retrying.
+                        Toast.makeText(
+                            this,
+                            "Something went wrong on our side. Please check your wallet before trying again.",
                             Toast.LENGTH_LONG
                         ).show()
                     }
