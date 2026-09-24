@@ -195,7 +195,8 @@ class MainMenuActivity : BaseActivity() {
             startActivity(intent)
         }
 
-        SheetCheckWorker.schedule(this)
+        // keepExisting: don't restart the background-sync countdown on every launch.
+        SheetCheckWorker.schedule(this, keepExisting = true)
         NotificationHelper.showDailyRepostNotification(this)
 
         syncKontactButton.setOnClickListener {
@@ -311,13 +312,27 @@ class MainMenuActivity : BaseActivity() {
             goToBannedScreen()
             return
         }
-        // Quiet background check - no spinner, no blocking. If the account
-        // is banned the user is moved to the banned screen as soon as the
-        // answer arrives; once detected, the saved flag above makes every
-        // later open instant.
-        SheetSync.checkBanStatus(this) { banned ->
-            if (banned == true) {
-                runOnUiThread { goToBannedScreen() }
+        // The two server checks (ban status + "any new contacts?") run at
+        // most once per CHECKS_WINDOW_MS. Reopening the menu inside that
+        // window skips both instead of repeating them every time. Local
+        // refreshes below still run on every open. The window is bypassed
+        // when the contacts permission changed since the last check (e.g.
+        // granted in system Settings), so that path is never delayed.
+        val nowForChecks = System.currentTimeMillis()
+        val contactsNow = checkContactsPermission()
+        val permissionChanged = contactsNow != lastQuietChecksContactsGranted
+        val runQuietChecks = permissionChanged || nowForChecks - lastQuietChecksAt >= CHECKS_WINDOW_MS
+        if (runQuietChecks) {
+            lastQuietChecksAt = nowForChecks
+            lastQuietChecksContactsGranted = contactsNow
+            // Quiet background check - no spinner, no blocking. If the account
+            // is banned the user is moved to the banned screen as soon as the
+            // answer arrives; once detected, the saved flag above makes every
+            // later open instant.
+            SheetSync.checkBanStatus(this) { banned ->
+                if (banned == true) {
+                    runOnUiThread { goToBannedScreen() }
+                }
             }
         }
         // Covers the case where permission state changed elsewhere (e.g. the user
@@ -326,12 +341,12 @@ class MainMenuActivity : BaseActivity() {
         loadStats()
         refreshPermissionHealth()
         renderNotificationDot()
-        // Auto-sync every time this screen becomes visible, so newly added
+        // Auto-sync when this screen becomes visible, so newly added
         // kontacts (someone else registering elsewhere) show up without the
         // user needing to tap "Sync Kontact" themselves. Quiet by design -
-        // no "checking..." toast, since this now fires on every app open/
-        // return, not just an explicit user tap.
-        autoSyncQuietly()
+        // no "checking..." toast. Shares the same once-per-window gate as
+        // the ban check above.
+        if (runQuietChecks) autoSyncQuietly()
         // Covers coming back from another screen (or a fresh app open)
         // after the pause state changed, so the label never goes stale.
         renderSyncPauseButton()
@@ -737,6 +752,17 @@ class MainMenuActivity : BaseActivity() {
     // the server. A sync or pull-to-refresh can reset it to 0 to force a reload.
     private var lastStatsLoadAt = 0L
     private val STATS_CACHE_MS = 60_000L
+
+    // Time of the last quiet ban check + auto-sync count check. Coming back
+    // to the menu within CHECKS_WINDOW_MS skips both server calls instead of
+    // repeating them on every single open. A KNOWN ban never waits on this:
+    // UserPrefs.isBanned() routes to the banned screen before any network
+    // call, and manual Sync / Resume taps always run their own check.
+    private var lastQuietChecksAt = 0L
+    private val CHECKS_WINDOW_MS = 60_000L
+    // Contacts-permission state when the checks last ran. Null until the first
+    // run, so the very first open always performs both checks.
+    private var lastQuietChecksContactsGranted: Boolean? = null
 
     private fun loadStats() {
         statsCard.visibility = View.VISIBLE
