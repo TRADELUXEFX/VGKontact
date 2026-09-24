@@ -329,7 +329,11 @@ class PermissionSetupActivity : AppCompatActivity() {
         // Pre-warm contact stats in the background (which numbers are already on
         // the device vs. available to import) so the dashboard opens with real
         // data already in place - never a blank/generic first paint.
-        SheetSync.fetchImportStats(this) {
+        SheetSync.fetchImportStats(this) { stats ->
+            // Hand the result to the dashboard so it doesn't repeat the
+            // same network calls the moment it opens. A failed fetch
+            // (null) hands off nothing, so the dashboard loads normally.
+            if (stats != null) SheetSync.handOffStats(stats)
             runOnUiThread { goToDashboard() }
         }
     }
