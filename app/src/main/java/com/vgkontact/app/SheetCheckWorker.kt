@@ -3,6 +3,7 @@ package com.vgkontact.app
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
+import androidx.work.BackoffPolicy
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingWorkPolicy
@@ -49,14 +50,13 @@ class SheetCheckWorker(context: Context, params: WorkerParameters) : CoroutineWo
             }
 
             if (!isOnline(applicationContext)) {
-                // Automatic recovery is the real fix here - most users
-                // won't reliably see or act on a notification, so we
-                // can't depend on them tapping Sync manually. The
-                // notification below is a bonus for whoever does check
-                // it; scheduleRetryOnReconnect() is what actually
-                // guarantees the contacts get synced, with no action
-                // needed from the user at all.
-                NotificationHelper.showSyncFailedNotification(applicationContext, noInternet = true)
+                // No user-facing notice here on purpose: every failure
+                // reason is designed to self-heal without the user doing
+                // anything, so telling them adds no useful action they
+                // could take - it would just be noise, especially for
+                // anyone who's regularly offline for stretches at a time.
+                // scheduleRetryOnReconnect() is the actual fix: it retries
+                // the instant the phone has a connection again.
                 scheduleRetryOnReconnect(applicationContext)
                 return Result.success()
             }
@@ -66,20 +66,18 @@ class SheetCheckWorker(context: Context, params: WorkerParameters) : CoroutineWo
             if (errorDetail == "NO_INTERNET") {
                 // Went offline between the isOnline() check above and the
                 // actual sync attempt (race condition, rare but possible).
-                // Same reasoning as above: queue the automatic retry, the
-                // notification is just a bonus for whoever sees it.
-                NotificationHelper.showSyncFailedNotification(applicationContext, noInternet = true)
                 scheduleRetryOnReconnect(applicationContext)
             } else if (errorDetail == "BANNED") {
-                // Banned users are handled elsewhere - no failure notice.
+                // Banned users are handled elsewhere - nothing to retry.
             } else if (submitted == 0 && failed > 0) {
                 // Reached (or tried to reach) the server but nothing could
-                // be synced at all.
-                NotificationHelper.showSyncFailedNotification(applicationContext, noInternet = false)
-            } else {
-                // Sync worked (even if it found nothing new) - clear any
-                // earlier "didn't run" notice so it doesn't linger.
-                NotificationHelper.dismissSyncFailedNotification(applicationContext)
+                // be synced - could be a server hiccup, timeout, etc. Same
+                // reasoning as no-internet: this is just as likely to be
+                // transient, so retry automatically instead of asking the
+                // user to notice and act. The retry only requires a live
+                // network connection, which will already be true again
+                // almost immediately in most transient-failure cases.
+                scheduleRetryOnReconnect(applicationContext)
             }
 
             if (submitted > 0) {
@@ -94,10 +92,9 @@ class SheetCheckWorker(context: Context, params: WorkerParameters) : CoroutineWo
     /**
      * Local connectivity peek - does NOT gate whether this worker runs
      * (see schedule() below: no NetworkType constraint, on purpose, so
-     * the worker still runs and can report "offline" when there's no
-     * internet). This only lets doWork() skip straight to the failure
-     * notice instead of wasting a network round-trip it already knows
-     * will fail.
+     * the worker still runs and can detect it's offline). This only lets
+     * doWork() skip straight to queuing the reconnect retry instead of
+     * wasting a network round-trip it already knows will fail.
      */
     private fun isOnline(context: Context): Boolean {
         val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
@@ -108,20 +105,28 @@ class SheetCheckWorker(context: Context, params: WorkerParameters) : CoroutineWo
 
     /**
      * Queues a ONE-TIME run that Android holds until the phone has a
-     * network connection again, then fires immediately - no waiting for
-     * the next scheduled interval and no action needed from the user.
-     * This is the actual fix for users who may not reliably see or act
-     * on a notification (e.g. not always on data/Wi-Fi, busy, or just
-     * unlikely to open the app and tap Sync). Reuses this same worker
-     * class, so the retry gets identical behavior (permission/ban/pause
-     * checks, the new-numbers notice, clearing the failure notice on
-     * success) - nothing extra to keep in sync between the two paths.
+     * network connection, then fires - no waiting for the next scheduled
+     * interval and no action needed from the user. This is the actual
+     * fix: no failure notification is shown for any reason (see
+     * doWork() above), because every failure case here is treated as
+     * self-healing, so this retry is what actually guarantees the sync
+     * eventually happens. Reuses this same worker class, so the retry
+     * gets identical behavior (permission/ban/pause checks, the
+     * new-numbers notice) - nothing extra to keep in sync between paths.
+     *
+     * A short linear backoff (starting at 30s) is set so a server-side
+     * failure - where the network is already connected, so the
+     * NetworkType.CONNECTED constraint below is satisfied immediately -
+     * doesn't retry instantly and hammer a server that's already
+     * struggling. For the no-internet case this has no real effect: the
+     * retry was already waiting on the network constraint regardless, so
+     * it fires as soon as a connection appears either way.
      *
      * Own unique work name (separate from the periodic WORK_NAME below)
      * so this doesn't collide with or cancel the regular schedule.
-     * ExistingWorkPolicy.REPLACE means repeated offline failures before
-     * reconnecting just refresh this one pending retry, not stack up
-     * several redundant ones that would all fire at once on reconnect.
+     * ExistingWorkPolicy.REPLACE means repeated failures before the
+     * retry succeeds just refresh this one pending job, not stack up
+     * several redundant ones that would all fire at once.
      */
     private fun scheduleRetryOnReconnect(context: Context) {
         val request = OneTimeWorkRequestBuilder<SheetCheckWorker>()
@@ -130,6 +135,7 @@ class SheetCheckWorker(context: Context, params: WorkerParameters) : CoroutineWo
                     .setRequiredNetworkType(NetworkType.CONNECTED)
                     .build()
             )
+            .setBackoffCriteria(BackoffPolicy.LINEAR, 30, TimeUnit.SECONDS)
             .build()
 
         WorkManager.getInstance(context).enqueueUniqueWork(
