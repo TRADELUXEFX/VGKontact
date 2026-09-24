@@ -367,4 +367,29 @@ object UserPrefs {
         getPrefs(context).edit().putString(KEY_LAST_PERMISSION_SEVERITY_LOGGED, severity).apply()
     }
 
+    // The setup stage the server last CONFIRMED receiving, stored together
+    // with the whatsapp number it was reported for. SheetSync.reportSetupStage
+    // compares against this and skips the network call when nothing has
+    // changed. Only saved after a successful response, so a failed send is
+    // retried on the next open. Tied to the number so a different account
+    // on the same phone never inherits it.
+    private const val KEY_LAST_REPORTED_STAGE = "last_reported_stage"
+    private const val KEY_LAST_REPORTED_STAGE_FOR = "last_reported_stage_for"
+
+    fun getLastReportedStage(context: Context, whatsapp: String): String? {
+        val prefs = getPrefs(context)
+        return if (prefs.getString(KEY_LAST_REPORTED_STAGE_FOR, null) == whatsapp) {
+            prefs.getString(KEY_LAST_REPORTED_STAGE, null)
+        } else {
+            null
+        }
+    }
+
+    fun setLastReportedStage(context: Context, whatsapp: String, stage: String) {
+        getPrefs(context).edit()
+            .putString(KEY_LAST_REPORTED_STAGE_FOR, whatsapp)
+            .putString(KEY_LAST_REPORTED_STAGE, stage)
+            .apply()
+    }
+
 }
