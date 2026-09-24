@@ -97,6 +97,6 @@ class NotificationSettingsActivity : AppCompatActivity() {
         }
 
         val label = if (selectedHours == 1) "hour" else "hours"
-        frequencySummaryText.text = "Notifications sent every $selectedHours $label"
+        frequencySummaryText.text = "Kontacts sync every $selectedHours $label"
     }
 }
