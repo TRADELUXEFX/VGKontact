@@ -140,6 +140,13 @@ object WalletSync {
         /** [message] is the server's reason, e.g. "Below minimum withdrawal". */
         data class Rejected(val message: String) : WithdrawResult()
         object NetworkError : WithdrawResult()
+        /**
+         * The server was reached but answered with an error (HTTP 4xx/5xx).
+         * The connection is fine, so the UI must NOT say "no internet" -
+         * and the request may or may not have been saved, so the user
+         * should check their wallet before trying again.
+         */
+        object ServerError : WithdrawResult()
     }
 
     /**
@@ -199,7 +206,7 @@ object WalletSync {
                     val text = response.body?.string().orEmpty()
                     if (response.code !in 200..299) {
                         Log.w(TAG, "request_withdrawal failed: HTTP ${response.code} $text")
-                        callback(WithdrawResult.NetworkError)
+                        callback(WithdrawResult.ServerError)
                         return@launch
                     }
                     // The RPC returns a single JSON object (not wrapped in
