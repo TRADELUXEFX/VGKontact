@@ -145,7 +145,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:layout_marginTop="-16dp"
+                android:layout_marginTop="16dp"
                 android:paddingStart="20dp"
                 android:paddingEnd="20dp"
                 android:paddingBottom="20dp">
@@ -168,17 +168,74 @@
                         android:letterSpacing="0.05"
                         android:textColor="@color/text_muted" />
 
-                    <TextView
-                        android:id="@+id/referCodeText"
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="36dp"
+                        android:layout_marginTop="10dp"
+                        android:orientation="horizontal"
+                        android:background="@drawable/tab_switch_background"
+                        android:padding="3dp">
+
+                        <TextView
+                            android:id="@+id/referModeNumberTab"
+                            android:layout_width="wrap_content"
+                            android:layout_height="match_parent"
+                            android:minWidth="84dp"
+                            android:gravity="center"
+                            android:text="@string/refer_earn_mode_number"
+                            android:textSize="12sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/white"
+                            android:background="@drawable/tab_selected_background"
+                            android:clickable="true"
+                            android:focusable="true" />
+
+                        <TextView
+                            android:id="@+id/referModeUsernameTab"
+                            android:layout_width="wrap_content"
+                            android:layout_height="match_parent"
+                            android:minWidth="84dp"
+                            android:gravity="center"
+                            android:text="@string/refer_earn_mode_username"
+                            android:textSize="12sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/text_muted"
+                            android:clickable="true"
+                            android:focusable="true" />
+
+                    </LinearLayout>
+
+                    <LinearLayout
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="6dp"
-                        android:textSize="24sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/vg_dark"
-                        android:fontFamily="@font/poppins"
-                        android:letterSpacing="0.02"
-                        tools:text="0810 870 9625" />
+                        android:layout_marginTop="14dp"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <TextView
+                            android:id="@+id/referCodeText"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textSize="24sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/vg_dark"
+                            android:fontFamily="@font/poppins"
+                            android:letterSpacing="0.02"
+                            tools:text="0810 870 9625" />
+
+                        <ImageView
+                            android:id="@+id/referCopyButton"
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:layout_marginStart="10dp"
+                            android:src="@drawable/ic_copy"
+                            app:tint="@color/vg_green"
+                            android:contentDescription="@string/action_copy_code"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:background="?attr/selectableItemBackgroundBorderless" />
+
+                    </LinearLayout>
 
                     <TextView
                         android:layout_width="match_parent"
