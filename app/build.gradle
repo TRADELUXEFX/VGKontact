@@ -35,6 +35,20 @@ android {
             keyAlias "vgkontactdebugkey"
             keyPassword "vgkontactdebug"
         }
+        release {
+            // All four values come from env vars set by CI (see
+            // .github/workflows/main.yml), which in turn come from
+            // GitHub repo secrets - never hardcoded, never committed.
+            // Locally, set the same env vars yourself before running
+            // assembleRelease, or the release build will fail to sign.
+            def relStoreFile = System.getenv('RELEASE_KEYSTORE_PATH')
+            if (relStoreFile != null) {
+                storeFile file(relStoreFile)
+                storePassword System.getenv('RELEASE_KEYSTORE_PASSWORD')
+                keyAlias System.getenv('RELEASE_KEY_ALIAS')
+                keyPassword System.getenv('RELEASE_KEY_PASSWORD')
+            }
+        }
     }
 
     buildTypes {
@@ -42,7 +56,9 @@ android {
             signingConfig signingConfigs.debug
         }
         release {
-            minifyEnabled false
+            signingConfig signingConfigs.release
+            minifyEnabled true
+            shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
