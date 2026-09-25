@@ -37,7 +37,6 @@
     <string name="menu_profile">My Profile</string>
     <string name="menu_kontact_groups">Kontact Groups</string>
     <string name="menu_increase_contact_limit">Grow WhatsApp Views</string>
-    <string name="menu_share_app">Share App</string>
     <string name="menu_delete_contacts">Delete My Contacts</string>
     <string name="menu_resume_syncing">Resume Syncing</string>
     <string name="dialog_delete_contacts_title">Delete My Contacts?</string>
@@ -126,4 +125,17 @@
     <string name="wallet_recent_activity">Recent activity</string>
     <string name="wallet_empty_title">No activity yet</string>
     <string name="wallet_empty_body">When your referrals buy viewers, your commission shows up here.</string>
+
+    <!-- Refer and Earn screen -->
+    <string name="action_back">Back</string>
+    <string name="refer_earn_title">Refer and earn</string>
+    <string name="refer_earn_stat_referred_viewers">Referred viewers</string>
+    <string name="refer_earn_stat_earnings">Referral earnings</string>
+    <string name="refer_earn_code_label">Your referral code</string>
+    <string name="refer_earn_code_hint">They enter your phone number or username in the referral box when they sign up.</string>
+    <string name="refer_earn_share_button">Share code</string>
+    <string name="refer_earn_free_title">Get free viewers when they join</string>
+    <string name="refer_earn_free_body">Their status viewers add straight to yours.</string>
+    <string name="refer_earn_cash_title">Get cash when they buy</string>
+    <string name="refer_earn_cash_body">Earn commission straight to your wallet when referrals buy status viewers.</string>
 </resources>
