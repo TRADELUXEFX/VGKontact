@@ -35,6 +35,7 @@
             android:textSize="22sp"
             android:textStyle="bold"
             android:textColor="@color/white"
+            android:fontFamily="@font/poppins"
             android:textAlignment="center" />
 
         <!-- ============ TAB SWITCHER (segmented control) ============
@@ -58,6 +59,7 @@
                 android:textAllCaps="false"
                 android:textSize="13sp"
                 android:textStyle="bold"
+                android:fontFamily="@font/poppins"
                 android:backgroundTint="@android:color/transparent"
                 android:textColor="@color/white"
                 app:cornerRadius="12dp"
@@ -77,6 +79,7 @@
                 android:textAllCaps="false"
                 android:textSize="13sp"
                 android:textStyle="bold"
+                android:fontFamily="@font/poppins"
                 android:backgroundTint="@android:color/transparent"
                 android:textColor="@color/white"
                 app:cornerRadius="12dp"
