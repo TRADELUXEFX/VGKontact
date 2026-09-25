@@ -64,7 +64,8 @@ class MainMenuActivity : BaseActivity() {
     private lateinit var statsCard: LinearLayout
     private lateinit var statsProgressBar: ProgressBar
     private lateinit var statsContent: LinearLayout
-    private lateinit var statsTodayText: TextView
+    private lateinit var homeWalletRow: LinearLayout
+    private lateinit var homeWalletBalanceText: TextView
     private lateinit var notificationIcon: ImageView
     private lateinit var notificationUnreadDot: View
     private lateinit var referralCodeLabelText: TextView
@@ -129,7 +130,11 @@ class MainMenuActivity : BaseActivity() {
         statsCard = findViewById(R.id.statsCard)
         statsProgressBar = findViewById(R.id.statsProgressBar)
         statsContent = findViewById(R.id.statsContent)
-        statsTodayText = findViewById(R.id.statsTodayText)
+        homeWalletRow = findViewById(R.id.homeWalletRow)
+        homeWalletBalanceText = findViewById(R.id.homeWalletBalanceText)
+        homeWalletRow.setOnClickListener {
+            startActivity(Intent(this, WalletActivity::class.java))
+        }
         notificationIcon = findViewById(R.id.notificationIcon)
         notificationUnreadDot = findViewById(R.id.notificationUnreadDot)
         referralCodeLabelText = findViewById(R.id.referralCodeLabelText)
@@ -741,12 +746,8 @@ class MainMenuActivity : BaseActivity() {
         }
 
         val todayCount = UserPrefs.getTodaySyncedCount(this)
-        statsTodayText.text = if (todayCount > 0) {
-            val label = if (todayCount == 1) "kontact" else "kontacts"
-            "$todayCount $label synced today"
-        } else {
-            getString(R.string.stats_no_sync_today)
-        }
+        maybeNotifyTodaySync(todayCount)
+        loadHomeWalletBalance()
 
         // Recent enough: keep what's on screen, skip the 4 server calls.
         // Only reused once a first load has actually filled the screen.
@@ -775,6 +776,48 @@ class MainMenuActivity : BaseActivity() {
                 purchasedViewersCurrentText.text = dash.purchased.current.toString()
                 purchasedViewersMaxText.text = "/${dash.purchased.max}"
                 referredViewersCountText.text = dash.referred.toString()
+            }
+        }
+    }
+
+    /**
+     * Fires a real system notification for today's sync count instead of
+     * showing it on-screen (moved off the main menu per request, so the
+     * stats card only shows things the user needs to act on/reference,
+     * not a passive log line). Uses NotificationHelper's existing
+     * "vgkontact_sync" channel so it matches the sync-complete notification
+     * in look and behavior. Guarded to once per calendar day per count so
+     * reopening the app repeatedly doesn't re-notify.
+     */
+    private fun maybeNotifyTodaySync(todayCount: Int) {
+        if (todayCount <= 0) return
+        val prefsKey = "last_today_sync_notify"
+        val today = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+            .format(java.util.Date())
+        val stamp = "$today:$todayCount"
+        val prefs = getSharedPreferences("vgkontact_home", Context.MODE_PRIVATE)
+        if (prefs.getString(prefsKey, null) == stamp) return
+        prefs.edit().putString(prefsKey, stamp).apply()
+
+        NotificationHelper.createNotificationChannel(this)
+        NotificationHelper.showSyncCompleteNotification(this, submitted = todayCount, failed = 0)
+    }
+
+    /**
+     * Loads the wallet's available balance into the home screen row, same
+     * source WalletActivity uses (WalletSync.fetchWallet -> get_my_wallet).
+     * Shows dashes on failure rather than a stale or fake number.
+     */
+    private fun loadHomeWalletBalance() {
+        WalletSync.fetchWallet(this) { wallet ->
+            runOnUiThread {
+                if (isFinishing || isDestroyed) return@runOnUiThread
+                homeWalletBalanceText.text = if (wallet != null) {
+                    val nf = java.text.NumberFormat.getNumberInstance(java.util.Locale.US)
+                    "\u20a6${nf.format(wallet.available)}"
+                } else {
+                    "\u2014"
+                }
             }
         }
     }
