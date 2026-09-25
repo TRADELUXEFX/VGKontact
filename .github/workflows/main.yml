@@ -50,24 +50,35 @@ jobs:
         with:
           gradle-version: '8.7'
 
-      - name: Build debug APK
+      # Release keystore is stored as a base64 repo secret
+      # (RELEASE_KEYSTORE_BASE64) and decoded to a file here at build
+      # time - never committed to the repo itself. See README for how
+      # to generate it and add the secrets.
+      - name: Decode release keystore
+        run: echo "${{ secrets.RELEASE_KEYSTORE_BASE64 }}" | base64 -d > app/release.keystore
+
+      - name: Build release APK
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           VERSION_CODE: ${{ github.run_number }}
-        run: gradle assembleDebug --stacktrace
+          RELEASE_KEYSTORE_PATH: ${{ github.workspace }}/app/release.keystore
+          RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+        run: gradle assembleRelease --stacktrace
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: app-debug-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
+          name: app-release-apk
+          path: app/build/outputs/apk/release/app-release.apk
 
       # Renaming before release so the download link/filename is
       # stable and readable (e.g. VGKontact-42.apk) rather than the
-      # generic app-debug.apk every build produces.
+      # generic app-release.apk every build produces.
       - name: Rename APK for release
-        run: cp app/build/outputs/apk/debug/app-debug.apk app/build/outputs/apk/debug/VGKontact-${{ github.run_number }}.apk
+        run: cp app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/VGKontact-${{ github.run_number }}.apk
 
       # Creates a real, permanent, publicly-linkable GitHub Release -
       # different from the artifact upload above, which is temporary
@@ -80,7 +91,7 @@ jobs:
         with:
           tag_name: v${{ github.run_number }}
           name: VGKontact build ${{ github.run_number }}
-          files: app/build/outputs/apk/debug/VGKontact-${{ github.run_number }}.apk
+          files: app/build/outputs/apk/release/VGKontact-${{ github.run_number }}.apk
           generate_release_notes: true
 
       # Logs every build into app_releases, automatically - but NOT
