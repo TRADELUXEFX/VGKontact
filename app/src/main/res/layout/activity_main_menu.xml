@@ -449,11 +449,16 @@
                             android:id="@+id/homeWalletBalanceText"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:textSize="15sp"
+                            android:background="@drawable/reward_badge_background"
+                            android:paddingStart="10dp"
+                            android:paddingEnd="10dp"
+                            android:paddingTop="4dp"
+                            android:paddingBottom="4dp"
+                            android:textSize="13sp"
                             android:textStyle="bold"
-                            android:textColor="@color/vg_dark"
+                            android:textColor="@color/vg_green_dark"
                             android:fontFamily="@font/poppins"
-                            tools:text="N8,400" />
+                            tools:text="8,400 NGN" />
 
                     </LinearLayout>
 
