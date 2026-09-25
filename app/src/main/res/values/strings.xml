@@ -45,6 +45,7 @@
     <string name="dialog_delete">Delete</string>
     <string name="contact_limit_label">Contact Information</string>
     <string name="label_free_viewers">Free viewers</string>
+    <string name="label_wallet_balance">Wallet balance</string>
     <string name="label_purchased_viewers">Purchased viewers</string>
     <string name="label_referred_viewers">Referred viewers</string>
     <string name="label_free_plan">Contact limit</string>
