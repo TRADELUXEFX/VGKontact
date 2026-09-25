@@ -814,7 +814,7 @@ class MainMenuActivity : BaseActivity() {
                 if (isFinishing || isDestroyed) return@runOnUiThread
                 homeWalletBalanceText.text = if (wallet != null) {
                     val nf = java.text.NumberFormat.getNumberInstance(java.util.Locale.US)
-                    "\u20a6${nf.format(wallet.available)}"
+                    "${nf.format(wallet.available)} NGN"
                 } else {
                     "\u2014"
                 }
