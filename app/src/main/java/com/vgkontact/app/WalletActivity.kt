@@ -147,6 +147,7 @@ class WalletActivity : BaseActivity() {
     private fun showLoadError() {
         balanceText.text = "\u2014"
         pendingText.text = "Couldn't load wallet. Tap to retry"
+        pendingText.visibility = View.VISIBLE
         pendingText.setOnClickListener { loadWallet() }
         totalEarnedText.text = "\u2014"
         withdrawnText.text = "\u2014"
@@ -171,8 +172,10 @@ class WalletActivity : BaseActivity() {
 
         if (hasPendingRequest) {
             pendingText.text = "Withdrawal request pending review"
+            pendingText.visibility = View.VISIBLE
         } else {
             pendingText.text = ""
+            pendingText.visibility = View.GONE
         }
         pendingText.setOnClickListener(null)
         pendingText.isClickable = false
