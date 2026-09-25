@@ -5,9 +5,6 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
-# Needed for the "Create GitHub Release" step below - the default
-# GITHUB_TOKEN is read-only on contents by default on many repos,
-# and creating a release requires write access.
 permissions:
   contents: write
 
@@ -24,24 +21,11 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      # packages: '' overrides the action's default package list, which
-      # includes the legacy 'tools' package. Google removed 'tools' from
-      # the SDK repository, so sdkmanager now fails with "Failed to find
-      # package 'tools'" whenever it tries to install it. Passing an empty
-      # list here skips that install entirely; platform-tools, the
-      # platform, and build-tools are pulled in automatically by Gradle
-      # itself (via the Android Gradle Plugin) on the "Build debug APK"
-      # step below, so nothing else needs to be installed manually.
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
         with:
           packages: ''
 
-      # setup-android installs the SDK but does NOT auto-accept its
-      # licenses. Without this, the first time Gradle needs a license-gated
-      # component it drops into an interactive "Accept? (y/N):" prompt with
-      # no terminal to answer it in CI, and the build just fails/hangs.
-      # Piping 'yes' auto-answers every prompt sdkmanager shows.
       - name: Accept Android SDK licenses
         run: yes | sdkmanager --licenses || true
 
@@ -50,12 +34,21 @@ jobs:
         with:
           gradle-version: '8.7'
 
-      # Release keystore is stored as a base64 repo secret
-      # (RELEASE_KEYSTORE_BASE64) and decoded to a file here at build
-      # time - never committed to the repo itself. See README for how
-      # to generate it and add the secrets.
+      # -d decodes, -i tells base64 to ignore any characters that
+      # aren't valid base64 (stray newlines/spaces from pasting the
+      # secret on a phone), which is what caused "Tag number over 30
+      # is not supported" last run - that error means the .keystore
+      # file was corrupted/truncated, not a wrong password.
       - name: Decode release keystore
-        run: echo "${{ secrets.RELEASE_KEYSTORE_BASE64 }}" | base64 -d > app/release.keystore
+        run: |
+          echo "${{ secrets.RELEASE_KEYSTORE_BASE64 }}" | base64 -d -i > app/release.keystore
+          ls -la app/release.keystore
+          # Sanity-check the file is a real, readable keystore before
+          # even trying to build - fails fast with a clear message
+          # instead of the cryptic R8/packaging error from before.
+          keytool -list -storetype PKCS12 -keystore app/release.keystore \
+            -storepass "${{ secrets.RELEASE_KEYSTORE_PASSWORD }}" || \
+            (echo "::error::release.keystore is not a valid keystore, or RELEASE_KEYSTORE_PASSWORD is wrong. Re-generate/re-copy the RELEASE_KEYSTORE_BASE64 secret." && exit 1)
 
       - name: Build release APK
         env:
@@ -74,17 +67,9 @@ jobs:
           name: app-release-apk
           path: app/build/outputs/apk/release/app-release.apk
 
-      # Renaming before release so the download link/filename is
-      # stable and readable (e.g. VGKontact-42.apk) rather than the
-      # generic app-release.apk every build produces.
       - name: Rename APK for release
         run: cp app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/VGKontact-${{ github.run_number }}.apk
 
-      # Creates a real, permanent, publicly-linkable GitHub Release -
-      # different from the artifact upload above, which is temporary
-      # and tied to this specific workflow run (and typically expires).
-      # This is the URL the app-side update check should actually point
-      # users toward.
       - name: Create GitHub Release
         id: create_release
         uses: softprops/action-gh-release@v2
@@ -94,40 +79,10 @@ jobs:
           files: app/build/outputs/apk/release/VGKontact-${{ github.run_number }}.apk
           generate_release_notes: true
 
-      # Logs every build into app_releases, automatically - but NOT
-      # approved. Building and shipping are now two separate steps on
-      # purpose: this step just records that the build exists, so
-      # nothing reaches users until it's manually approved (via
-      # `select approve_release(<version_code>);` in Supabase, or the
-      # admin dashboard toggle once that's built). This replaces the
-      # old behavior of writing straight into app_version, which made
-      # every push instantly live to every phone.
-      #
-      # Uses the service_role key, NOT the anon key the app itself
-      # uses - anon has read-only access via the check_app_version RPC
-      # only (see the SQL that created app_releases), so anyone who
-      # extracts the anon key from the APK can never insert or approve
-      # a release themselves. service_role bypasses RLS entirely, which
-      # is correct here since this step only runs inside your own
-      # trusted CI, never inside the app.
-      #
-      # REQUIRES a repo secret: SUPABASE_SERVICE_ROLE_KEY.
-      # Add it at: Settings -> Secrets and variables -> Actions ->
-      # New repository secret. Get the actual key from Supabase
-      # dashboard -> Project Settings -> API -> service_role (the
-      # "secret" one, not anon/public). Treat this like a password -
-      # it bypasses every RLS policy in your database.
       - name: Log build in Supabase (unapproved)
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          # softprops/action-gh-release reports the assets it actually
-          # uploaded as a JSON array (each with a browser_download_url)
-          # on this output. Reading the real URL back from here means
-          # Supabase always gets the exact link GitHub assigned to the
-          # file - never a hand-typed guess at the URL pattern, which is
-          # what caused download_url to point at the releases page
-          # instead of the APK in the first place.
           RELEASE_ASSETS: ${{ steps.create_release.outputs.assets }}
         run: |
           DOWNLOAD_URL=$(echo "$RELEASE_ASSETS" | jq -r '.[0].browser_download_url')
