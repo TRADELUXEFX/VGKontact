@@ -128,6 +128,9 @@
 
     <!-- Refer and Earn screen -->
     <string name="action_back">Back</string>
+    <string name="action_copy_code">Copy referral code</string>
+    <string name="refer_earn_mode_number">Number</string>
+    <string name="refer_earn_mode_username">Username</string>
     <string name="refer_earn_title">Refer and earn</string>
     <string name="refer_earn_stat_referred_viewers">Referred viewers</string>
     <string name="refer_earn_stat_earnings">Referral earnings</string>
