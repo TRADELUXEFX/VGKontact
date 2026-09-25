@@ -53,7 +53,7 @@ class MainMenuActivity : BaseActivity() {
     private lateinit var syncKontactButton: Button
     private lateinit var kontactGroupsButton: Button
     private var contactUsFab: View? = null
-    private lateinit var shareAppButton: Button
+    private lateinit var referAndEarnButton: Button
     // Declared as MaterialButton (not plain Button) because its icon is
     // swapped at runtime in renderSyncPauseButton() - android.widget.Button
     // has no .icon property, only MaterialButton does. The XML <Button> tag
@@ -123,7 +123,7 @@ class MainMenuActivity : BaseActivity() {
 
         syncKontactButton = findViewById(R.id.syncKontactButton)
         kontactGroupsButton = findViewById(R.id.kontactGroupsButton)
-        shareAppButton = findViewById(R.id.shareAppButton)
+        referAndEarnButton = findViewById(R.id.referAndEarnButton)
         deleteContactsIcon = findViewById(R.id.deleteContactsIcon)
         phoneNumberText = findViewById(R.id.phoneNumberText)
         statsCard = findViewById(R.id.statsCard)
@@ -217,8 +217,8 @@ class MainMenuActivity : BaseActivity() {
             }
         }
 
-        shareAppButton.setOnClickListener {
-            shareReferralLink()
+        referAndEarnButton.setOnClickListener {
+            startActivity(Intent(this, ReferAndEarnActivity::class.java))
         }
 
         renderSyncPauseButton()
@@ -661,37 +661,6 @@ class MainMenuActivity : BaseActivity() {
             arrayOf(Manifest.permission.POST_NOTIFICATIONS),
             NOTIFICATION_PERMISSION_REQUEST_CODE
         )
-    }
-
-    /**
-     * Builds a share message containing the user's own WhatsApp number (the
-     * same value already used as "My Referral Code" on the Profile screen)
-     * baked into the website link as a ?ref= parameter, then hands it to
-     * Android's native share sheet so the user can send it through
-     * WhatsApp, SMS, or anything else installed.
-     *
-     * The person on the other end still has to type the code in manually
-     * at signup - there's no app-store install-referrer to auto-carry it
-     * through, since this app isn't distributed via the Play Store. The
-     * link's ?ref= is there so a future website update can display the
-     * code back to them automatically instead of relying on them
-     * remembering it from the chat message.
-     */
-    private fun shareReferralLink() {
-        val myCode = UserPrefs.getWhatsapp(this)
-        if (myCode.isNullOrEmpty()) {
-            Toast.makeText(this, "Referral code unavailable", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        val link = "https://vgkontact.netlify.app?ref=$myCode"
-        val message = "Join me on VGKontact! Download here: $link\n\nUse my code $myCode when you sign up."
-
-        val shareIntent = Intent(Intent.ACTION_SEND).apply {
-            type = "text/plain"
-            putExtra(Intent.EXTRA_TEXT, message)
-        }
-        startActivity(Intent.createChooser(shareIntent, "Share VGKontact"))
     }
 
     private fun checkContactsPermission(): Boolean {
