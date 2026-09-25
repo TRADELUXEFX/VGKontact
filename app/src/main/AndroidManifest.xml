@@ -97,6 +97,14 @@
             android:name=".ProfileActivity"
             android:exported="false" />
 
+        <!-- Refer and Earn - opened from the dashboard's "Refer and
+             earn" button (replaces the old direct-to-share-sheet
+             "Share App" button). Explains the two ways a referral
+             pays before handing off to the same share sheet. -->
+        <activity
+            android:name=".ReferAndEarnActivity"
+            android:exported="false" />
+
         <!-- Wallet - referral commission balance, withdraw and recent
              activity. Reached from the Wallet bottom-nav tab. It was
              missing from the manifest before, which made tapping the tab
