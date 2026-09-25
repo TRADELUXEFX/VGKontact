@@ -41,8 +41,15 @@ class ReferAndEarnActivity : BaseActivity() {
     private lateinit var referredViewersText: TextView
     private lateinit var earningsText: TextView
     private lateinit var codeText: TextView
+    private lateinit var copyButton: View
     private lateinit var shareButton: View
+    private lateinit var numberTab: TextView
+    private lateinit var usernameTab: TextView
     private lateinit var loadingOverlay: View
+
+    private var myNumber: String = "N/A"
+    private var myUsername: String = "N/A"
+    private var activeCode: String = "N/A"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -54,17 +61,30 @@ class ReferAndEarnActivity : BaseActivity() {
         referredViewersText = findViewById(R.id.referReferredViewersText)
         earningsText = findViewById(R.id.referEarningsText)
         codeText = findViewById(R.id.referCodeText)
+        copyButton = findViewById(R.id.referCopyButton)
         shareButton = findViewById(R.id.referShareButton)
+        numberTab = findViewById(R.id.referModeNumberTab)
+        usernameTab = findViewById(R.id.referModeUsernameTab)
         loadingOverlay = findViewById(R.id.loadingOverlay)
 
         backButton.setOnClickListener { onBackPressedDispatcher.onBackPressed() }
 
-        val myCode = UserPrefs.getWhatsapp(this) ?: "N/A"
-        codeText.text = formatPhoneForDisplay(myCode)
+        myNumber = UserPrefs.getWhatsapp(this) ?: "N/A"
+        val name = UserPrefs.getName(this)
+        myUsername = if (name.isNullOrBlank()) "N/A" else name
+
+        numberTab.setOnClickListener { selectMode(showUsername = false) }
+        usernameTab.setOnClickListener { selectMode(showUsername = true) }
+        selectMode(showUsername = false)
+
+        copyButton.setOnClickListener {
+            copyCodeToClipboard(activeCode)
+            Toast.makeText(this, "Code copied", Toast.LENGTH_SHORT).show()
+        }
 
         shareButton.setOnClickListener {
-            copyCodeToClipboard(myCode)
-            shareReferralLink(myCode)
+            copyCodeToClipboard(activeCode)
+            shareReferralLink(activeCode)
         }
 
         loadStats()
@@ -98,6 +118,29 @@ class ReferAndEarnActivity : BaseActivity() {
                 }
             }
         }
+    }
+
+    /**
+     * Switches which value the referral card shows, copies and shares -
+     * the WhatsApp number (UserPrefs.getWhatsapp) or the username
+     * (UserPrefs.getName, same field ProfileActivity already labels
+     * "Username"). Referrals already accept either at signup (see
+     * OnboardingActivity), so this doesn't change what the backend
+     * accepts - only which one this screen leads with.
+     */
+    private fun selectMode(showUsername: Boolean) {
+        activeCode = if (showUsername) myUsername else myNumber
+        codeText.text = if (showUsername) myUsername else formatPhoneForDisplay(myNumber)
+
+        val selectedBg = ContextCompat.getDrawable(this, R.drawable.tab_selected_background)
+        val selectedColor = ContextCompat.getColor(this, R.color.white)
+        val mutedColor = ContextCompat.getColor(this, R.color.text_muted)
+
+        numberTab.background = if (showUsername) null else selectedBg
+        numberTab.setTextColor(if (showUsername) mutedColor else selectedColor)
+
+        usernameTab.background = if (showUsername) selectedBg else null
+        usernameTab.setTextColor(if (showUsername) selectedColor else mutedColor)
     }
 
     private fun formatNaira(amount: Long): String {
